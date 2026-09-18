@@ -8,6 +8,7 @@ import { ORNAMENTOS_FESTA } from '../Moodboard/Moodboard';
 import { calcularPeriodoTeste, formatarDataExibicao, formatarDataParaInput, calcularSeEhNovo } from '../../utils/periodoTesteUtils';
 import { enviarAvisoInatividadeEmail } from '../../utils/emailInatividadeService';
 import { enviarConfirmacaoReativacaoEmail } from '../../utils/emailReativacaoService';
+import AbaFaturamentoAdmin from './AbaFaturamentoAdmin';
 import './ControleGeral.css';
 
 // 🌿 Função auxiliar para renderizar SVG com cor dourada nos cards de admin
@@ -519,7 +520,7 @@ const ControleGeral = () => {
       ...membroEdicao,
       dataFimTeste: `${yyyy}-${mm}-${dd}`,
       assinaturaAtiva: false,
-      statusAssinatura: 'ativa'
+      statusAssinatura: 'inativa'
     });
   };
 
@@ -537,18 +538,24 @@ const ControleGeral = () => {
       ...membroEdicao,
       dataFimTeste: `${yyyy}-${mm}-${dd}`,
       assinaturaAtiva: false,
-      statusAssinatura: 'ativa'
+      statusAssinatura: 'inativa'
     });
   };
 
   // 🌟 PRESETS DE ASSINATURA EM 1 CLIQUE
   const aplicarPresetVip = () => {
+    const agora = new Date();
+    const prox = new Date(agora);
+    prox.setMonth(prox.getMonth() + 1);
+
     setMembroEdicao({
       ...membroEdicao,
       assinaturaAtiva: true,
       plano: 'pago',
       statusAssinatura: 'ativa',
       statusPagamentoVulso: 'pago',
+      dataPagamento: agora.toISOString(),
+      dataProximaCobranca: prox.toISOString(),
       planoId: membroEdicao.planoId || 'plano_basico'
     });
   };
@@ -564,7 +571,7 @@ const ControleGeral = () => {
       ...membroEdicao,
       assinaturaAtiva: false,
       plano: '',
-      statusAssinatura: 'ativa',
+      statusAssinatura: 'inativa',
       statusPagamentoVulso: '',
       dataFimTeste: `${yyyy}-${mm}-${dd}`
     });
@@ -734,10 +741,13 @@ const ControleGeral = () => {
         const dataCadastroFormatada = formatarDataExibicao(rawDateView);
         const infoNovo = calcularSeEhNovo(rawDateView);
 
+        const isAssinantePago = pagou || dadosTarget.plano === 'pago' || dadosTarget.statusAssinatura === 'ativa' || dadosTarget.statusPagamentoVulso === 'aprovado';
+
         return {
           uid,
           tenantId: data.tenantId || uid,
           rawUserData: data,
+          isAssinantePago,
           nomeCompleto: data.nomeCompleto || data.nomeExibicao || data.displayName || '—',
           nomeExibicao: data.nomeExibicao || data.nomeCompleto || '—',
           email: data.email || '—',
@@ -754,16 +764,20 @@ const ControleGeral = () => {
           diasRestantes: status === 'teste' ? diasRestantes : 0,
           diasTeste,
           nomePlano,
-          planoId: data.planoId || dadosTarget.planoId || 'plano_basico',
+          planoId: data.planoId || dadosTarget.planoId || (isAssinantePago ? 'plano_basico' : ''),
           role: data.role || (isFuncionarioVinculado ? 'funcionario' : 'owner'),
           isFuncionarioVinculado,
           idEmpresaPatrao,
-          assinaturaAtiva: dadosTarget.assinaturaAtiva || false,
-          statusPagamentoVulso: dadosTarget.statusPagamentoVulso || '',
-          plano: dadosTarget.plano || '',
-          statusAssinatura: dadosTarget.statusAssinatura || '',
+          assinaturaAtiva: isAssinantePago ? true : (dadosTarget.assinaturaAtiva || false),
+          statusPagamentoVulso: dadosTarget.statusPagamentoVulso || (isAssinantePago ? 'aprovado' : ''),
+          plano: dadosTarget.plano || (isAssinantePago ? 'pago' : ''),
+          statusAssinatura: dadosTarget.statusAssinatura || (isAssinantePago ? 'ativa' : ''),
           totalDiasTeste: infoTeste.totalDiasTeste || 7,
-          isDuplicado
+          isDuplicado,
+          dataPagamento: dadosTarget.dataPagamento || data.dataPagamento || null,
+          dataProximaCobranca: dadosTarget.dataProximaCobranca || data.dataProximaCobranca || null,
+          metodoPagamento: dadosTarget.metodoPagamento || data.metodoPagamento || 'PIX',
+          valorAssinatura: dadosTarget.valorAssinatura || data.valorAssinatura || 49.90
         };
       });
 
@@ -787,12 +801,71 @@ const ControleGeral = () => {
     setModalAberto(true);
   };
 
+  // 🔄 SINCRONIZAR ACESSO: Propaga dados financeiros para TODOS os documentos do mesmo e-mail
+  const handleSincronizarAcesso = async () => {
+    if (!membroEdicao || !membroEdicao.email) return;
+    const nomeAlvo = membroEdicao.nomeExibicao || membroEdicao.nomeCompleto || membroEdicao.email;
+    if (!window.confirm(`Sincronizar acesso de "${nomeAlvo}"?\n\nEsta ação vai propagar o status atual de teste/assinatura para TODOS os documentos associados ao e-mail ${membroEdicao.email}.\n\nIsso resolve o problema de login misto (Google + e-mail) imediatamente.`)) return;
+
+    setSalvando(true);
+    try {
+      const userRef = doc(db, 'usuarios', membroEdicao.uid);
+      const snapDoc = await getDoc(userRef);
+      if (!snapDoc.exists()) {
+        alert('Documento principal não encontrado.');
+        return;
+      }
+      const dadosMestre = snapDoc.data();
+
+      const emailBusca = membroEdicao.email.toLowerCase().trim();
+      const qDuplicados = query(collection(db, 'usuarios'), where('email', '==', emailBusca));
+      const snapDuplicados = await getDocs(qDuplicados);
+
+      let qtdSincronizados = 0;
+      const payloadSync = {
+        dataFimTeste: dadosMestre.dataFimTeste || null,
+        dataCadastro: dadosMestre.dataCadastro || null,
+        statusConta: dadosMestre.statusConta || 'ativo',
+        assinaturaAtiva: dadosMestre.assinaturaAtiva || false,
+        planoId: dadosMestre.planoId || 'plano_basico',
+        plano: dadosMestre.plano || '',
+        statusAssinatura: dadosMestre.statusAssinatura || '',
+        statusPagamentoVulso: dadosMestre.statusPagamentoVulso || '',
+        dataPagamento: dadosMestre.dataPagamento || null,
+        dataProximaCobranca: dadosMestre.dataProximaCobranca || null,
+        tenantId: membroEdicao.uid
+      };
+
+      for (const docDup of snapDuplicados.docs) {
+        if (docDup.id !== membroEdicao.uid) {
+          await updateDoc(doc(db, 'usuarios', docDup.id), payloadSync).catch(() => {});
+          qtdSincronizados++;
+        }
+      }
+
+      alert(`✅ Acesso sincronizado com sucesso!\n${qtdSincronizados > 0 ? `${qtdSincronizados} conta(s) vinculada(s) atualizada(s).` : 'Nenhuma conta duplicada encontrada — apenas a conta principal existe.'}`);
+      carregarDados();
+    } catch (err) {
+      console.error('Erro ao sincronizar acesso:', err);
+      alert('Falha ao sincronizar. Tente novamente.');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
   const salvarEdicao = async (e) => {
     e.preventDefault();
     setSalvando(true);
     try {
       const userRef = doc(db, 'usuarios', membroEdicao.uid);
-      const isVip = membroEdicao.assinaturaAtiva === true || membroEdicao.assinaturaAtiva === 'true';
+      const isPagoOuVip = Boolean(
+        membroEdicao.assinaturaAtiva === true || 
+        membroEdicao.assinaturaAtiva === 'true' ||
+        membroEdicao.plano === 'pago' ||
+        membroEdicao.statusAssinatura === 'ativa' ||
+        membroEdicao.statusPagamentoVulso === 'aprovado' ||
+        membroEdicao.statusPagamentoVulso === 'pago'
+      );
 
       let dataFimIso = null;
       if (membroEdicao.dataFimTeste) {
@@ -816,20 +889,25 @@ const ControleGeral = () => {
         }
       }
 
+      const agoraIso = new Date().toISOString();
+      const proxMesIso = new Date(Date.now() + 30*24*60*60*1000).toISOString();
+
       const payload = {
         nomeExibicao: membroEdicao.nomeExibicao || '',
         nomeCompleto: membroEdicao.nomeCompleto || '',
         email: membroEdicao.email || '',
         telefone: membroEdicao.telefone || '',
         documento: membroEdicao.documento || '',
-        planoId: isVip ? (membroEdicao.planoId || 'plano_basico') : '',
-        plano: isVip ? (membroEdicao.plano || 'pago') : '',
-        statusPagamentoVulso: isVip ? (membroEdicao.statusPagamentoVulso || 'pago') : '',
-        assinaturaAtiva: isVip,
-        statusAssinatura: isVip ? (membroEdicao.statusAssinatura || 'ativa') : (membroEdicao.statusAssinatura || 'inativa'),
-        statusConta: isVip ? 'ativo' : (membroEdicao.statusConta || 'ativo'),
+        planoId: isPagoOuVip ? (membroEdicao.planoId || 'plano_basico') : (membroEdicao.planoId || ''),
+        plano: isPagoOuVip ? (membroEdicao.plano || 'pago') : '',
+        statusPagamentoVulso: isPagoOuVip ? (membroEdicao.statusPagamentoVulso || 'aprovado') : '',
+        assinaturaAtiva: isPagoOuVip,
+        statusAssinatura: isPagoOuVip ? (membroEdicao.statusAssinatura || 'ativa') : (membroEdicao.statusAssinatura || 'inativa'),
+        statusConta: isPagoOuVip ? 'ativo' : (membroEdicao.statusConta || 'ativo'),
         dataCadastro: dataCadastroIso,
-        dataFimTeste: dataFimIso
+        dataFimTeste: dataFimIso,
+        dataPagamento: membroEdicao.dataPagamento || (isPagoOuVip ? agoraIso : null),
+        dataProximaCobranca: membroEdicao.dataProximaCobranca || (isPagoOuVip ? proxMesIso : null)
       };
 
       await updateDoc(userRef, payload);
@@ -851,7 +929,9 @@ const ControleGeral = () => {
                 statusPagamentoVulso: payload.statusPagamentoVulso,
                 assinaturaAtiva: payload.assinaturaAtiva,
                 statusAssinatura: payload.statusAssinatura,
-                statusConta: payload.statusConta
+                statusConta: payload.statusConta,
+                dataPagamento: payload.dataPagamento,
+                dataProximaCobranca: payload.dataProximaCobranca
               });
             }
           }
@@ -958,12 +1038,14 @@ const ControleGeral = () => {
       const dataFimStr = `${yyyy}-${mm}-${dd}`;
 
       const userRef = doc(db, 'usuarios', membroEdicao.uid);
+      // 🔥 BUG 7 FIX: Corrigida contradição — quando é reativação como trial (sem plano pago),
+      // statusAssinatura deve ser 'inativa', não 'ativa'. 'ativa' é reservado para assinatura paga.
       const updatePayload = {
         statusConta: 'ativo',
         dataCadastro: hoje.toISOString(),
         dataFimTeste: fimTeste.toISOString(),
         assinaturaAtiva: false,
-        statusAssinatura: 'ativa'
+        statusAssinatura: 'inativa'
       };
 
       await updateDoc(userRef, updatePayload);
@@ -981,7 +1063,7 @@ const ControleGeral = () => {
                 dataCadastro: hoje.toISOString(),
                 dataFimTeste: fimTeste.toISOString(),
                 assinaturaAtiva: false,
-                statusAssinatura: 'ativa'
+                statusAssinatura: 'inativa'
               }).catch(() => {});
             }
           }
@@ -997,7 +1079,7 @@ const ControleGeral = () => {
         dataCadastro: hoje.toISOString(),
         dataFimTeste: dataFimStr,
         assinaturaAtiva: false,
-        statusAssinatura: 'ativa'
+        statusAssinatura: 'inativa'
       }));
 
       // Dispara o e-mail oficial de reativação para o cliente
@@ -1033,6 +1115,12 @@ const ControleGeral = () => {
 
     setSalvando(true);
     try {
+      const agora = new Date();
+      const prox = new Date(agora);
+      prox.setMonth(prox.getMonth() + 1);
+      const agoraIso = agora.toISOString();
+      const proxIso = prox.toISOString();
+
       const userRef = doc(db, 'usuarios', membroEdicao.uid);
       const updatePayload = {
         statusConta: 'ativo',
@@ -1041,7 +1129,9 @@ const ControleGeral = () => {
         planoId: idPlano,
         plano: 'pago',
         statusAssinatura: 'ativa',
-        statusPagamentoVulso: 'pago'
+        statusPagamentoVulso: 'pago',
+        dataPagamento: agoraIso,
+        dataProximaCobranca: proxIso
       };
 
       await updateDoc(userRef, updatePayload);
@@ -1061,6 +1151,19 @@ const ControleGeral = () => {
           console.warn("Aviso na sincronia de duplicatas:", errSync);
         }
       }
+
+      // Registra o log oficial de faturamento/assinatura
+      await addDoc(collection(db, "logs_atividades"), {
+        empresaId: membroEdicao.tenantId || membroEdicao.uid,
+        userId: membroEdicao.uid,
+        funcionarioId: usuarioLogado?.uid || 'admin',
+        nomeFuncionario: 'Super Admin',
+        usuarioEmail: membroEdicao.email || "Desconhecido",
+        acao: "ASSINATURA APROVADA",
+        detalhes: `Assinatura de ${infoPlano.nome || 'Plano Premium'} (R$ 99,90) ativada pelo Super Admin no Controle Geral.`,
+        dataHora: agoraIso,
+        criadoEm: serverTimestamp()
+      }).catch(eLog => console.warn("Aviso ao registrar log de reativação:", eLog));
 
       setMembroEdicao(prev => ({
         ...prev,
@@ -1799,6 +1902,7 @@ const ControleGeral = () => {
       {/* 🌟 NAVEGADOR PRINCIPAL DE MÓDULOS (SEGMENTED SWITCHER) */}
       <div className="cg-main-tabs">
         <button 
+          type="button"
           className={`cg-main-tab-btn ${abaPrincipal === 'clientes' ? 'active' : ''}`}
           onClick={() => setAbaPrincipal('clientes')}
         >
@@ -1808,6 +1912,20 @@ const ControleGeral = () => {
           <span className="cg-tab-badge">{clientes.length}</span>
         </button>
         <button 
+          type="button"
+          className={`cg-main-tab-btn ${abaPrincipal === 'faturamento' ? 'active' : ''}`}
+          onClick={() => setAbaPrincipal('faturamento')}
+        >
+          <i className="fas fa-receipt"></i>
+          <span className="cg-tab-text-full">Faturas & Auditoria de Pagamentos</span>
+          <span className="cg-tab-text-short">Faturas</span>
+          <span className="cg-tab-badge green">
+            <span className="cg-tab-badge-full">Faturamento Global</span>
+            <span className="cg-tab-badge-short"><i className="fas fa-dollar-sign"></i></span>
+          </span>
+        </button>
+        <button 
+          type="button"
           className={`cg-main-tab-btn ${abaPrincipal === 'moodboard' ? 'active' : ''}`}
           onClick={() => { setAbaPrincipal('moodboard'); carregarItensMoodboard(); }}
         >
@@ -1823,7 +1941,12 @@ const ControleGeral = () => {
         </button>
       </div>
 
-      {abaPrincipal === 'moodboard' ? (
+      {abaPrincipal === 'faturamento' ? (
+        <AbaFaturamentoAdmin 
+          clientes={clientes} 
+          onAbrirSuporteCliente={abrirVisualizadorSuporte} 
+        />
+      ) : abaPrincipal === 'moodboard' ? (
         <div className="cg-moodboard-manager">
           
           {/* 🌟 NAVEGADOR DE SUB-MÓDULOS DO MOODBOARD */}
@@ -2709,7 +2832,7 @@ const ControleGeral = () => {
                   <th>Data Cadastro</th>
                   <th>Plano</th>
                   <th>Status</th>
-                  <th>Teste</th>
+                  <th>Vigência / Pagamento</th>
                   <th style={{ textAlign: 'center' }}>Ações</th>
                 </tr>
               </thead>
@@ -2775,7 +2898,11 @@ const ControleGeral = () => {
                       </td>
                       <td>{getStatusBadge(c.status)}</td>
                       <td>
-                        {c.status === 'teste' ? (
+                        {c.status === 'admin' ? (
+                          <span className="cg-admin-badge">
+                            <i className="fas fa-shield-alt"></i> Super Admin
+                          </span>
+                        ) : c.status === 'teste' ? (
                           <div className="cg-teste-info">
                             <div className="cg-teste-bar">
                               <div 
@@ -2788,6 +2915,39 @@ const ControleGeral = () => {
                             </div>
                             <small style={{ color: c.diasRestantes <= 2 ? '#ea580c' : '#64748b', fontWeight: c.diasRestantes <= 2 ? '800' : '600' }}>
                               {c.diasRestantes <= 0 ? '⚠️ Vencido' : `${c.diasRestantes}d restantes`}
+                            </small>
+                          </div>
+                        ) : (c.isAssinantePago || c.dataPagamento) ? (
+                          <div className="cg-pagamento-cell">
+                            <div className="cg-pagamento-top">
+                              <span className="cg-pagamento-pago-tag" title={c.dataPagamento ? `Quitado em ${formatarDataExibicao(c.dataPagamento)}` : 'Assinatura Quitada'}>
+                                <i className="fas fa-check-circle"></i> {c.dataPagamento ? formatarDataExibicao(c.dataPagamento) : 'Quitado'}
+                              </span>
+                              <span className={`cg-metodo-badge-mini ${String(c.metodoPagamento || '').toLowerCase().includes('pix') ? 'pix' : 'cartao'}`}>
+                                {String(c.metodoPagamento || '').toLowerCase().includes('pix') ? (
+                                  <><i className="fas fa-qrcode"></i> PIX</>
+                                ) : (
+                                  <><i className="fas fa-credit-card"></i> Cartão</>
+                                )}
+                              </span>
+                            </div>
+                            {c.dataProximaCobranca ? (
+                              <small className="cg-pagamento-renova" title={`Próxima cobrança/renovação em ${formatarDataExibicao(c.dataProximaCobranca)}`}>
+                                <i className="fas fa-sync-alt"></i> Renova {formatarDataExibicao(c.dataProximaCobranca)}
+                              </small>
+                            ) : (
+                              <small className="cg-pagamento-renova" style={{ color: '#059669' }}>
+                                <i className="fas fa-shield-alt"></i> Ativa (30 dias)
+                              </small>
+                            )}
+                          </div>
+                        ) : (c.dataFimTeste && c.status === 'ativo') ? (
+                          <div className="cg-vip-cell">
+                            <span className="cg-vip-tag">
+                              <i className="fas fa-award"></i> Cortesia VIP
+                            </span>
+                            <small className="cg-vip-ate">
+                              Até {formatarDataExibicao(c.dataFimTeste)}
                             </small>
                           </div>
                         ) : (
@@ -2952,7 +3112,7 @@ const ControleGeral = () => {
                           </div>
                         </div>
 
-                        {c.status === 'teste' && (
+                        {c.status === 'teste' ? (
                           <div className={`cg-mcard-trial-gauge ${c.diasRestantes <= 2 ? 'is-expiring' : ''}`}>
                             <div className="cg-trial-gauge-header">
                               <span className="cg-trial-gauge-title">
@@ -2974,7 +3134,34 @@ const ControleGeral = () => {
                               ></div>
                             </div>
                           </div>
-                        )}
+                        ) : (c.isAssinantePago || c.dataPagamento) ? (
+                          <div className="cg-mcard-payment-box">
+                            <div className="cg-mcard-payment-top">
+                              <span className="cg-mcard-payment-pago">
+                                <i className="fas fa-check-circle"></i> Quitado: {c.dataPagamento ? formatarDataExibicao(c.dataPagamento) : 'Pago'}
+                              </span>
+                              <span className={`cg-metodo-badge-mini ${String(c.metodoPagamento || '').toLowerCase().includes('pix') ? 'pix' : 'cartao'}`}>
+                                {String(c.metodoPagamento || '').toLowerCase().includes('pix') ? 'PIX' : 'Cartão'}
+                              </span>
+                            </div>
+                            {c.dataProximaCobranca ? (
+                              <small className="cg-mcard-payment-renova">
+                                <i className="fas fa-sync-alt"></i> Próxima Cobrança: {formatarDataExibicao(c.dataProximaCobranca)}
+                              </small>
+                            ) : (
+                              <small className="cg-mcard-payment-renova" style={{ color: '#059669' }}>
+                                <i className="fas fa-shield-alt"></i> Assinatura Ativa (30 dias)
+                              </small>
+                            )}
+                          </div>
+                        ) : (c.dataFimTeste && c.status === 'ativo') ? (
+                          <div className="cg-mcard-vip-box">
+                            <div className="cg-mcard-payment-top">
+                              <span className="cg-mcard-vip-pago"><i className="fas fa-award"></i> Cortesia VIP</span>
+                            </div>
+                            <small className="cg-mcard-payment-renova">Válido até: {formatarDataExibicao(c.dataFimTeste)}</small>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
 
@@ -3101,6 +3288,46 @@ const ControleGeral = () => {
                         </div>
                       </div>
 
+                      {/* 🌟 BANNER EXECUTIVO DE ASSINATURA QUITADA */}
+                      {(membroEdicao.plano === 'pago' || membroEdicao.statusAssinatura === 'ativa' || membroEdicao.statusPagamentoVulso === 'aprovado' || membroEdicao.statusPagamentoVulso === 'pago') && (
+                        <div style={{
+                          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(5, 150, 105, 0.08) 100%)',
+                          border: '1.5px solid #10b981',
+                          borderRadius: '10px',
+                          padding: '12px 16px',
+                          marginBottom: '15px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '12px',
+                          boxShadow: '0 2px 8px rgba(16, 185, 129, 0.12)'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <i className="fas fa-check-circle" style={{ color: '#10b981', fontSize: '24px' }}></i>
+                            <div>
+                              <div style={{ color: '#065f46', fontSize: '13.5px', fontWeight: '800' }}>
+                                Assinatura Ativa & Quitada ({membroEdicao.planoId?.includes('basico') ? 'Plano Básico' : (membroEdicao.planoId?.includes('plus') ? 'Plano Plus' : 'Plano Premium')})
+                              </div>
+                              <div style={{ color: '#047857', fontSize: '11.5px', fontWeight: '500', marginTop: '2px' }}>
+                                Forma: <strong>{membroEdicao.metodoPagamento || 'PIX'}</strong> • Valor: <strong>R$ {Number(membroEdicao.valorAssinatura || 49.9).toFixed(2).replace('.', ',')}</strong> • Válido até: <strong>{membroEdicao.dataProximaCobranca ? new Date(membroEdicao.dataProximaCobranca).toLocaleDateString('pt-BR') : '18/10/2026'}</strong>
+                              </div>
+                            </div>
+                          </div>
+                          <span style={{
+                            background: '#10b981',
+                            color: '#ffffff',
+                            padding: '5px 12px',
+                            borderRadius: '20px',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            letterSpacing: '0.5px',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            ✓ PAGO & LIBERADO
+                          </span>
+                        </div>
+                      )}
+
                       {/* BARRA DE AÇÕES RÁPIDAS DE SUPORTE (LIVRE ACESSO) */}
                       <div className="cg-quick-support-box">
                         <div className="cg-quick-support-title">
@@ -3146,6 +3373,37 @@ const ControleGeral = () => {
                               )}
                             </button>
                           </div>
+
+                          {/* 🔄 BOTÃO SINCRONIZAR ACESSO (resolve login misto Google/e-mail) */}
+                          <button
+                            type="button"
+                            className="cg-btn-sync-access"
+                            onClick={handleSincronizarAcesso}
+                            disabled={salvando}
+                            title="Propaga status de assinatura/teste para todos os documentos com o mesmo e-mail (resolve bloqueio em login Google)"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              width: '100%',
+                              marginTop: '8px',
+                              padding: '9px 14px',
+                              borderRadius: '8px',
+                              border: '1.5px solid #7c3aed',
+                              background: 'linear-gradient(135deg, #7c3aed15, #7c3aed08)',
+                              color: '#7c3aed',
+                              fontWeight: '600',
+                              fontSize: '0.82rem',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            <i className="fas fa-sync-alt" style={{ fontSize: '14px' }}></i>
+                            <div style={{ textAlign: 'left' }}>
+                              <div>🔄 Sincronizar Acesso (Login Misto)</div>
+                              <small style={{ fontWeight: 400, opacity: 0.8 }}>Propaga dados financeiros para todos os docs do mesmo e-mail</small>
+                            </div>
+                          </button>
                         </div>
                       </div>
 
@@ -3297,7 +3555,7 @@ const ControleGeral = () => {
 
                             <button 
                               type="button" 
-                              className={`cg-preset-pill teste ${!membroEdicao.assinaturaAtiva && membroEdicao.statusAssinatura === 'ativa' ? 'active' : ''}`}
+                              className={`cg-preset-pill teste ${!membroEdicao.assinaturaAtiva && membroEdicao.statusAssinatura !== 'cancelada' ? 'active' : ''}`}
                               onClick={aplicarPresetTeste}
                               title="Manter como teste grátis (7 dias)"
                             >
@@ -3317,13 +3575,13 @@ const ControleGeral = () => {
                           {/* AJUSTES MANUAIS DETALHADOS */}
                           <div className="cg-form-grid" style={{ marginTop: '12px' }}>
                             <div className="cg-form-group">
-                              <label>Assinatura Ativa (Passe VIP)</label>
+                              <label>Assinatura Ativa</label>
                               <select 
                                 value={String(membroEdicao.assinaturaAtiva)} 
                                 onChange={e => setMembroEdicao({ ...membroEdicao, assinaturaAtiva: e.target.value === 'true' })}
                               >
+                                <option value="true">Sim (Acesso Liberado / Assinante Pago)</option>
                                 <option value="false">Não (Bloquear se teste expirar)</option>
-                                <option value="true">Sim (Acesso irrestrito pago)</option>
                               </select>
                             </div>
 
@@ -3333,21 +3591,22 @@ const ControleGeral = () => {
                                 value={membroEdicao.plano || ''} 
                                 onChange={e => setMembroEdicao({ ...membroEdicao, plano: e.target.value })}
                               >
+                                <option value="pago">Pago (Assinante Ativo)</option>
+                                <option value="gratis">Degustação / Grátis</option>
                                 <option value="">Sem plano</option>
-                                <option value="pago">Pago</option>
-                                <option value="gratis">Grátis</option>
                               </select>
                             </div>
 
                             <div className="cg-form-group">
-                              <label>Pagamento Avulso</label>
+                              <label>Pagamento no Gateway</label>
                               <select 
                                 value={membroEdicao.statusPagamentoVulso || ''} 
                                 onChange={e => setMembroEdicao({ ...membroEdicao, statusPagamentoVulso: e.target.value })}
                               >
-                                <option value="">Nenhum</option>
+                                <option value="aprovado">Aprovado (PIX / Boleto)</option>
                                 <option value="pago">Pago</option>
                                 <option value="pendente">Pendente</option>
+                                <option value="">Nenhum</option>
                               </select>
                             </div>
 
@@ -3357,10 +3616,10 @@ const ControleGeral = () => {
                                 value={membroEdicao.statusAssinatura || ''} 
                                 onChange={e => setMembroEdicao({ ...membroEdicao, statusAssinatura: e.target.value })}
                               >
-                                <option value="">Sem assinatura</option>
-                                <option value="ativa">Ativa</option>
-                                <option value="cancelada">Cancelada</option>
+                                <option value="ativa">Ativa (Regular)</option>
                                 <option value="pendente">Pendente</option>
+                                <option value="cancelada">Cancelada</option>
+                                <option value="">Sem assinatura</option>
                               </select>
                             </div>
                           </div>
@@ -3489,6 +3748,16 @@ const ControleGeral = () => {
                               onChange={e => setMembroEdicao({ ...membroEdicao, dataFimTeste: e.target.value })}
                             />
                             <small style={{ color: '#64748b', marginTop: '4px', display: 'block' }}>Data limite para expiração do acesso cortesia.</small>
+                          </div>
+
+                          <div className="cg-form-group">
+                            <label>Vigência da Assinatura / Próxima Cobrança</label>
+                            <input 
+                              type="date" 
+                              value={formatarDataParaInput(membroEdicao.dataProximaCobranca)} 
+                              onChange={e => setMembroEdicao({ ...membroEdicao, dataProximaCobranca: e.target.value })}
+                            />
+                            <small style={{ color: '#10b981', marginTop: '4px', display: 'block' }}>Vigência do plano pago contratado até esta data.</small>
                           </div>
                         </div>
 

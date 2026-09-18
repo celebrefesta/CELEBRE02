@@ -66,26 +66,48 @@ const RotaProtegida = ({ recursoExigido, children }) => {
                 let tenantId = user.uid;
                 let isFuncionarioReal = false;
 
-                 if (ownDocSnap.exists()) {
-                     const userData = ownDocSnap.data();
-                     if (userData.role && userData.role !== 'owner' && userData.tenantId) {
-                         tenantId = userData.tenantId;
-                         isFuncionarioReal = true;
-                         localStorage.setItem('tenantId', tenantId);
-                     } else {
-                         tenantId = user.uid;
-                         localStorage.setItem('tenantId', user.uid);
-                     }
-                 } else {
-                     // Verifica se é funcionário de outra empresa
-                     const qFunc = query(collection(db, "equipe"), where("email", "==", user.email));
-                     const snapFunc = await getDocs(qFunc);
-                     if (!snapFunc.empty && snapFunc.docs[0].data().empresaId) {
-                         tenantId = snapFunc.docs[0].data().empresaId;
-                         isFuncionarioReal = true;
-                         localStorage.setItem('tenantId', tenantId);
-                     }
-                 }
+                // 1. Sempre verifica se o e-mail está cadastrado na equipe de alguma empresa
+                const emailLimpo = user.email ? user.email.toLowerCase().trim() : '';
+                if (emailLimpo) {
+                    try {
+                        const qFunc = query(collection(db, "equipe"), where("email", "==", emailLimpo));
+                        const snapFunc = await getDocs(qFunc);
+                        if (!snapFunc.empty) {
+                            const dadosFunc = snapFunc.docs[0].data();
+                            if (dadosFunc.empresaId && dadosFunc.empresaId !== user.uid) {
+                                tenantId = dadosFunc.empresaId;
+                                isFuncionarioReal = true;
+                                localStorage.setItem('tenantId', tenantId);
+                                localStorage.setItem('userRole', 'funcionario');
+                                localStorage.setItem('userRoleCargo', dadosFunc.cargo || 'Equipe');
+                            }
+                        }
+                    } catch (eEq) {
+                        console.warn("Aviso ao buscar equipe em RotaProtegida:", eEq);
+                    }
+                }
+
+                if (ownDocSnap.exists()) {
+                    const userData = ownDocSnap.data();
+                    if (isFuncionarioReal) {
+                        if (userData.tenantId !== tenantId || userData.role !== 'funcionario') {
+                            updateDoc(doc(db, "usuarios", user.uid), {
+                                tenantId: tenantId,
+                                role: 'funcionario'
+                            }).catch(() => {});
+                        }
+                    } else if (userData.role && userData.role !== 'owner' && userData.tenantId) {
+                        tenantId = userData.tenantId;
+                        isFuncionarioReal = true;
+                        localStorage.setItem('tenantId', tenantId);
+                    } else if (userData.tenantId && userData.tenantId !== user.uid) {
+                        tenantId = userData.tenantId;
+                        localStorage.setItem('tenantId', tenantId);
+                    } else {
+                        tenantId = user.uid;
+                        localStorage.setItem('tenantId', user.uid);
+                    }
+                }
 
                 const userSnap = await getDoc(doc(db, "usuarios", tenantId));
 

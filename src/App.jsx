@@ -163,34 +163,56 @@ const TravaSeguranca = ({ children, modulo, recursoExigido }) => {
         let isFuncionarioReal = false;
         let permissoesFuncionario = {};
 
-        if (ownDocSnap.exists()) {
-            const userData = ownDocSnap.data();
-            if (userData.role && userData.role !== 'owner' && userData.tenantId) {
-                tenantId = userData.tenantId;
-                isFuncionarioReal = true;
-                const qFunc = query(collection(db, "equipe"), where("email", "==", user.email));
+        // 1. Sempre verifica se o e-mail do usuário está cadastrado na equipe de alguma empresa
+        const emailLimpo = user.email ? user.email.toLowerCase().trim() : '';
+        if (emailLimpo) {
+            try {
+                const qFunc = query(collection(db, "equipe"), where("email", "==", emailLimpo));
                 const snapFunc = await getDocs(qFunc);
                 if (!snapFunc.empty) {
-                    permissoesFuncionario = snapFunc.docs[0].data().permissoes || {};
+                    const dadosFunc = snapFunc.docs[0].data();
+                    if (dadosFunc.empresaId && dadosFunc.empresaId !== user.uid) {
+                        tenantId = dadosFunc.empresaId;
+                        isFuncionarioReal = true;
+                        permissoesFuncionario = dadosFunc.permissoes || {};
+                        localStorage.setItem('tenantId', tenantId);
+                        localStorage.setItem('userRole', 'funcionario');
+                        localStorage.setItem('userRoleCargo', dadosFunc.cargo || 'Equipe');
+                    }
                 }
+            } catch (eEq) {
+                console.warn("Aviso ao buscar vínculo de equipe em App.jsx:", eEq);
+            }
+        }
+
+        if (ownDocSnap.exists()) {
+            const userData = ownDocSnap.data();
+            if (isFuncionarioReal) {
+                // Auto-cura: garante que o doc em usuarios tenha role funcionario e o tenantId correto
+                if (userData.tenantId !== tenantId || userData.role !== 'funcionario') {
+                    updateDoc(doc(db, "usuarios", user.uid), {
+                        tenantId: tenantId,
+                        role: 'funcionario'
+                    }).catch(() => {});
+                }
+            } else if (userData.role && userData.role !== 'owner' && userData.tenantId) {
+                tenantId = userData.tenantId;
+                isFuncionarioReal = true;
+                localStorage.setItem('tenantId', tenantId);
+                localStorage.setItem('userRole', userData.role);
+            } else if (userData.tenantId && userData.tenantId !== user.uid) {
+                tenantId = userData.tenantId;
+                localStorage.setItem('tenantId', tenantId);
             } else {
                 tenantId = user.uid;
+                localStorage.setItem('tenantId', user.uid);
             }
         } else {
-            // Verifica se é funcionário de outra empresa
-            const qFunc = query(collection(db, "equipe"), where("email", "==", user.email));
-            const snapFunc = await getDocs(qFunc);
-            if (!snapFunc.empty) {
-                const dadosFunc = snapFunc.docs[0].data();
-                tenantId = dadosFunc.empresaId || user.uid;
-                permissoesFuncionario = dadosFunc.permissoes || {};
-                isFuncionarioReal = true;
-            } else {
+            if (!isFuncionarioReal) {
                 // Auto-cura instantânea para novas contas do Google ou e-mail
                 const dataAtual = new Date();
                 const dataFimTeste = new Date(dataAtual);
                 dataFimTeste.setDate(dataFimTeste.getDate() + 7);
-                const emailLimpo = user.email ? user.email.toLowerCase().trim() : '';
                 const nomePadrao = user.displayName || (emailLimpo ? emailLimpo.split('@')[0] : 'Usuário');
 
                 await setDoc(doc(db, "usuarios", user.uid), {
@@ -209,6 +231,16 @@ const TravaSeguranca = ({ children, modulo, recursoExigido }) => {
                 }, { merge: true });
 
                 ownDocSnap = await getDoc(doc(db, "usuarios", user.uid));
+            } else {
+                await setDoc(doc(db, "usuarios", user.uid), {
+                  email: emailLimpo,
+                  nomeCompleto: user.displayName || emailLimpo,
+                  nomeExibicao: user.displayName || emailLimpo,
+                  role: 'funcionario',
+                  tenantId: tenantId,
+                  statusConta: 'ativo',
+                  criadoEm: new Date().toISOString()
+                }, { merge: true });
             }
         }
 

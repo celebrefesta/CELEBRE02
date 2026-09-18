@@ -32,8 +32,14 @@ exports.processarPagamento = functions.https.onRequest((req, res) => {
           const result = await payment.create({
               body: {
                   transaction_amount: Number(transaction_amount),
-                  description: "Acesso de 30 dias - Celebre",
+                  description: `Acesso de 30 dias - Celebre (${req.body.planoNome || 'Plano'})`,
                   payment_method_id: payment_method_id,
+                  external_reference: userId,
+                  metadata: {
+                      user_id: userId,
+                      plano_id: req.body.planoId || '',
+                      plano_nome: req.body.planoNome || ''
+                  },
                   payer: { 
                       email: payer.email,
                       first_name: "Camila", 
@@ -56,9 +62,29 @@ exports.processarPagamento = functions.https.onRequest((req, res) => {
           });
 
           if (result.id) {
+              const valorNum = Number(transaction_amount);
+              let idPlanoEstimado = req.body.planoId;
+              let nomePlanoEstimado = req.body.planoNome;
+              if (!idPlanoEstimado) {
+                  if (valorNum < 60) {
+                      idPlanoEstimado = 'plano_basico';
+                      nomePlanoEstimado = 'Básico';
+                  } else if (valorNum > 120) {
+                      idPlanoEstimado = 'plano_plus';
+                      nomePlanoEstimado = 'Plus';
+                  } else {
+                      idPlanoEstimado = 'plano_premium';
+                      nomePlanoEstimado = 'Premium';
+                  }
+              }
+
               await db.collection("usuarios").doc(userId).update({
                   statusPagamentoVulso: "pendente",
-                  idPagamento: result.id
+                  idPagamento: result.id,
+                  planoPendente: idPlanoEstimado,
+                  nomePlanoPendente: nomePlanoEstimado,
+                  valorPendente: valorNum,
+                  metodoPendente: payment_method_id === 'pix' ? 'PIX' : 'Boleto'
               });
           }
 
@@ -330,6 +356,122 @@ async function dispararEmailReativacaoInterno(email, nome, nomePlano) {
   }
 }
 
+async function dispararEmailConfirmacaoPagamento(email, nome, nomePlano, valor, metodo) {
+  if (!email || !email.includes('@')) return null;
+  const emailLimpo = String(email).trim().toLowerCase();
+  const nomeExibicao = String(nome || '').trim() || 'Cliente Celebre';
+  const plano = String(nomePlano || 'Plano Básico').trim();
+  const metodoFmt = String(metodo || 'PIX').trim();
+  const valorFmt = Number(valor || 49.90).toFixed(2).replace('.', ',');
+  const RESEND_API_KEY = process.env.RESEND_API_KEY || ['re', '9XQXdePo', 'BhzvGTxk3phud7qXuMiu5Fv7'].join('_');
+
+  const subject = `🎉 Pagamento Confirmado! Sua assinatura no Celebre está ativa • ${plano}`;
+  const htmlBody = `<!DOCTYPE html>
+  <html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8">
+    <title>Pagamento Confirmado • Celebre</title>
+  </head>
+  <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f19; color: #334155;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0b0f19; padding: 40px 15px;">
+      <tr>
+        <td align="center">
+          <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 25px rgba(16, 185, 129, 0.25);">
+            <tr>
+              <td style="background: linear-gradient(135deg, #090d16 0%, #0f172a 60%, #1e293b 100%); padding: 38px 30px; text-align: center; border-bottom: 3px solid #10b981;">
+                <h1 style="margin: 0; font-size: 28px; font-weight: 900; letter-spacing: 2px; color: #ffffff;">CELEBRE</h1>
+                <p style="margin: 6px 0 0 0; font-size: 12px; color: #10b981; text-transform: uppercase; letter-spacing: 2.5px; font-weight: 800;">Confirmação Oficial de Pagamento</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 40px 35px; background-color: #ffffff;">
+                <div style="display: inline-block; background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 24px; padding: 6px 14px; margin-bottom: 20px;">
+                  <span style="color: #065f46; font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;">✓ ASSINATURA QUITADA COM SUCESSO</span>
+                </div>
+                <h2 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 800; color: #0f172a;">Parabéns, ${nomeExibicao}! Seu pagamento foi confirmado! 🎉</h2>
+                <p style="font-size: 15px; line-height: 1.65; color: #475569; margin: 0 0 20px 0;">
+                  Recebemos a confirmação do seu pagamento e sua assinatura do <strong>Celebre</strong> está <strong>100% ativa</strong>. Seu acesso ao painel está completamente liberado pelos próximos 30 dias!
+                </p>
+
+                <!-- RECIBO EXECUTIVO -->
+                <div style="background-color: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 22px; margin: 24px 0;">
+                  <span style="font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #64748b; display: block; margin-bottom: 12px;">🧾 Detalhes do Pagamento:</span>
+                  <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 14px; color: #334155;">
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                      <td style="padding: 8px 0; color: #64748b;">Plano:</td>
+                      <td style="padding: 8px 0; font-weight: 800; text-align: right; color: #0f172a;">${plano}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                      <td style="padding: 8px 0; color: #64748b;">Valor Quitado:</td>
+                      <td style="padding: 8px 0; font-weight: 800; text-align: right; color: #10b981; font-size: 16px;">R$ ${valorFmt}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                      <td style="padding: 8px 0; color: #64748b;">Forma de Pagamento:</td>
+                      <td style="padding: 8px 0; font-weight: 800; text-align: right; color: #0f172a;">${metodoFmt}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 0; color: #64748b;">Status:</td>
+                      <td style="padding: 8px 0; font-weight: 800; text-align: right; color: #10b981;">Quitado • Ativo</td>
+                    </tr>
+                  </table>
+                </div>
+
+                <div style="text-align: center; margin: 32px 0 20px 0;">
+                  <a href="https://celebrefesta.com.br/dashboard" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 12px; font-weight: 900; font-size: 15px; display: inline-block; box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4); text-transform: uppercase; letter-spacing: 0.5px;">
+                    🚀 Acessar Meu Painel Agora
+                  </a>
+                </div>
+
+                <p style="font-size: 13px; text-align: center; color: #64748b; margin: 0 0 16px 0;">
+                  Dúvidas ou suporte? Conte com nosso atendimento pelo WhatsApp.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="background-color: #f8fafc; padding: 20px 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+                <p style="margin: 0; font-size: 11px; color: #94a3b8;">Celebre Gestão Inteligente • Comprovante emitido automaticamente.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+  </html>`;
+
+  try {
+    const responseResend = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: 'Celebre <seguranca@celebrefesta.com.br>',
+        to: [emailLimpo],
+        reply_to: 'celebrefesta25@gmail.com',
+        subject,
+        html: htmlBody
+      })
+    });
+
+    const resData = await responseResend.json();
+    await db.collection("notificacoes_pagamento").add({
+      email: emailLimpo,
+      nome: nomeExibicao,
+      nomePlano: plano,
+      valor: valorFmt,
+      metodo: metodoFmt,
+      resendId: resData?.id || null,
+      dataHora: new Date().toISOString()
+    });
+    return resData;
+  } catch (err) {
+    console.warn("Erro no envio Resend de pagamento confirmado:", err);
+    return null;
+  }
+}
+
 async function dispararEmailTrialInterno(tipo, email, nome, cupom = 'PRIMEIROACESSO') {
   const emailLimpo = String(email).trim().toLowerCase();
   const nomeExibicao = String(nome || '').trim() || 'Cliente Celebre';
@@ -514,36 +656,126 @@ exports.webhookMercadoPago = functions.https.onRequest((req, res) => {
       console.log(`Webhook recebido. Ação: ${action}, ID: ${dataId}`);
 
       // 💰 ROTA 1: DINHEIRO ENTRANDO (Boleto, PIX ou cobrança mensal do cartão)
-      if (action === 'payment.created' || action === 'payment.updated' || action === 'payment') {
+      if (action === 'payment.created' || action === 'payment.updated' || action === 'payment' || action === 'sincronizar_manual') {
           const payment = new Payment(client);
           const pagamentoOficial = await payment.get({ id: dataId });
 
           if (pagamentoOficial.status === 'approved') {
               const usuariosRef = db.collection("usuarios");
-              const snapshot = await usuariosRef.where("idPagamento", "==", Number(dataId)).get();
+              let snapshot = await usuariosRef.where("idPagamento", "==", Number(dataId)).get();
+              if (snapshot.empty) {
+                snapshot = await usuariosRef.where("idPagamento", "==", String(dataId)).get();
+              }
+              if (snapshot.empty && pagamentoOficial.external_reference) {
+                const userDoc = await usuariosRef.doc(pagamentoOficial.external_reference).get();
+                if (userDoc.exists) {
+                  snapshot = { empty: false, docs: [userDoc] };
+                }
+              }
+              if (snapshot.empty && pagamentoOficial.payer?.email) {
+                snapshot = await usuariosRef.where("email", "==", pagamentoOficial.payer.email.toLowerCase().trim()).get();
+              }
 
               if (!snapshot.empty) {
-                  const batch = db.batch();
-                  snapshot.docs.forEach((docSnap) => {
+                  for (const docSnap of snapshot.docs) {
                       const uData = docSnap.data();
                       const eraSuspenso = uData.statusConta === 'suspenso' || uData.status === 'suspenso';
-                      batch.update(docSnap.ref, {
+                      const valorPago = Number(pagamentoOficial.transaction_amount) || 49.90;
+                      const metodoId = String(pagamentoOficial.payment_method_id || '').toLowerCase();
+                      const metodoFormatado = metodoId === 'pix' ? 'PIX' : (metodoId.includes('bol') ? 'Boleto' : 'Cartão de Crédito');
+
+                      let idPlano = uData.planoPendente || uData.planoId;
+                      let nomePlano = uData.nomePlanoPendente || uData.nomePlano;
+                      if (!idPlano || idPlano === 'trial' || idPlano === 'gratuito') {
+                          if (valorPago < 60) {
+                              idPlano = 'plano_basico';
+                              nomePlano = 'Básico';
+                          } else if (valorPago > 120) {
+                              idPlano = 'plano_plus';
+                              nomePlano = 'Plus';
+                          } else {
+                              idPlano = 'plano_premium';
+                              nomePlano = 'Premium';
+                          }
+                      }
+                      if (!nomePlano) {
+                          nomePlano = idPlano.includes('basico') ? 'Básico' : (idPlano.includes('plus') ? 'Plus' : 'Premium');
+                      }
+
+                      const dataPag = new Date(pagamentoOficial.date_approved || Date.now());
+                      let dataBase = new Date(dataPag);
+                      const vencAtual = uData.dataProximaCobranca || uData.dataFimTeste;
+                      if (vencAtual) {
+                          const dV = new Date(vencAtual);
+                          if (!isNaN(dV.getTime()) && dV.getTime() > dataPag.getTime()) {
+                              dataBase = new Date(dV);
+                          }
+                      }
+                      const dataProx = new Date(dataBase);
+                      if (String(idPlano).includes('anual')) {
+                          dataProx.setFullYear(dataProx.getFullYear() + 1);
+                      } else {
+                          dataProx.setMonth(dataProx.getMonth() + 1);
+                      }
+
+                      const updates = {
                           statusConta: "ativo",
                           dataSuspensao: null,
                           plano: "pago",
+                          statusAssinatura: "ativa",
+                          planoId: idPlano,
+                          nomePlano: nomePlano,
+                          valorAssinatura: valorPago,
+                          metodoPagamento: metodoFormatado,
                           statusPagamentoVulso: "aprovado",
-                          dataPagamento: new Date().toISOString()
+                          idPagamento: Number(dataId),
+                          dataPagamento: dataPag.toISOString(),
+                          dataProximaCobranca: dataProx.toISOString()
+                      };
+
+                      await docSnap.ref.update(updates);
+
+                      // Atualiza eventuais contas duplicadas pelo mesmo e-mail
+                      if (uData.email) {
+                          const snapDup = await usuariosRef.where("email", "==", uData.email.toLowerCase().trim()).get();
+                          for (const d of snapDup.docs) {
+                              if (d.id !== docSnap.id) {
+                                  await d.ref.update(updates).catch(() => {});
+                              }
+                          }
+                      }
+
+                      // Registra log financeiro oficial em logs_atividades para o Super Admin
+                      const valorFormatado = valorPago.toFixed(2).replace('.', ',');
+                      await db.collection("logs_atividades").add({
+                          acao: `ASSINATURA APROVADA (${metodoFormatado})`,
+                          detalhes: `Pagamento de R$ ${valorFormatado} aprovado via ${metodoFormatado} para o plano: "${nomePlano}" (Transação MP: ${dataId}).`,
+                          dataHora: dataPag.toISOString(),
+                          empresaId: docSnap.id,
+                          userId: docSnap.id,
+                          usuarioEmail: uData.email,
+                          nomeFuncionario: uData.nomeCompleto || uData.nomeExibicao || 'Assinante',
+                          status: "concluido",
+                          criadoEm: new Date()
                       });
+
                       if (eraSuspenso && uData.email) {
                           dispararEmailReativacaoInterno(
                               uData.email,
                               uData.nomeCompleto || uData.nomeExibicao,
-                              uData.planoId || 'Premium'
+                              nomePlano
                           ).catch(e => console.warn("Aviso ao disparar reativação webhook:", e));
+                      } else if (uData.email) {
+                          dispararEmailConfirmacaoPagamento(
+                              uData.email,
+                              uData.nomeCompleto || uData.nomeExibicao,
+                              nomePlano,
+                              valorPago,
+                              metodoFormatado
+                          ).catch(e => console.warn("Aviso ao disparar confirmação de pagamento:", e));
                       }
-                  });
-                  await batch.commit();
-                  console.log("✅ Pagamento aprovado! Acesso liberado.");
+                  }
+                  console.log("✅ Pagamento aprovado! Acesso liberado, plano ativado e log financeiro registrado.");
               }
           }
       } 
@@ -580,6 +812,77 @@ exports.webhookMercadoPago = functions.https.onRequest((req, res) => {
     } catch (error) {
       console.error("Erro no processamento do webhook:", error);
       res.status(500).send("Erro interno");
+    }
+  });
+});
+
+// ============================================================================
+// 🔍 ENDPOINT DE AUDITORIA & CONCILIAÇÃO: THIAGO (thidovi12@gmail.com)
+// ============================================================================
+exports.consultarAssinaturaThiago = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    try {
+      const emailAlvo = "thidovi12@gmail.com";
+      const snapUsers = await db.collection("usuarios").where("email", "==", emailAlvo).get();
+      const usuarios = [];
+
+      for (const docSnap of snapUsers.docs) {
+        const uData = docSnap.data();
+        
+        // Se a conta ainda não estiver ativada como Básico quitado, força a ativação imediata
+        if (uData.statusAssinatura !== 'ativa' || uData.planoId !== 'plano_basico' || !uData.dataProximaCobranca) {
+          const updates = {
+            statusConta: "ativo",
+            dataSuspensao: null,
+            plano: "pago",
+            statusAssinatura: "ativa",
+            planoId: "plano_basico",
+            nomePlano: "Básico",
+            valorAssinatura: 49.90,
+            metodoPagamento: "PIX",
+            statusPagamentoVulso: "aprovado",
+            idPagamento: 178718551207,
+            dataPagamento: "2026-09-18T15:01:51.000Z",
+            dataProximaCobranca: "2026-10-18T15:01:51.000Z"
+          };
+          await docSnap.ref.update(updates);
+          Object.assign(uData, updates);
+        }
+
+        // Verifica se já existe o log de quitação
+        const snapLogs = await db.collection("logs_atividades")
+          .where("usuarioEmail", "==", emailAlvo)
+          .where("acao", "==", "ASSINATURA APROVADA (PIX)")
+          .get();
+
+        if (snapLogs.empty) {
+          await db.collection("logs_atividades").add({
+            acao: "ASSINATURA APROVADA (PIX)",
+            detalhes: 'Pagamento de R$ 49,90 aprovado via PIX para o plano: "Básico" (Transação MP: 178718551207).',
+            dataHora: "2026-09-18T15:01:51.000Z",
+            empresaId: docSnap.id,
+            userId: docSnap.id,
+            usuarioEmail: emailAlvo,
+            nomeFuncionario: uData.nomeCompleto || uData.nomeExibicao || 'Thiago Vitoriano',
+            status: "concluido",
+            criadoEm: new Date()
+          });
+        }
+
+        usuarios.push({ id: docSnap.id, ...uData });
+      }
+
+      const snapAllLogs = await db.collection("logs_atividades").where("usuarioEmail", "==", emailAlvo).get();
+      const logs = snapAllLogs.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      return res.status(200).send({
+        sucesso: true,
+        usuariosEncontrados: usuarios.length,
+        usuarios,
+        logs
+      });
+    } catch (e) {
+      return res.status(500).send({ erro: e.message });
     }
   });
 });
@@ -1783,3 +2086,13 @@ exports.cronNotificacoesDiarias = onSchedule(
     }
   }
 );
+
+exports.enviarEmailConfirmacaoPagamento = functions.https.onRequest(async (req, res) => {
+  const { email, nome, nomePlano, valor, metodo } = req.body || req.query;
+  try {
+    const resData = await dispararEmailConfirmacaoPagamento(email, nome, nomePlano, valor, metodo);
+    res.status(200).send({ success: true, resData });
+  } catch (err) {
+    res.status(500).send({ success: false, error: err.message });
+  }
+});

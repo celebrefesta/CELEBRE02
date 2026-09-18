@@ -177,51 +177,54 @@ const Navbar = () => {
               let isFuncionarioReal = false;
 
               const ownDocSnap = await getDoc(doc(db, "usuarios", user.uid));
-              
-              if (ownDocSnap.exists()) {
-                  const userData = ownDocSnap.data();
-                  if (userData.role && userData.role !== 'owner' && userData.tenantId) {
-                      idParaBusca = userData.tenantId;
-                      isFuncionarioReal = true;
-                      localStorage.setItem('tenantId', idParaBusca);
-                      localStorage.setItem('userRole', userData.role);
 
-                      const qFunc = query(collection(db, "equipe"), where("email", "==", user.email));
+              // 1. Sempre verifica se o usuário é funcionário cadastrado em equipe
+              const emailLimpo = user.email ? user.email.toLowerCase().trim() : '';
+              if (emailLimpo) {
+                  try {
+                      const qFunc = query(collection(db, "equipe"), where("email", "==", emailLimpo));
                       const snapFunc = await getDocs(qFunc);
                       if (!snapFunc.empty) {
                           const funcDoc = snapFunc.docs[0];
-                          const dadosF = funcDoc.data();
-                          setPermissoesAtivas(dadosF.permissoes || dadosF);
-                          unsubSnapshot = onSnapshot(doc(db, "equipe", funcDoc.id), (docSnap) => {
-                              if (docSnap.exists()) {
-                                  const d = docSnap.data();
-                                  setPermissoesAtivas(d.permissoes || d);
-                              }
-                          });
+                          const dadosFunc = funcDoc.data();
+                          if (dadosFunc.empresaId && dadosFunc.empresaId !== user.uid) {
+                              idParaBusca = dadosFunc.empresaId;
+                              isFuncionarioReal = true;
+                              localStorage.setItem('tenantId', idParaBusca);
+                              localStorage.setItem('userRole', dadosFunc.cargo || 'Funcionário');
+                              setPermissoesAtivas(dadosFunc.permissoes || dadosFunc);
+
+                              unsubSnapshot = onSnapshot(doc(db, "equipe", funcDoc.id), (docSnap) => {
+                                  if (docSnap.exists()) {
+                                      const d = docSnap.data();
+                                      setPermissoesAtivas(d.permissoes || d);
+                                  }
+                              });
+                          }
+                      }
+                  } catch (eEq) {
+                      console.warn("Aviso ao buscar equipe em Navbar:", eEq);
+                  }
+              }
+
+              if (!isFuncionarioReal) {
+                  if (ownDocSnap.exists()) {
+                      const userData = ownDocSnap.data();
+                      if (userData.role && userData.role !== 'owner' && userData.tenantId) {
+                          idParaBusca = userData.tenantId;
+                          isFuncionarioReal = true;
+                          localStorage.setItem('tenantId', idParaBusca);
+                          localStorage.setItem('userRole', userData.role);
+                      } else if (userData.tenantId && userData.tenantId !== user.uid) {
+                          idParaBusca = userData.tenantId;
+                          localStorage.setItem('tenantId', idParaBusca);
+                      } else {
+                          idParaBusca = user.uid;
+                          localStorage.setItem('tenantId', user.uid);
                       }
                   } else {
                       idParaBusca = user.uid;
                       localStorage.setItem('tenantId', user.uid);
-                  }
-              } else {
-                  const qFunc = query(collection(db, "equipe"), where("email", "==", user.email));
-                  const snapFunc = await getDocs(qFunc);
-                  
-                  if (!snapFunc.empty && snapFunc.docs[0].data().empresaId) {
-                      isFuncionarioReal = true;
-                      const funcDoc = snapFunc.docs[0];
-                      const dadosFunc = funcDoc.data();
-                      idParaBusca = dadosFunc.empresaId;
-                      localStorage.setItem('tenantId', idParaBusca);
-                      localStorage.setItem('userRole', dadosFunc.cargo || 'Funcionário');
-                      setPermissoesAtivas(dadosFunc.permissoes || dadosFunc);
-                      
-                      unsubSnapshot = onSnapshot(doc(db, "equipe", funcDoc.id), (docSnap) => {
-                          if (docSnap.exists()) {
-                              const d = docSnap.data();
-                              setPermissoesAtivas(d.permissoes || d);
-                          }
-                      });
                   }
               }
 

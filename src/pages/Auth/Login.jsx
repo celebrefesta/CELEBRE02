@@ -421,17 +421,29 @@ const Login = () => {
         const updates = {};
         if (!existingData.email || existingData.email !== emailLimpo) updates.email = emailLimpo;
 
-        // Se encontramos uma conta original e esta conta está com tenantId desvinculado:
-        if (isAlias && existingData.tenantId !== tenantIdParaSalvar) {
+        // 🔥 BUG 4 FIX: Se este doc Google é alias de uma conta mestre, sincroniza SEMPRE os
+        // dados financeiros atuais da conta mestre — não apenas quando o campo está vazio.
+        // Isso garante que extensões de teste feitas pelo Admin sejam imediatamente refletidas.
+        if (isAlias && docPrincipalExistente) {
           updates.tenantId = tenantIdParaSalvar;
           updates.role = roleParaSalvar;
           updates.isAlias = true;
           updates.contaVinculadaDe = contaVinculadaUid;
-        }
 
-        if (!existingData.dataFimTeste && !existingData.assinaturaAtiva) {
+          // Sincroniza dados financeiros da conta mestre
+          if (docPrincipalExistente.dataFimTeste) updates.dataFimTeste = docPrincipalExistente.dataFimTeste;
+          if (docPrincipalExistente.dataCadastro) updates.dataCadastro = docPrincipalExistente.dataCadastro;
+          updates.statusConta = docPrincipalExistente.statusConta || 'ativo';
+          updates.assinaturaAtiva = docPrincipalExistente.assinaturaAtiva || false;
+          updates.planoId = docPrincipalExistente.planoId || 'plano_basico';
+          updates.plano = docPrincipalExistente.plano || '';
+          updates.statusAssinatura = docPrincipalExistente.statusAssinatura || '';
+          updates.statusPagamentoVulso = docPrincipalExistente.statusPagamentoVulso || '';
+        } else if (!isAlias && !existingData.dataFimTeste && !existingData.assinaturaAtiva) {
+          // Conta Google própria sem alias — apenas define dataFimTeste se ainda não existe
           updates.dataFimTeste = dataFimTeste.toISOString();
         }
+
         if (Object.keys(updates).length > 0) {
           await setDoc(userDocRef, updates, { merge: true });
         }

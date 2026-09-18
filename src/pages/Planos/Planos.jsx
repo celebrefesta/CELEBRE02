@@ -224,7 +224,8 @@ const Planos = () => {
 
   const handleSelecionarPlano = async (planoSelecionado) => {
     if (usuarioLogado) {
-      await registrarLog("TENTATIVA DE ASSINATURA", `Iniciou o processo de checkout para o plano: "${planoSelecionado.nome}".`);
+      const precoFmt = Number(planoSelecionado.preco || 0).toFixed(2).replace('.', ',');
+      await registrarLog("ACESSO AO CHECKOUT", `Acessou a tela de checkout para o plano: "${planoSelecionado.nome}" (R$ ${precoFmt}).`);
       navigate('/checkout', { 
         state: { 
           plano: planoSelecionado,

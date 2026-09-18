@@ -5,7 +5,7 @@ import { db } from '../../firebaseConfig';
 import { collection, getDocs, query, where, doc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth, signOut } from 'firebase/auth'; 
 import AuditoriaEstoque from './AuditoriaEstoque';
-import { calcularPeriodoTeste } from '../../utils/periodoTesteUtils';
+import { calcularPeriodoTeste, parseDataGenerica, obterMelhorContaPorEmail } from '../../utils/periodoTesteUtils';
 import { verificarLembretesAgendadosHoje } from '../../utils/notificacoesDispatchService';
 import {
   ResponsiveContainer,
@@ -212,6 +212,8 @@ const Dashboard = () => {
   const [statusConta, setStatusConta] = useState('ativo'); 
   const [assinaturaAtiva, setAssinaturaAtiva] = useState(false);
   const [erroCarregamento, setErroCarregamento] = useState(null);
+  const [isFuncionarioEquipe, setIsFuncionarioEquipe] = useState(false);
+  const [dadosEmpresaState, setDadosEmpresaState] = useState(null);
 
   useEffect(() => {
     if (!usuarioLogado) {
@@ -233,15 +235,50 @@ const Dashboard = () => {
             const snapUserDoc = await getDoc(doc(db, "usuarios", uidParaConsultar));
             userData = snapUserDoc.exists() ? snapUserDoc.data() : null;
 
-            // Se a conta for vinculada a um tenant diferente ou for funcionário/alias, busca os dados mestres
+            // 🛡️ Identificação e consolidação robusta de Funcionário de Equipe
+            let idEmpresaPatrao = (userData?.role === 'funcionario' && userData?.tenantId && userData.tenantId !== uidParaConsultar) ? userData.tenantId : null;
+            let funcionarioDetectado = Boolean(idEmpresaPatrao);
+
+            const emailLogadoLimpo = (usuarioLogado?.email || userData?.email || '').toLowerCase().trim();
+            if (!idEmpresaPatrao && emailLogadoLimpo) {
+                try {
+                    const qEq = query(collection(db, "equipe"), where("email", "==", emailLogadoLimpo));
+                    const snapEq = await getDocs(qEq);
+                    if (!snapEq.empty) {
+                        const dEq = snapEq.docs[0].data();
+                        if (dEq.empresaId && dEq.empresaId !== uidParaConsultar) {
+                            idEmpresaPatrao = dEq.empresaId;
+                            funcionarioDetectado = true;
+                            if (userData?.tenantId !== idEmpresaPatrao || userData?.role !== 'funcionario') {
+                                updateDoc(doc(db, "usuarios", uidParaConsultar), {
+                                    tenantId: idEmpresaPatrao,
+                                    role: 'funcionario',
+                                    cargo: dEq.cargo || 'Equipe'
+                                }).catch(() => {});
+                            }
+                        }
+                    }
+                } catch (eEq) {
+                    console.warn("Aviso ao buscar vínculo de equipe no Dashboard:", eEq);
+                }
+            }
+
+            setIsFuncionarioEquipe(funcionarioDetectado);
+
+            // Se for funcionário ou alias, busca os dados mestres da empresa
             let dadosEmpresa = userData;
-            const tenantAlvo = userData?.tenantId;
+            const tenantAlvo = idEmpresaPatrao || userData?.tenantId;
             if (tenantAlvo && tenantAlvo !== uidParaConsultar) {
                 idDaEmpresaCorreta = tenantAlvo;
                 try {
                     const snapEmp = await getDoc(doc(db, "usuarios", tenantAlvo));
                     if (snapEmp.exists()) {
                         dadosEmpresa = snapEmp.data();
+                        setDadosEmpresaState(dadosEmpresa);
+                        if (funcionarioDetectado) {
+                            localStorage.setItem('tenantId', tenantAlvo);
+                            localStorage.setItem('userRole', 'funcionario');
+                        }
                     }
                 } catch (eEmp) {
                     console.warn("Erro ao buscar dados da empresa mestre:", eEmp);
@@ -252,15 +289,34 @@ const Dashboard = () => {
                     const snapMesmoEmail = await getDocs(qMesmoEmail);
                     snapEmailDocs = snapMesmoEmail.docs;
                     if (snapMesmoEmail.size > 1) {
-                        snapMesmoEmail.docs.forEach(docE => {
-                            const dData = docE.data();
-                            if (dData.assinaturaAtiva || (dData.dataFimTeste && (!dadosEmpresa?.dataFimTeste || dData.dataFimTeste > dadosEmpresa.dataFimTeste))) {
-                                dadosEmpresa = dData;
-                                if (dData.tenantId || docE.id) {
-                                    idDaEmpresaCorreta = dData.tenantId || docE.id;
-                                }
+                        // 🔥 BUG 1 FIX: Usa obterMelhorContaPorEmail (parseDataGenerica) em vez de
+                        // comparação direta de strings, que falha entre formatos ISO e YYYY-MM-DD.
+                        const { melhorDoc, melhorId } = obterMelhorContaPorEmail(snapMesmoEmail.docs);
+                        if (melhorDoc) {
+                            dadosEmpresa = melhorDoc;
+                            idDaEmpresaCorreta = melhorDoc.tenantId || melhorId || uidParaConsultar;
+
+                            // Auto-cura silenciosa: se o doc do usuário logado tiver dados desatualizados,
+                            // propaga os dados financeiros corretos em background sem travar o carregamento.
+                            const docLogado = snapMesmoEmail.docs.find(d => d.id === uidParaConsultar);
+                            const docLogadoData = docLogado?.data();
+                            const melhorFim = parseDataGenerica(melhorDoc.dataFimTeste);
+                            const logadoFim = parseDataGenerica(docLogadoData?.dataFimTeste);
+                            const melhorTemAssinatura = melhorDoc.assinaturaAtiva === true || melhorDoc.statusAssinatura === 'ativa' || melhorDoc.plano === 'pago';
+                            const logadoTemAssinatura = docLogadoData?.assinaturaAtiva === true || docLogadoData?.statusAssinatura === 'ativa';
+                            if (melhorId !== uidParaConsultar && docLogado && !logadoTemAssinatura && (melhorTemAssinatura || (melhorFim && (!logadoFim || melhorFim > logadoFim)))) {
+                                updateDoc(doc(db, "usuarios", uidParaConsultar), {
+                                    dataFimTeste: melhorDoc.dataFimTeste || null,
+                                    dataCadastro: melhorDoc.dataCadastro || null,
+                                    statusConta: melhorDoc.statusConta || 'ativo',
+                                    assinaturaAtiva: melhorDoc.assinaturaAtiva || false,
+                                    planoId: melhorDoc.planoId || 'plano_basico',
+                                    plano: melhorDoc.plano || '',
+                                    statusAssinatura: melhorDoc.statusAssinatura || '',
+                                    statusPagamentoVulso: melhorDoc.statusPagamentoVulso || ''
+                                }).catch(() => {});
                             }
-                        });
+                        }
                     }
                 } catch (eDup) {}
             }
@@ -288,7 +344,10 @@ const Dashboard = () => {
                                         dadosEmpresa.statusPagamentoVulso === 'pago';
 
                 if (!assinaturaAtiva && !isImpersonating) {
-                    if (infoTeste.diasTranscorridos > 180) {
+                    // 🔥 BUG 2 FIX: Só suspende por inatividade se NÃO estiver em período de teste ativo.
+                    // Antes: suspensão automática após 180 dias mesmo com teste VIP estendido pelo admin.
+                    // Agora: respeita dataFimTeste — se emTeste=true, nunca suspende por diasTranscorridos.
+                    if (!infoTeste.emTeste && infoTeste.diasTranscorridos > 180) {
                         setStatusConta('suspenso');
                         try {
                             await updateDoc(doc(db, "usuarios", uidParaConsultar), { statusConta: 'suspenso' });
@@ -1089,6 +1148,27 @@ const Dashboard = () => {
   }
 
   if (statusConta === 'bloqueado') {
+      if (isFuncionarioEquipe) {
+        return (
+          <div className="dash-wide-container dash-status-screen fade-in">
+            <div className="dash-status-card dash-status-card--warning">
+              <h2>🔒 Acesso da Equipe Temporariamente Suspenso</h2>
+              <p>
+                A conta da empresa <strong>{dadosEmpresaState?.nomeExibicao || dadosEmpresaState?.nomeCompleto || 'titular'}</strong> está com o período de teste expirado ou a assinatura pendente.
+              </p>
+              <p style={{ fontSize: '13px', color: 'var(--texto-secundario)', marginTop: '8px' }}>
+                Solicite ao gestor / administrador da sua empresa que regularize a assinatura no Celebre para restabelecer o acesso de toda a equipe.
+              </p>
+              <div style={{ marginTop: '20px', display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                <button type="button" onClick={handleLogout} className="dash-status-btn-logout">
+                  <i className="fas fa-sign-out-alt"></i> Sair da Conta
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
       return (
           <div className="dash-wide-container dash-status-screen fade-in">
               <div className="dash-status-card dash-status-card--warning">

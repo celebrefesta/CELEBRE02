@@ -15,7 +15,7 @@ import AbaSeguranca from './AbaSeguranca';
 import AbaAparencia from './AbaAparencia';
 import AbaBackup from './AbaBackup';
 import AbaNotificacoes from './AbaNotificacoes';
-import { calcularPeriodoTeste, formatarDataExibicao } from '../../utils/periodoTesteUtils';
+import { calcularPeriodoTeste, formatarDataExibicao, obterMelhorContaPorEmail } from '../../utils/periodoTesteUtils';
 import { aplicarCorDestaqueGlobal } from '../../utils/themeUtils';
 
 const Configuracoes = () => {
@@ -23,10 +23,40 @@ const Configuracoes = () => {
   const location = useLocation();
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
-  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
-  const isSuperAdmin = usuarioLogado?.email === "celebrefesta25@gmail.com";
-  const isOwner = tenantId === usuarioLogado?.uid;
+
+  // 🛡️ DETECÇÃO DE MODO SUPORTE / IMPERSONAÇÃO DE CLIENTE PELO SUPER ADMIN
+  const rawImp = localStorage.getItem('impersonatingTenant');
+  let impData = null;
+  if (rawImp) {
+    try { impData = JSON.parse(rawImp); } catch (e) {}
+  }
+  const isImpersonating = Boolean(impData?.uid);
+
+  const tenantId = impData?.uid || localStorage.getItem('tenantId') || usuarioLogado?.uid;
+  const isSuperAdminReal = usuarioLogado?.email === "celebrefesta25@gmail.com";
+  // Quando estiver em modo suporte / impersonando cliente, opera com a visão e dados do cliente, NÃO como Super Admin global
+  const isSuperAdmin = !isImpersonating && isSuperAdminReal;
+
+  const targetUid = isImpersonating ? (impData.originalUid || impData.uid) : usuarioLogado?.uid;
+  const targetEmail = isImpersonating ? (impData.email || '') : (usuarioLogado?.email || '');
+  const targetNome = isImpersonating ? (impData.nome || '') : (usuarioLogado?.displayName || '');
+  const targetRole = isImpersonating ? (impData.role || 'owner') : (localStorage.getItem('userRole') || 'owner');
+
+  const isOwner = isImpersonating 
+    ? (targetRole === 'owner' || targetRole === 'admin' || !targetRole || tenantId === targetUid)
+    : (tenantId === usuarioLogado?.uid);
   const isCollaborator = !isSuperAdmin && !isOwner;
+
+  const effectiveUser = isImpersonating ? {
+    uid: targetUid,
+    tenantId: tenantId,
+    originalUid: impData.originalUid,
+    email: targetEmail,
+    displayName: targetNome,
+    role: targetRole,
+    isImpersonating: true,
+    allUids: impData.allUids || []
+  } : usuarioLogado;
 
   const queryTab = new URLSearchParams(location.search).get('tab');
   const [abaAtiva, setAbaAtiva] = useState(queryTab || location.state?.aba || 'meu_perfil'); 
@@ -66,8 +96,8 @@ const Configuracoes = () => {
   // ESTADOS DO RESTO DO SISTEMA
   // ==========================================
   const [assinatura, setAssinatura] = useState({
-    planoNome: 'Carregando...', precoMensal: '0,00', status: 'Carregando...',
-    corBg: '#f1f5f9', corTexto: '#64748b', metodoPagamento: 'Nenhum', emailCobranca: '-',
+    planoNome: 'Plano Premium', precoMensal: '99,90', status: 'Carregando...',
+    corBg: '#f1f5f9', corTexto: '#64748b', metodoPagamento: 'Cartão de Crédito', emailCobranca: '-',
     subscriptionId: null, isActive: false 
   });
   const [usoPlano, setUsoPlano] = useState({ limite: 1, usado: 1 });
@@ -144,13 +174,13 @@ const Configuracoes = () => {
   const registrarLog = async (acao, detalhes) => {
     if (!usuarioLogado) return;
     try {
-      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipe";
+      const nomeEquipa = localStorage.getItem('funcName') || targetNome || usuarioLogado?.displayName || usuarioLogado?.email || "Equipe";
       await addDoc(collection(db, "logs_atividades"), {
         empresaId: tenantId,
         userId: tenantId,
         funcionarioId: usuarioLogado?.uid,
         nomeFuncionario: nomeEquipa,
-        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        usuarioEmail: targetEmail || usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
         dataHora: new Date().toISOString(),
@@ -206,10 +236,16 @@ const Configuracoes = () => {
             dbCatVitrine = CATALOGO_TEMAS;
             precisaAtualizarDB = true;
         }
-        const contaAlvoRef = isSuperAdmin ? doc(db, 'usuarios', usuarioLogado.uid) : doc(db, 'usuarios', tenantId);
-        const contaAlvoSnap = await getDoc(contaAlvoRef);
+        const contaAlvoRef = isSuperAdmin ? doc(db, 'usuarios', usuarioLogado.uid) : doc(db, 'usuarios', targetUid || tenantId);
+        let contaAlvoSnap = await getDoc(contaAlvoRef);
+        if (!contaAlvoSnap.exists() && tenantId && tenantId !== targetUid) {
+          const fallbackSnap = await getDoc(doc(db, 'usuarios', tenantId)).catch(() => null);
+          if (fallbackSnap && fallbackSnap.exists()) {
+            contaAlvoSnap = fallbackSnap;
+          }
+        }
         
-        let rawDataCriacao = usuarioLogado?.metadata?.creationTime;
+        let rawDataCriacao = !isImpersonating ? usuarioLogado?.metadata?.creationTime : null;
         if (contaAlvoSnap.exists()) {
           const cData = contaAlvoSnap.data();
           rawDataCriacao = cData.dataCadastro || cData.criadoEm || rawDataCriacao;
@@ -232,12 +268,31 @@ const Configuracoes = () => {
         setConfig(prev => ({ ...prev, ...newState, dataCadastro: dataFormatada }));
 
         if (!isCollaborator) {
-            let statusReal = "Inativa / Sem Plano", corBg = "#fef2f2", corTexto = "#991b1b", textoMetodo = "Nenhum método cadastrado";
-            let isActive = false, nomeDoPlano = "Básico (Gratuito)", precoDoPlano = "0,00", limiteAtual = 1;
-            let emailCobranca = usuarioLogado.email, subId = null;
+            let statusReal = "Inativa / Sem Plano", corBg = "#fef2f2", corTexto = "#991b1b", textoMetodo = "Cartão de Crédito";
+            let isActive = false, nomeDoPlano = "Plano Premium", precoDoPlano = "99,90", limiteAtual = 3;
+            let emailCobranca = targetEmail || usuarioLogado.email, subId = null;
 
-            if (contaAlvoSnap.exists()) {
-                const cData = contaAlvoSnap.data();
+            let cData = contaAlvoSnap.exists() ? contaAlvoSnap.data() : null;
+            if (!cData && tenantId !== usuarioLogado.uid) {
+              const fallbackSnap = await getDoc(doc(db, 'usuarios', tenantId)).catch(() => null);
+              if (fallbackSnap && fallbackSnap.exists()) cData = fallbackSnap.data();
+            }
+
+            const emailBuscaConta = targetEmail || usuarioLogado.email;
+            if (emailBuscaConta) {
+              try {
+                const qEmail = query(collection(db, 'usuarios'), where('email', '==', emailBuscaConta.toLowerCase().trim()));
+                const snapEmail = await getDocs(qEmail);
+                if (snapEmail.docs.length > 0) {
+                  const melhor = obterMelhorContaPorEmail(snapEmail.docs);
+                  if (melhor) cData = { ...(cData || {}), ...melhor };
+                }
+              } catch (eBest) {
+                console.warn('Aviso ao buscar melhor conta por email em Configuracoes:', eBest);
+              }
+            }
+
+            if (cData) {
                 const infoT = calcularPeriodoTeste(cData);
                 let testeAtivo = infoT.emTeste;
                 const assinaturaAtiva = cData.assinaturaAtiva || cData.statusAssinatura === 'ativa' || cData.plano === 'pago';
@@ -253,16 +308,56 @@ const Configuracoes = () => {
                     textoMetodo = cData.metodoPagamento || "Cartão de Crédito"; isActive = true;
                 } else if (testeAtivo) {
                     statusReal = "Em Período de Teste (VIP)"; corBg = "#fffbeb"; corTexto = "#b45309"; 
+                    textoMetodo = cData.metodoPagamento || "Cartão de Crédito";
+                }
+
+                // Identificação canônica do plano e ciclo
+                const rawPId = String(cData.planoId || cData.plano || '').toLowerCase();
+                let fallbackKey = 'premium';
+                if (rawPId.includes('plus') || rawPId.includes('pro')) fallbackKey = 'plus';
+                else if (rawPId.includes('basico') || rawPId.includes('básico')) fallbackKey = 'basico';
+                else fallbackKey = 'premium';
+
+                const isCicloAnual = Boolean(rawPId.includes('anual') || String(cData.cicloAssinatura || cData.ciclo || '').toLowerCase() === 'anual');
+
+                if (fallbackKey === 'plus') {
+                    nomeDoPlano = 'Plano Plus';
+                    precoDoPlano = isCicloAnual ? '1.535,00' : '159,90';
+                    limiteAtual = 5;
+                } else if (fallbackKey === 'basico') {
+                    nomeDoPlano = 'Plano Básico';
+                    precoDoPlano = isCicloAnual ? '479,00' : '49,90';
+                    limiteAtual = 1;
+                } else {
+                    nomeDoPlano = 'Plano Premium';
+                    precoDoPlano = isCicloAnual ? '958,80' : '99,90';
+                    limiteAtual = 3;
                 }
 
                 if (cData.planoId) {
-                    const planoSnap = await getDoc(doc(db, "planos", cData.planoId));
-                    if (planoSnap.exists()) {
-                        nomeDoPlano = planoSnap.data().nome; precoDoPlano = planoSnap.data().preco;
-                        if (nomeDoPlano.toLowerCase().includes('premium')) limiteAtual = 3;
-                        else if (nomeDoPlano.toLowerCase().includes('pro')) limiteAtual = 5;
+                    try {
+                        const planoSnap = await getDoc(doc(db, "planos", cData.planoId));
+                        if (planoSnap && planoSnap.exists()) {
+                            const pData = planoSnap.data();
+                            if (pData.nome) nomeDoPlano = pData.nome;
+                            if (pData.preco) precoDoPlano = String(pData.preco).replace('.', ',');
+                            else if (pData.precoMensal) precoDoPlano = String(pData.precoMensal).replace('.', ',');
+                            if (nomeDoPlano.toLowerCase().includes('premium')) limiteAtual = 3;
+                            else if (nomeDoPlano.toLowerCase().includes('pro') || nomeDoPlano.toLowerCase().includes('plus')) limiteAtual = 5;
+                        }
+                    } catch (ePlano) {
+                        console.warn("Aviso ao buscar plano no Firestore:", ePlano);
                     }
                 }
+
+                if (cData.valorAssinatura && cData.valorAssinatura !== '0,00' && cData.valorAssinatura !== 0) {
+                    precoDoPlano = String(cData.valorAssinatura).replace('.', ',');
+                }
+
+                if (!textoMetodo || textoMetodo === "Nenhum método cadastrado" || textoMetodo === "Nenhum") {
+                    textoMetodo = cData.metodoPagamento || (isActive ? "Cartão de Crédito" : "Mercado Pago (Cartão / PIX)");
+                }
+
                 emailCobranca = cData.email || usuarioLogado.email; subId = cData.subscriptionId || null;
             }
 
@@ -274,7 +369,14 @@ const Configuracoes = () => {
             setAssinatura({
                 planoNome: nomeDoPlano, precoMensal: precoDoPlano, status: statusReal, corBg: corBg,
                 corTexto: corTexto, metodoPagamento: textoMetodo, emailCobranca: emailCobranca,
-                subscriptionId: subId, isActive: isActive, dataCriacao: dataFormatada
+                subscriptionId: subId, isActive: isActive,
+                // Campo unificado de detecção: garante que calcularProximaDataRenovacao
+                // ignore o período de teste quando a assinatura está ativa
+                ativa: isActive,
+                dataCriacao: dataFormatada,
+                dataPagamento: cData?.dataPagamento || null,
+                dataProximaCobranca: cData?.dataProximaCobranca || null,
+                dataVencimento: cData?.dataVencimento || null
             });
 
             const qEquipe = query(collection(db, 'equipe'), where('empresaId', '==', tenantId));
@@ -563,13 +665,14 @@ const Configuracoes = () => {
         
         {abaAtiva === 'meu_perfil' && (
           <AbaMeuPerfil 
-            usuarioLogado={usuarioLogado}
+            usuarioLogado={effectiveUser}
             isCollaborator={isCollaborator}
             isSuperAdmin={isSuperAdmin}
             isOwner={isOwner}
             nomeEmpresa={config.nomeEmpresa}
             registrarLog={registrarLog}
             dataCriacaoConta={dataCriacaoConta}
+            isImpersonating={isImpersonating}
           />
         )}
 
@@ -600,7 +703,7 @@ const Configuracoes = () => {
             setConfig={setConfig}
             carregarConfiguracoesGerais={carregarConfiguracoesGerais}
             tenantId={tenantId}
-            usuarioLogado={usuarioLogado}
+            usuarioLogado={effectiveUser}
           />
         )}
 
@@ -627,21 +730,24 @@ const Configuracoes = () => {
             cancelando={cancelando}
             handleCancelarAssinatura={handleCancelarAssinatura}
             dataCriacaoConta={dataCriacaoConta}
+            usuarioLogado={effectiveUser}
+            isImpersonating={isImpersonating}
           />
         )}
 
         {abaAtiva === 'notificacoes' && (
           <AbaNotificacoes 
             tenantId={tenantId}
-            usuarioLogado={usuarioLogado}
+            usuarioLogado={effectiveUser}
             registrarLog={registrarLog}
           />
         )}
 
         {abaAtiva === 'seguranca' && (
           <AbaSeguranca
-            usuarioLogado={usuarioLogado}
+            usuarioLogado={effectiveUser}
             registrarLog={registrarLog}
+            isImpersonating={isImpersonating}
           />
         )}
 
@@ -652,7 +758,7 @@ const Configuracoes = () => {
         {abaAtiva === 'backup' && (
           <AbaBackup 
             tenantId={tenantId}
-            usuarioLogado={usuarioLogado}
+            usuarioLogado={effectiveUser}
             registrarLog={registrarLog}
             configEmpresa={config}
           />

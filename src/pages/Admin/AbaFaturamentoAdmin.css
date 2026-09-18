@@ -1,0 +1,1090 @@
+/* ==========================================================================
+   🔒 CELEBRE SISTEMAS - AUDITORIA FINANCEIRA & FATURAMENTO (SUPER ADMIN)
+   Escopo Estrito: .cg-faturamento-container
+   ========================================================================== */
+
+.cg-faturamento-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================================
+   1. KPI CARDS EXECUTIVOS
+   Desktop (> 900px): 6 Colunas em 1 Linha Única Horizontal
+   Mobile (<= 900px): 2 Colunas Simétricas (3 Linhas x 2 Cards)
+   ========================================== */
+.cg-faturamento-container .cg-fat-kpi-grid {
+  display: grid !important;
+  grid-template-columns: repeat(6, 1fr) !important;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.cg-faturamento-container .cg-fat-kpi-card {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  gap: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.cg-faturamento-container .cg-fat-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  border-color: var(--dourado, #c5a059);
+}
+
+.cg-faturamento-container .cg-fat-kpi-card.card-ativo {
+  border-color: var(--dourado, #c5a059) !important;
+  box-shadow: 0 4px 14px rgba(197, 160, 89, 0.2) !important;
+  background: rgba(197, 160, 89, 0.02) !important;
+}
+
+/* 1ª Linha: Título do Card em Largura Total */
+.cg-faturamento-container .kpi-title {
+  display: block !important;
+  font-size: 10.5px !important;
+  font-weight: 800 !important;
+  color: var(--text-muted, #64748b) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.35px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  width: 100% !important;
+  line-height: 1.2 !important;
+  margin: 0 !important;
+}
+
+/* 2ª Linha: Ícone Compacto + Valor em Destaque */
+.cg-faturamento-container .kpi-valor-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  margin: 2px 0 3px 0 !important;
+  min-width: 0 !important;
+}
+
+.cg-faturamento-container .kpi-icon-box {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 13px !important;
+  flex-shrink: 0 !important;
+}
+
+.cg-faturamento-container .kpi-icon-box.verde {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.cg-faturamento-container .kpi-icon-box.ouro {
+  background: rgba(197, 160, 89, 0.15);
+  color: var(--dourado, #c5a059);
+}
+
+.cg-faturamento-container .kpi-icon-box.azul {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+}
+
+.cg-faturamento-container .kpi-icon-box.ciano {
+  background: rgba(6, 182, 212, 0.12);
+  color: #0891b2;
+}
+
+.cg-faturamento-container .kpi-icon-box.vermelho {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.cg-faturamento-container .kpi-icon-box.roxo {
+  background: rgba(139, 92, 246, 0.12);
+  color: #8b5cf6;
+}
+
+.cg-faturamento-container .kpi-num-wrap {
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 2px !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.cg-faturamento-container .kpi-cur {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  color: var(--text-muted, #94a3b8) !important;
+  margin-right: 1px !important;
+}
+
+.cg-faturamento-container .kpi-num {
+  font-size: 18px !important;
+  font-weight: 850 !important;
+  color: var(--text-main, #0f172a) !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.4px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.cg-faturamento-container .kpi-num.red {
+  color: #ef4444 !important;
+}
+
+/* 3ª Linha: Micro-badge translúcido com bordas suaves */
+.cg-faturamento-container .kpi-sub {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  padding: 2.5px 7px !important;
+  border-radius: 6px !important;
+  width: fit-content !important;
+  max-width: 100% !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.2 !important;
+  box-sizing: border-box !important;
+}
+
+.cg-faturamento-container .kpi-sub.green {
+  background: rgba(16, 185, 129, 0.08) !important;
+  color: #059669 !important;
+  border: 1px solid rgba(16, 185, 129, 0.2) !important;
+}
+
+.cg-faturamento-container .kpi-sub.gold {
+  background: rgba(197, 160, 89, 0.1) !important;
+  color: #b48328 !important;
+  border: 1px solid rgba(197, 160, 89, 0.25) !important;
+}
+
+.cg-faturamento-container .kpi-sub.blue {
+  background: rgba(59, 130, 246, 0.08) !important;
+  color: #2563eb !important;
+  border: 1px solid rgba(59, 130, 246, 0.2) !important;
+}
+
+.cg-faturamento-container .kpi-sub.ciano {
+  background: rgba(6, 182, 212, 0.08) !important;
+  color: #0891b2 !important;
+  border: 1px solid rgba(6, 182, 212, 0.2) !important;
+}
+
+.cg-faturamento-container .kpi-sub.red {
+  background: rgba(239, 68, 68, 0.08) !important;
+  color: #dc2626 !important;
+  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+}
+
+.cg-faturamento-container .kpi-sub.purple {
+  background: rgba(139, 92, 246, 0.08) !important;
+  color: #7c3aed !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+}
+
+/* Destaques de Borda dos KPIs */
+.cg-faturamento-container .cg-fat-kpi-card.destaque-verde {
+  border-left: 3px solid #10b981 !important;
+}
+.cg-faturamento-container .cg-fat-kpi-card.destaque-ouro {
+  border-left: 3px solid var(--dourado, #c5a059) !important;
+}
+.cg-faturamento-container .cg-fat-kpi-card.destaque-azul {
+  border-left: 3px solid #3b82f6 !important;
+}
+.cg-faturamento-container .cg-fat-kpi-card.destaque-ciano {
+  border-left: 3px solid #0891b2 !important;
+}
+.cg-faturamento-container .cg-fat-kpi-card.destaque-vermelho {
+  border-left: 3px solid #ef4444 !important;
+}
+.cg-faturamento-container .cg-fat-kpi-card.destaque-roxo {
+  border-left: 3px solid #8b5cf6 !important;
+}
+
+/* 🌙 Dark Mode Support para os KPI Cards */
+[data-theme^='dark'] .cg-faturamento-container .cg-fat-kpi-card {
+  background: #18181b !important;
+  border-color: #27272a !important;
+}
+[data-theme^='dark'] .cg-faturamento-container .kpi-title {
+  color: #a1a1aa !important;
+}
+[data-theme^='dark'] .cg-faturamento-container .kpi-num {
+  color: #f4f4f5 !important;
+}
+[data-theme^='dark'] .cg-faturamento-container .kpi-cur {
+  color: #71717a !important;
+}
+
+/* ==========================================
+   2. TOOLBAR: BUSCA & FILTROS
+   ========================================== */
+.cg-faturamento-container .cg-fat-toolbar {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+}
+
+.cg-faturamento-container .cg-fat-search-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cg-faturamento-container .cg-fat-search-box {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.cg-faturamento-container .cg-fat-search-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--text-muted, #94a3b8);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.cg-faturamento-container .cg-fat-input-search {
+  width: 100%;
+  height: 42px;
+  padding: 0 38px 0 38px;
+  background: var(--bg-input, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+  font-size: 13.5px;
+  color: var(--text-main, #0f172a);
+  font-weight: 500;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.cg-faturamento-container .cg-fat-input-search:focus {
+  background: var(--bg-card, #ffffff);
+  border-color: var(--dourado, #c5a059);
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.15);
+}
+
+.cg-faturamento-container .cg-fat-btn-clear {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 13px;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.cg-faturamento-container .cg-fat-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cg-faturamento-container .cg-fat-btn-action {
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--bg-input, #f8fafc);
+  color: var(--text-main, #1e293b);
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.cg-faturamento-container .cg-fat-btn-action:hover {
+  background: var(--hover-bg, #f1f5f9);
+  border-color: var(--dourado, #c5a059);
+  color: var(--dourado, #c5a059);
+}
+
+.cg-faturamento-container .cg-fat-btn-action.export {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #10b981;
+}
+
+.cg-faturamento-container .cg-fat-btn-action.export:hover {
+  background: #10b981;
+  color: #ffffff;
+}
+
+/* Linha 2: Pílulas e Seletores */
+.cg-faturamento-container .cg-fat-filters-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cg-faturamento-container .cg-fat-status-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cg-faturamento-container .cg-fat-pill {
+  height: 34px;
+  padding: 0 13px;
+  border-radius: 20px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--bg-input, #f8fafc);
+  color: var(--text-muted, #64748b);
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cg-faturamento-container .cg-fat-pill:hover {
+  background: var(--hover-bg, #f1f5f9);
+  color: var(--text-main, #0f172a);
+}
+
+.cg-faturamento-container .cg-fat-pill.active {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+}
+
+.cg-faturamento-container .cg-fat-pill.green.active {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+}
+
+.cg-faturamento-container .cg-fat-pill.red.active {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+.cg-faturamento-container .cg-fat-pill.purple.active {
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+  color: #ffffff;
+}
+
+.cg-faturamento-container .cg-fat-selects-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cg-faturamento-container .cg-fat-select {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--bg-card, #ffffff);
+  color: var(--text-main, #1e293b);
+  font-size: 12px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+}
+
+.cg-faturamento-container .cg-fat-select:focus {
+  border-color: var(--dourado, #c5a059);
+}
+
+/* ==========================================
+   3. TABELA DE FATURAS & AUDITORIA
+   ========================================== */
+.cg-faturamento-container .cg-fat-table-card {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.02);
+}
+
+.cg-faturamento-container .cg-fat-table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.cg-faturamento-container .cg-fat-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.cg-faturamento-container .cg-fat-table thead th {
+  background: #0f172a;
+  color: #ffffff;
+  padding: 13px 16px;
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.cg-faturamento-container .cg-fat-table tbody td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color, #f1f5f9);
+  vertical-align: middle;
+  font-size: 13px;
+  color: var(--text-main, #1e293b);
+}
+
+.cg-faturamento-container .cg-fat-table tbody tr:hover {
+  background: var(--hover-bg, rgba(248, 250, 252, 0.8));
+}
+
+.cg-faturamento-container .linha-fat.falha {
+  background: rgba(239, 68, 68, 0.03);
+}
+
+.cg-faturamento-container .linha-fat.falha:hover {
+  background: rgba(239, 68, 68, 0.06);
+}
+
+/* Células Especializadas */
+.cg-faturamento-container .fat-code-badge {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11.5px;
+  font-weight: 800;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.cg-faturamento-container .fat-empresa-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 150px;
+}
+
+.cg-faturamento-container .fat-empresa-nome {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+}
+
+.cg-faturamento-container .fat-empresa-email {
+  font-size: 11.5px;
+  color: var(--text-muted, #64748b);
+}
+
+.cg-faturamento-container .fat-empresa-tel {
+  font-size: 11px;
+  color: #10b981;
+  font-weight: 600;
+}
+
+.cg-faturamento-container .fat-data-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.cg-faturamento-container .fat-data-dia {
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+}
+
+.cg-faturamento-container .fat-data-hora {
+  font-size: 11px;
+  color: var(--text-muted, #64748b);
+}
+
+.cg-faturamento-container .fat-desc-box {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 280px;
+}
+
+.cg-faturamento-container .fat-desc-acao {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-main, #0f172a);
+}
+
+.cg-faturamento-container .fat-desc-detalhe {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-muted, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cg-faturamento-container .fat-metodo-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cg-faturamento-container .fat-metodo-pill.cartao {
+  background: #f1f5f9;
+  color: #1e293b;
+  border: 1px solid #cbd5e1;
+}
+
+.cg-faturamento-container .fat-metodo-pill.pix {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.cg-faturamento-container .fat-metodo-pill.boleto {
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.cg-faturamento-container .fat-metodo-pill.pendente {
+  background: rgba(148, 163, 184, 0.15);
+  color: #64748b;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.cg-faturamento-container .fat-valor-tag {
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.cg-faturamento-container .fat-valor-tag.pago {
+  color: #10b981;
+}
+
+.cg-faturamento-container .fat-valor-tag.recusado {
+  color: #ef4444;
+  text-decoration: line-through;
+}
+
+.cg-faturamento-container .fat-valor-tag.neutro {
+  color: var(--text-main, #0f172a);
+}
+
+.cg-faturamento-container .fat-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.cg-faturamento-container .fat-status-badge.success {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.cg-faturamento-container .fat-status-badge.danger {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.cg-faturamento-container .fat-status-badge.info {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.cg-faturamento-container .fat-status-badge.warning {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+/* Ações */
+.cg-faturamento-container .fat-acoes-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cg-faturamento-container .fat-btn-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--bg-card, #ffffff);
+  color: var(--text-main, #334155);
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cg-faturamento-container .fat-btn-icon:hover {
+  transform: translateY(-1px);
+}
+
+.cg-faturamento-container .fat-btn-icon.print:hover {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+}
+
+.cg-faturamento-container .fat-btn-icon.details:hover {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+
+.cg-faturamento-container .fat-btn-icon.support:hover {
+  background: var(--dourado, #c5a059);
+  border-color: var(--dourado, #c5a059);
+  color: #ffffff;
+}
+
+/* Rodapé e Empty States */
+.cg-faturamento-container .cg-fat-table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: var(--bg-input, #f8fafc);
+  border-top: 1px solid var(--border-color, #e2e8f0);
+  font-size: 12px;
+  color: var(--text-muted, #64748b);
+}
+
+.cg-faturamento-container .cg-fat-footer-tip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--dourado, #c5a059);
+  font-weight: 600;
+}
+
+.cg-faturamento-container .cg-fat-loading-box,
+.cg-faturamento-container .cg-fat-empty-box {
+  padding: 48px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.cg-faturamento-container .cg-fat-loading-box i {
+  font-size: 28px;
+  color: var(--dourado, #c5a059);
+}
+
+.cg-faturamento-container .cg-fat-empty-box i {
+  font-size: 38px;
+  color: var(--text-muted, #cbd5e1);
+}
+
+.cg-faturamento-container .cg-fat-empty-box h4 {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-main, #0f172a);
+  margin: 0;
+}
+
+.cg-faturamento-container .cg-fat-empty-box p {
+  font-size: 13px;
+  color: var(--text-muted, #64748b);
+  margin: 0;
+  max-width: 420px;
+}
+
+.cg-faturamento-container .cg-fat-btn-reset-filters {
+  margin-top: 6px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+
+/* ==========================================
+   4. MODAL DE DETALHES TÉCNICOS DA TRANSAÇÃO
+   ========================================== */
+.cg-fat-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  animation: fadeIn 0.2s ease;
+}
+
+.cg-fat-modal-card {
+  width: 100%;
+  max-width: 640px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e2e8f0;
+}
+
+.cg-fat-modal-header {
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.cg-fat-modal-header .modal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cg-fat-modal-header .modal-header-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.cg-fat-modal-header .modal-header-icon.concluido {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.cg-fat-modal-header .modal-header-icon.falha {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.cg-fat-modal-header .modal-header-icon.mudanca {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.cg-fat-modal-header .modal-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.cg-fat-modal-header .modal-subtitle {
+  font-size: 11.5px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.cg-fat-modal-header .modal-btn-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cg-fat-modal-body {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.cg-fat-modal-body .modal-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.cg-fat-modal-body .modal-info-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cg-fat-modal-body .modal-info-item label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.cg-fat-modal-body .modal-info-item strong {
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.cg-fat-modal-body .modal-info-item span {
+  font-size: 11.5px;
+  color: #64748b;
+}
+
+.cg-fat-modal-body .green-text { color: #16a34a !important; font-size: 16px !important; }
+.cg-fat-modal-body .red-text { color: #dc2626 !important; font-size: 16px !important; }
+
+.cg-fat-modal-body .modal-detalhes-bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cg-fat-modal-body .modal-detalhes-bloco label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+}
+
+.cg-fat-modal-body .detalhes-log-text {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #1e293b;
+}
+
+.cg-fat-modal-body .detalhes-json-box {
+  background: #0f172a;
+  color: #38bdf8;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 11.5px;
+  font-family: 'Courier New', Courier, monospace;
+  overflow-x: auto;
+  margin: 0;
+}
+
+.cg-fat-modal-footer {
+  padding: 16px 22px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cg-fat-modal-footer .btn-modal-secundario {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cg-fat-modal-footer .modal-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cg-fat-modal-footer .btn-modal-suporte {
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid #3b82f6;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.cg-fat-modal-footer .btn-modal-print {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: none;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.cg-fat-modal-footer .btn-modal-print:hover {
+  background: var(--dourado, #c5a059);
+}
+
+/* ==========================================
+   5. RESPONSIVIDADE (MOBILE <= 900px)
+   ========================================== */
+@media (max-width: 900px) {
+  /* 🔒 REGRA DE OURO MOBILE: CARDS KPI EM 2 COLUNAS */
+  .cg-faturamento-container .cg-fat-kpi-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .cg-faturamento-container .cg-fat-kpi-card {
+    padding: 10px 11px !important;
+    gap: 4px !important;
+  }
+
+  .cg-faturamento-container .kpi-title {
+    font-size: 9.5px !important;
+    letter-spacing: 0.2px !important;
+  }
+
+  .cg-faturamento-container .kpi-valor-row {
+    gap: 6px !important;
+    margin: 1px 0 2px 0 !important;
+  }
+
+  .cg-faturamento-container .kpi-icon-box {
+    width: 25px !important;
+    height: 25px !important;
+    min-width: 25px !important;
+    font-size: 11.5px !important;
+    border-radius: 7px !important;
+  }
+
+  .cg-faturamento-container .kpi-cur {
+    font-size: 10px !important;
+  }
+
+  .cg-faturamento-container .kpi-num {
+    font-size: 15.5px !important;
+  }
+
+  .cg-faturamento-container .kpi-sub {
+    font-size: 9px !important;
+    padding: 2px 5.5px !important;
+    letter-spacing: -0.1px !important;
+  }
+
+  .cg-faturamento-container .cg-fat-search-row {
+    flex-direction: column;
+  }
+
+  .cg-faturamento-container .cg-fat-toolbar-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .cg-faturamento-container .cg-fat-btn-action {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .cg-faturamento-container .cg-fat-filters-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cg-faturamento-container .cg-fat-selects-group {
+    width: 100%;
+  }
+
+  .cg-faturamento-container .cg-fat-select {
+    flex: 1;
+  }
+
+  .cg-fat-modal-body .modal-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cg-fat-modal-footer {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .cg-fat-modal-footer .btn-modal-secundario,
+  .cg-fat-modal-footer .modal-footer-actions {
+    width: 100%;
+  }
+
+  .cg-fat-modal-footer .modal-footer-actions button {
+    flex: 1;
+    justify-content: center;
+  }
+}

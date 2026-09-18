@@ -154,8 +154,10 @@ export const calcularPeriodoTeste = (usuarioOuDados) => {
   const diasRestantesCalculados = Math.round(diffAteFimMs / (1000 * 60 * 60 * 24));
   const diasRestantes = Math.max(0, diasRestantesCalculados);
 
-  // Está em teste ativo enquanto a data atual for anterior à data limite e houver dias restantes
-  const emTeste = hojeMeia < dataFimTeste && diasRestantesCalculados > 0;
+  // 🔒 BUG 6 FIX: Considera o teste ativo até o FIM do último dia civil (≥ 0 restantes).
+  // Antes: diasRestantesCalculados > 0 bloqueava o usuário às 00:00 do último dia.
+  // Agora: diasRestantesCalculados >= 0 garante acesso até as 23:59 da dataFimTeste.
+  const emTeste = hojeMeia <= dataFimTeste && diasRestantesCalculados >= 0;
 
   // Dia atual do teste relativo ao total (ex: Dia 1 de 15, Dia 2 de 15...)
   const diaAtual = Math.min(totalDiasTeste, diasTranscorridos + 1);
@@ -174,6 +176,68 @@ export const calcularPeriodoTeste = (usuarioOuDados) => {
     dataFimFormatada,
     dataFimDate: dataFimTeste
   };
+};
+
+/**
+ * 🏆 Compara N documentos Firestore do mesmo e-mail e retorna o que tem maior validade.
+ * Prioridade: assinaturaAtiva > maior dataFimTeste > mais antigo (dataCadastro menor).
+ * Retorna { melhorDoc, melhorId } onde melhorDoc é o data() e melhorId é o docId.
+ */
+export const obterMelhorContaPorEmail = (docs) => {
+  if (!docs || docs.length === 0) return { melhorDoc: null, melhorId: null };
+  if (docs.length === 1) {
+    const d = docs[0];
+    return { melhorDoc: typeof d.data === 'function' ? d.data() : d, melhorId: d.id || null };
+  }
+
+  let melhorDoc = null;
+  let melhorId = null;
+  let melhorFim = null;
+
+  for (const docSnap of docs) {
+    const data = typeof docSnap.data === 'function' ? docSnap.data() : docSnap;
+    const id = docSnap.id || data.id || null;
+
+    // Assinatura ativa sempre vence
+    const temAssinatura =
+      data.assinaturaAtiva === true ||
+      data.statusAssinatura === 'ativa' ||
+      data.plano === 'pago' ||
+      data.statusPagamentoVulso === 'pago';
+
+    const melhorTemAssinatura =
+      melhorDoc?.assinaturaAtiva === true ||
+      melhorDoc?.statusAssinatura === 'ativa' ||
+      melhorDoc?.plano === 'pago' ||
+      melhorDoc?.statusPagamentoVulso === 'pago';
+
+    if (!melhorDoc) {
+      melhorDoc = data;
+      melhorId = id;
+      melhorFim = parseDataGenerica(data.dataFimTeste);
+      continue;
+    }
+
+    // Se o candidato tem assinatura e o melhor não → candidato vence
+    if (temAssinatura && !melhorTemAssinatura) {
+      melhorDoc = data;
+      melhorId = id;
+      melhorFim = parseDataGenerica(data.dataFimTeste);
+      continue;
+    }
+
+    // Se ambos têm (ou nenhum tem) assinatura → quem tem dataFimTeste maior vence
+    if (!melhorTemAssinatura) {
+      const candidatoFim = parseDataGenerica(data.dataFimTeste);
+      if (candidatoFim && (!melhorFim || candidatoFim > melhorFim)) {
+        melhorDoc = data;
+        melhorId = id;
+        melhorFim = candidatoFim;
+      }
+    }
+  }
+
+  return { melhorDoc, melhorId };
 };
 
 /**

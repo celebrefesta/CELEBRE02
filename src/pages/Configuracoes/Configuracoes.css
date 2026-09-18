@@ -43,9 +43,20 @@
 }
 
 .config-container .config-tabs-nav-wrapper .config-top-tabs {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: none !important;
+  scroll-behavior: smooth !important;
+  gap: 10px !important;
   margin-bottom: 0 !important;
-  width: 100%;
-  scroll-behavior: smooth;
+  width: 100% !important;
+  flex-wrap: nowrap !important;
+  white-space: nowrap !important;
 }
 
 /* GRADIENTES E CONTÊINERES DAS FLECHAS LATERAIS */
@@ -146,34 +157,50 @@
 }
 
 .config-top-tabs {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 8px;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: none !important;
+  scroll-behavior: smooth !important;
+  gap: 10px !important;
   background: #ffffff;
-  padding: 8px;
+  padding: 8px 12px !important;
   border-radius: 16px;
   border: 1.5px solid #cbd5e1;
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
   margin-bottom: 30px;
   width: 100%;
+  flex-wrap: nowrap !important;
+  white-space: nowrap !important;
   box-sizing: border-box;
 }
 
+.config-top-tabs::-webkit-scrollbar {
+  display: none !important;
+}
+
 .config-top-tabs button {
+  flex: 0 0 auto !important;
+  min-width: fit-content !important;
   background: #f8fafc;
   border: 1.5px solid #e2e8f0;
-  padding: 12px 14px;
+  padding: 11px 18px !important;
   font-size: 13.5px;
   font-weight: 800;
   color: #1e293b; /* TEXTO ESCURO E VIVO (NADA APAGADO) */
   cursor: pointer;
   border-radius: 12px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  box-sizing: border-box !important;
 }
 
 .config-top-tabs button .tab-icon {
@@ -8432,10 +8459,50 @@
   box-sizing: border-box;
 }
 
-/* ── CARD 1: STATUS DO PLANO & PRÓXIMA COBRANÇA (PADRÃO CONFIGURAÇÕES) ── */
+/* ── CARD 1: STATUS DO PLANO & PRÓXIMA COBRANÇA (PADRÃO LUXURY CELEBRE) ── */
 .config-container .assinatura-card-topo {
   position: relative;
   overflow: hidden;
+  padding: 22px 24px;
+}
+
+.config-container .assinatura-topo-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.config-container .assinatura-topo-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+}
+
+.config-container .assinatura-crown-medallion {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--dourado) 15%, var(--fundo-card));
+  border: 1.5px solid color-mix(in srgb, var(--dourado) 35%, transparent);
+  color: var(--dourado);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--dourado) 18%, transparent);
+  flex-shrink: 0;
+}
+
+.config-container .assinatura-topo-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .config-container .plano-top-badges {
@@ -8443,15 +8510,14 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 4px;
 }
 
 .config-container .plano-status-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 9px;
-  border-radius: 12px;
+  padding: 3px 10px;
+  border-radius: 20px;
   font-size: 11px;
   font-weight: 600;
 }
@@ -8459,11 +8525,13 @@
 .config-container .plano-status-badge.ativo {
   background: rgba(16, 185, 129, 0.12);
   color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
 }
 
 .config-container .plano-status-badge.alerta {
   background: rgba(245, 158, 11, 0.12);
   color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.25);
 }
 
 .config-container .plano-status-badge .status-dot {
@@ -8476,9 +8544,10 @@
 .config-container .plano-tipo-badge {
   background: color-mix(in srgb, var(--dourado) 12%, transparent);
   color: var(--dourado);
-  padding: 3px 9px;
-  border-radius: 12px;
-  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--dourado) 25%, transparent);
+  font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -8489,22 +8558,106 @@
   color: var(--texto-secundario);
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+}
+
+.config-container .plano-title-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 1px;
+}
+
+.config-container .plano-hero-nome {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--texto-primario);
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+}
+
+.config-container .plano-hero-preco {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--texto-secundario);
+}
+
+.config-container .preco-rotulo {
+  color: var(--texto-secundario);
+  font-size: 12.5px;
+}
+
+.config-container .preco-valor {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--dourado);
+}
+
+.config-container .preco-ciclo {
+  font-size: 12px;
+  color: var(--texto-secundario);
+}
+
+.config-container .plano-master-pill {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--dourado);
+  background: color-mix(in srgb, var(--dourado) 12%, transparent);
+  padding: 2px 10px;
+  border-radius: 12px;
+}
+
+.config-container .plano-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.config-container .btn-ver-recursos-plano {
+  background: var(--fundo-card);
+  color: var(--texto-primario);
+  border: 1.5px solid color-mix(in srgb, var(--dourado) 35%, var(--borda));
+  padding: 0 16px;
+  height: 42px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.config-container .btn-ver-recursos-plano:hover {
+  background: color-mix(in srgb, var(--dourado) 8%, var(--fundo-card));
+  border-color: var(--dourado);
+  transform: translateY(-1px);
 }
 
 .config-container .btn-upgrade-plano {
-  background: var(--dourado) !important;
+  background: linear-gradient(135deg, var(--dourado) 0%, #b38e46 100%) !important;
   color: #ffffff !important;
   border: none !important;
-  padding: 9px 18px !important;
-  border-radius: 8px !important;
+  padding: 0 18px !important;
+  height: 42px !important;
+  border-radius: 10px !important;
   font-weight: 600 !important;
   font-size: 13px !important;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--dourado) 35%, transparent);
   transition: all 0.2s ease;
   white-space: nowrap;
 }
@@ -8512,64 +8665,72 @@
 .config-container .btn-upgrade-plano:hover {
   filter: brightness(1.08);
   transform: translateY(-1px);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--dourado) 45%, transparent);
 }
 
 /* 📅 BANNER DE DESTAQUE: DATA DE RENOVAÇÃO / VENCIMENTO */
 .config-container .assinatura-vencimento-banner {
-  margin-top: 14px;
-  padding: 14px 16px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--dourado) 8%, transparent);
-  border: 1.5px solid color-mix(in srgb, var(--dourado) 30%, transparent);
+  margin-top: 16px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--dourado) 6%, var(--fundo-card));
+  border: 1px solid color-mix(in srgb, var(--dourado) 22%, transparent);
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 14px;
 }
 
 .config-container .vencimento-banner-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 9px;
-  background: var(--dourado);
-  color: #ffffff;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--dourado) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--dourado) 30%, transparent);
+  color: var(--dourado);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 17px;
+  font-size: 18px;
   flex-shrink: 0;
 }
 
 .config-container .vencimento-banner-info {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.config-container .vencimento-titulo {
-  font-size: 13.5px;
-  font-weight: 500;
-  color: #000000;
-  margin-bottom: 3px;
+.config-container .vencimento-header-row {
   display: flex;
   align-items: center;
+  gap: 8px;
   flex-wrap: wrap;
-  gap: 6px;
+}
+
+.config-container .vencimento-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--texto-primario);
 }
 
 .config-container .vencimento-data-destaque {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--dourado);
-  background: var(--branco);
-  padding: 2px 8px;
-  border-radius: 6px;
-  border: 1px solid var(--borda);
+  background: color-mix(in srgb, var(--dourado) 14%, var(--fundo-card));
+  padding: 2px 10px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--dourado) 28%, transparent);
 }
 
 .config-container .vencimento-subtexto {
   margin: 0;
   font-size: 12px;
   color: var(--texto-secundario);
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 /* 📊 CARDS KPI DE CONSUMO (REGRA DE OURO: 1 LINHA DESKTOP / 2 COLUNAS MOBILE) */
@@ -8904,13 +9065,77 @@
   background: rgba(225, 29, 72, 0.18);
 }
 
-/* GRID DE MÓDULOS (RECURSOS INCLUÍDOS) */
+/* 👑 MODAL DE RECURSOS & MÓDULOS INCLUÍDOS NO PLANO */
+.config-container .modal-recursos-plano-card {
+  background: var(--fundo-card);
+  border: 1px solid var(--borda);
+  border-radius: 16px;
+  max-width: 820px;
+  width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px 28px;
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.28);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: fadeInCelebre 0.2s ease-out;
+}
+
+.config-container .modal-recursos-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--borda);
+  padding-bottom: 16px;
+}
+
+.config-container .modal-recursos-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.config-container .modal-recursos-icon-circle {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--dourado) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--dourado) 35%, transparent);
+  color: var(--dourado);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.config-container .modal-recursos-top-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.config-container .modal-recursos-badge-plano {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--dourado);
+  background: color-mix(in srgb, var(--dourado) 12%, transparent);
+  padding: 2px 10px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .config-container .modulos-liberados-badge {
   font-size: 11.5px;
   font-weight: 600;
   color: #10b981;
   background: rgba(16, 185, 129, 0.12);
-  padding: 4px 12px;
+  padding: 3px 12px;
   border-radius: 20px;
   border: 1px solid rgba(16, 185, 129, 0.25);
   display: inline-flex;
@@ -8918,6 +9143,42 @@
   gap: 6px;
 }
 
+.config-container .modal-recursos-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--texto-primario);
+  margin: 0 0 3px 0;
+}
+
+.config-container .modal-recursos-sub {
+  font-size: 13px;
+  color: var(--texto-secundario);
+  margin: 0;
+}
+
+.config-container .modal-recursos-close-btn {
+  background: var(--fundo-cinza);
+  border: 1px solid var(--borda);
+  color: var(--texto-secundario);
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.config-container .modal-recursos-close-btn:hover {
+  background: var(--fundo-hover);
+  color: var(--texto-primario);
+  border-color: var(--dourado);
+}
+
+.config-container .modal-recursos-grid,
 .config-container .assinatura-modulos-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -8967,9 +9228,45 @@
 
 .config-container .modulo-title {
   font-size: 13px;
-  font-weight: 500;
-  color: #000000;
+  font-weight: 600;
+  color: var(--texto-primario);
   margin: 0 0 2px 0;
+}
+
+.config-container .modal-recursos-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--borda);
+  padding-top: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.config-container .modal-recursos-footer-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--texto-secundario);
+}
+
+.config-container .btn-modal-recursos-fechar {
+  background: var(--fundo-cinza);
+  color: var(--texto-primario);
+  border: 1px solid var(--borda);
+  padding: 9px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.config-container .btn-modal-recursos-fechar:hover {
+  background: var(--dourado);
+  color: #ffffff;
+  border-color: var(--dourado);
 }
 
 .config-container .modulo-desc {
@@ -9001,11 +9298,13 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .config-container .assinatura-tabela td {
   padding: 11px 12px;
   border-bottom: 1px solid var(--borda);
+  white-space: nowrap;
 }
 
 .config-container .assinatura-tabela .data-col {
@@ -9014,8 +9313,24 @@
 }
 
 .config-container .assinatura-tabela .desc-col {
-  color: #000000;
+  color: var(--texto-principal);
   font-weight: 500;
+}
+
+.config-container .assinatura-tabela .periodo-col {
+  color: var(--texto-principal);
+}
+
+.config-container .assinatura-tabela .periodo-badge {
+  display: inline-block;
+  padding: 2.5px 8px;
+  background: rgba(197, 160, 89, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(197, 160, 89, 0.25);
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
 }
 
 .config-container .assinatura-tabela .metodo-col {
@@ -9023,7 +9338,7 @@
 }
 
 .config-container .assinatura-tabela .valor-col {
-  color: #000000;
+  color: var(--texto-principal);
   font-weight: 600;
 }
 
@@ -9260,6 +9575,149 @@
   padding: 2px 7px;
   border-radius: 6px;
   letter-spacing: 0.5px;
+}
+
+/* 🎠 CAROUSEL DE PLANOS COM FLECHAS INDICATIVAS */
+.config-container .modal-carousel-nav-wrapper {
+  display: none; /* Oculto no desktop, onde os 3 cards já ficam lado a lado */
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+  width: 100%;
+}
+
+.config-container .modal-carousel-arrow-btn {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 10px;
+  background: var(--fundo-card);
+  border: 1.5px solid color-mix(in srgb, var(--dourado) 35%, var(--borda));
+  color: var(--dourado);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.config-container .modal-carousel-arrow-btn:hover {
+  background: color-mix(in srgb, var(--dourado) 12%, var(--fundo-card));
+  border-color: var(--dourado);
+  transform: scale(1.05);
+}
+
+.config-container .modal-carousel-arrow-btn:active {
+  transform: scale(0.95);
+}
+
+.config-container .modal-carousel-pills-track {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1;
+  background: var(--fundo-cinza);
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--borda);
+}
+
+.config-container .modal-carousel-pill-item {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--texto-secundario);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.config-container .modal-carousel-pill-item .pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--borda);
+  transition: all 0.2s ease;
+}
+
+.config-container .modal-carousel-pill-item.active {
+  background: var(--fundo-card);
+  color: var(--texto-primario);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.config-container .modal-carousel-pill-item.active .pill-dot {
+  background: var(--dourado);
+}
+
+.config-container .modal-carousel-pill-item .pill-sub-tag {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  font-weight: 700;
+}
+
+.config-container .modal-carousel-pill-item .pill-sub-tag.gold {
+  background: color-mix(in srgb, var(--dourado) 18%, transparent);
+  color: var(--dourado);
+}
+
+.config-container .modal-planos-carousel-container {
+  position: relative;
+  width: 100%;
+}
+
+.config-container .modal-carousel-floating-arrow {
+  display: none; /* Oculto no desktop */
+  position: absolute;
+  top: 45%;
+  transform: translateY(-50%);
+  z-index: 15;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--fundo-card);
+  border: 1.5px solid color-mix(in srgb, var(--dourado) 45%, transparent);
+  color: var(--dourado);
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.config-container .modal-carousel-floating-arrow:hover {
+  background: color-mix(in srgb, var(--dourado) 14%, var(--fundo-card));
+  border-color: var(--dourado);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.config-container .modal-carousel-floating-arrow:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.config-container .modal-carousel-floating-arrow.prev {
+  left: 2px;
+}
+
+.config-container .modal-carousel-floating-arrow.next {
+  right: 2px;
 }
 
 /* 📦 GRID DE CARDS DOS 3 PLANOS */
@@ -10002,13 +10460,34 @@
   transform: translateY(-1px);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .config-container .modal-migracao-anual-card.modal-migracao-multi-planos {
     padding: 18px 14px;
+    max-height: 94vh;
+  }
+  .config-container .modal-carousel-nav-wrapper {
+    display: flex !important;
+  }
+  .config-container .modal-carousel-floating-arrow {
+    display: flex !important;
+  }
+  .config-container .modal-planos-carousel-container {
+    padding: 0 4px;
+    margin-bottom: 14px;
   }
   .config-container .modal-planos-grid {
-    grid-template-columns: 1fr;
-    gap: 18px;
+    display: block !important;
+    gap: 0 !important;
+    margin-bottom: 0 !important;
+  }
+  .config-container .modal-planos-grid .modal-plano-card {
+    display: none !important;
+  }
+  .config-container .modal-planos-grid .modal-plano-card.is-carousel-active {
+    display: flex !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    animation: fadeInCelebre 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .config-container .modal-ciclo-toggle-track {
     width: 100%;
@@ -10848,16 +11327,105 @@ body.dark-mode .config-container .banner-anual-sub {
 
 /* 📱 RESPONSIVIDADE MOBILE (≤ 900px) */
 @media (max-width: 900px) {
-  .config-container .assinatura-card-topo .config-card-header {
+  .config-container .assinatura-card-topo {
+    padding: 16px 14px !important;
+  }
+
+  .config-container .assinatura-topo-hero {
     flex-direction: column !important;
     align-items: stretch !important;
+    gap: 14px !important;
+  }
+
+  .config-container .assinatura-topo-main {
+    align-items: flex-start !important;
     gap: 12px !important;
   }
 
+  .config-container .assinatura-crown-medallion {
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    font-size: 17px !important;
+    border-radius: 10px !important;
+  }
+
+  .config-container .plano-hero-nome {
+    font-size: 20px !important;
+  }
+
+  .config-container .plano-title-price-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 2px !important;
+  }
+
+  .config-container .plano-header-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .config-container .btn-ver-recursos-plano,
   .config-container .assinatura-card-topo .btn-upgrade-plano {
     width: 100% !important;
     justify-content: center !important;
-    min-height: 44px !important;
+    height: 42px !important;
+    padding: 0 8px !important;
+    font-size: 12.5px !important;
+    border-radius: 10px !important;
+  }
+
+  .config-container .assinatura-vencimento-banner {
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    padding: 12px 14px !important;
+    margin-top: 14px !important;
+  }
+
+  .config-container .vencimento-banner-icon {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    font-size: 16px !important;
+    border-radius: 8px !important;
+  }
+
+  .config-container .modal-recursos-plano-card {
+    padding: 16px 14px !important;
+    width: 94% !important;
+    gap: 14px !important;
+  }
+
+  .config-container .modal-recursos-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .config-container .modal-recursos-header-left {
+    gap: 10px !important;
+  }
+
+  .config-container .modal-recursos-icon-circle {
+    width: 38px !important;
+    height: 38px !important;
+    font-size: 16px !important;
+  }
+
+  .config-container .modal-recursos-title {
+    font-size: 16px !important;
+  }
+
+  .config-container .modal-recursos-footer {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .config-container .btn-modal-recursos-fechar {
+    width: 100% !important;
+    text-align: center !important;
   }
 
   .config-container .assinatura-vencimento-banner {

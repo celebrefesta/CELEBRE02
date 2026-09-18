@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
-import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
-import { calcularPeriodoTeste, parseDataGenerica } from '../../utils/periodoTesteUtils';
+import { calcularPeriodoTeste, parseDataGenerica, obterMelhorContaPorEmail } from '../../utils/periodoTesteUtils';
 import { aplicarCorDestaqueGlobal } from '../../utils/themeUtils';
 import { formatCPF } from '../../utils/mascaras';
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
+import ModalReciboOficial from '../../components/ModalReciboOficial';
 
 // 🔥 INICIALIZAÇÃO DE PRODUÇÃO MERCADO PAGO
 initMercadoPago('APP_USR-4c525755-f2c1-4e28-8c9e-020787a172a1', { locale: 'pt-BR' });
 
 // 📅 Função inteligente para projetar sempre o próximo ciclo de faturamento real
-export const calcularProximaDataRenovacao = (uData, assinatura, dataCriacaoConta, isSuperAdmin) => {
+export const calcularProximaDataRenovacao = (uData, assinatura, dataCriacaoConta, isSuperAdmin, dataPagamentoLog = null) => {
   if (isSuperAdmin) {
     return 'Vitalício';
   }
@@ -20,68 +21,136 @@ export const calcularProximaDataRenovacao = (uData, assinatura, dataCriacaoConta
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
 
-  // 1. Se o usuário estiver ATUALMENTE no Período de Teste VIP ativo
-  if (uData) {
+  // Detecta se há assinatura paga ativa via qualquer campo possível do sistema
+  const temAssinaturaAtiva = Boolean(
+    uData?.assinaturaAtiva === true ||
+    uData?.statusAssinatura === 'ativa' ||
+    uData?.plano === 'pago' ||
+    uData?.statusPagamentoVulso === 'pago' ||
+    assinatura?.isActive === true ||
+    assinatura?.ativa === true ||
+    assinatura?.status === 'Assinatura Ativa'
+  );
+
+  // 1. Se o usuário estiver ATUALMENTE no Período de Teste VIP ativo (e não possuir assinatura ativa)
+  if (!temAssinaturaAtiva && uData) {
     const infoT = calcularPeriodoTeste(uData);
     if (infoT.emTeste && infoT.dataFimDate && infoT.dataFimDate >= hoje) {
       return infoT.dataFimFormatada;
     }
   }
 
-  // 2. Se houver uma data de vencimento/cobrança futura explícita (>= hoje)
-  const dataCandidataRaw = uData?.dataProximaCobranca 
-    || uData?.dataVencimento 
-    || assinatura?.dataProximaCobranca 
-    || assinatura?.dataVencimento;
+  // 2. Determina se o ciclo é anual
+  const rawPId = String(uData?.planoId || uData?.plano || assinatura?.planoNome || '').toLowerCase();
+  const isAnual = Boolean(
+    rawPId.includes('anual') || 
+    String(uData?.cicloAssinatura || uData?.ciclo || assinatura?.ciclo || '').toLowerCase() === 'anual'
+  );
 
-  if (dataCandidataRaw) {
-    const dataCand = parseDataGenerica(dataCandidataRaw);
-    if (dataCand) {
-      const dataCandMeia = new Date(dataCand);
-      dataCandMeia.setHours(0, 0, 0, 0);
-      if (dataCandMeia >= hoje) {
-        return dataCandMeia.toLocaleDateString('pt-BR');
+  // 3. Determinar o dia fixo do ciclo de cobrança
+  let diaCiclo = null;
+  let dataBaseCiclo = null;
+
+  // 3a. Âncora de Ouro: log de pagamento / transação real
+  if (dataPagamentoLog) {
+    const parsedLog = dataPagamentoLog instanceof Date ? dataPagamentoLog : parseDataGenerica(dataPagamentoLog);
+    if (parsedLog && !isNaN(parsedLog.getTime())) {
+      dataBaseCiclo = parsedLog;
+      diaCiclo = parsedLog.getDate();
+    }
+  }
+
+  // 3b. Data de pagamento real registrada no documento do usuário (se não for cópia do dataFimTeste)
+  if (!diaCiclo) {
+    const rawDataPagamento = uData?.dataPagamento || uData?.dataUltimoPagamento || assinatura?.dataPagamento;
+    if (rawDataPagamento) {
+      const parsedPag = parseDataGenerica(rawDataPagamento);
+      if (parsedPag && !isNaN(parsedPag.getTime())) {
+        const fimTesteDate = uData?.dataFimTeste ? parseDataGenerica(uData.dataFimTeste) : null;
+        const isMesmoDiaFimTeste = fimTesteDate && parsedPag.getDate() === fimTesteDate.getDate() && parsedPag.getMonth() === fimTesteDate.getMonth();
+        if (!isMesmoDiaFimTeste || !temAssinaturaAtiva) {
+          dataBaseCiclo = parsedPag;
+          diaCiclo = parsedPag.getDate();
+        }
       }
     }
   }
 
-  // 3. Determinar o dia fixo do ciclo mensal de cobrança (ex: dia 21)
-  let diaCiclo = 21;
-  if (uData) {
+  // 3c. Se houver uma data de vencimento/cobrança explícita e válida no documento
+  // (Apenas se não for idêntica ao dataFimTeste de uma conta com assinatura ativa)
+  if (!diaCiclo) {
+    const dataCandidataRaw = uData?.dataProximaCobranca 
+      || uData?.dataVencimento 
+      || assinatura?.dataProximaCobranca 
+      || assinatura?.dataVencimento;
+
+    if (dataCandidataRaw) {
+      const dataCand = parseDataGenerica(dataCandidataRaw);
+      if (dataCand && !isNaN(dataCand.getTime())) {
+        const fimTesteDate = uData?.dataFimTeste ? parseDataGenerica(uData.dataFimTeste) : null;
+        const isMesmoDiaFimTeste = fimTesteDate && dataCand.getDate() === fimTesteDate.getDate() && dataCand.getMonth() === fimTesteDate.getMonth();
+        if (!isMesmoDiaFimTeste || !temAssinaturaAtiva) {
+          const dataCandMeia = new Date(dataCand);
+          dataCandMeia.setHours(0, 0, 0, 0);
+          if (dataCandMeia >= hoje) {
+            return dataCandMeia.toLocaleDateString('pt-BR');
+          }
+          diaCiclo = dataCand.getDate();
+        }
+      }
+    }
+  }
+
+  // 3d. Fallback para data de criação da conta se não tiver pagamento nem log
+  if (!diaCiclo && dataCriacaoConta) {
+    const parsedCad = parseDataGenerica(dataCriacaoConta);
+    if (parsedCad && !isNaN(parsedCad.getTime())) {
+      diaCiclo = parsedCad.getDate();
+    }
+  }
+
+  // 3e. Usa data de fim de teste SOMENTE se não houver assinatura ativa
+  if (!diaCiclo && uData && !temAssinaturaAtiva) {
     const infoT = calcularPeriodoTeste(uData);
     if (infoT.dataFimDate) {
       diaCiclo = infoT.dataFimDate.getDate();
     }
   }
-  if ((!diaCiclo || diaCiclo === 21) && dataCriacaoConta) {
-    const parsedCad = parseDataGenerica(dataCriacaoConta);
-    if (parsedCad) {
-      const dC = new Date(parsedCad);
-      dC.setDate(dC.getDate() + 7);
-      diaCiclo = dC.getDate();
-    }
-  }
-  if (!diaCiclo || isNaN(diaCiclo)) diaCiclo = 21;
 
-  // 4. Projetar a próxima data futura de renovação no ciclo mensal (nunca no passado)
+  if (!diaCiclo || isNaN(diaCiclo)) {
+    diaCiclo = hoje.getDate();
+  }
+
+  // 4. Projetar a próxima data futura de renovação no ciclo (nunca no passado)
   const anoAtual = hoje.getFullYear();
   const mesAtual = hoje.getMonth();
   const diaHoje = hoje.getDate();
 
   let proximaData;
-  if (diaHoje <= diaCiclo) {
-    // Cobrança no mês corrente (ex: hoje é 17/09 e o ciclo é 21 -> 21/09)
-    const ultimoDiaMes = new Date(anoAtual, mesAtual + 1, 0).getDate();
-    const diaReal = Math.min(diaCiclo, ultimoDiaMes);
-    proximaData = new Date(anoAtual, mesAtual, diaReal);
+  if (isAnual) {
+    let anoCandidato = dataBaseCiclo ? dataBaseCiclo.getFullYear() + 1 : anoAtual;
+    let mesBase = dataBaseCiclo ? dataBaseCiclo.getMonth() : mesAtual;
+    let dataCand = new Date(anoCandidato, mesBase, diaCiclo);
+    while (dataCand <= hoje) {
+      anoCandidato++;
+      dataCand = new Date(anoCandidato, mesBase, diaCiclo);
+    }
+    proximaData = dataCand;
   } else {
-    // Cobrança no mês seguinte (ex: hoje é 25/09 e o ciclo foi dia 21 -> 21/10)
-    const proximoMes = mesAtual + 1;
-    const anoProximo = proximoMes > 11 ? anoAtual + 1 : anoAtual;
-    const mesCalculado = proximoMes % 12;
-    const ultimoDiaProximoMes = new Date(anoProximo, mesCalculado + 1, 0).getDate();
-    const diaReal = Math.min(diaCiclo, ultimoDiaProximoMes);
-    proximaData = new Date(anoProximo, mesCalculado, diaReal);
+    if (diaHoje < diaCiclo) {
+      // Cobrança no mês corrente
+      const ultimoDiaMes = new Date(anoAtual, mesAtual + 1, 0).getDate();
+      const diaReal = Math.min(diaCiclo, ultimoDiaMes);
+      proximaData = new Date(anoAtual, mesAtual, diaReal);
+    } else {
+      // Cobrança no próximo mês
+      const proximoMes = mesAtual + 1;
+      const anoProximo = proximoMes > 11 ? anoAtual + 1 : anoAtual;
+      const mesCalculado = proximoMes % 12;
+      const ultimoDiaProximoMes = new Date(anoProximo, mesCalculado + 1, 0).getDate();
+      const diaReal = Math.min(diaCiclo, ultimoDiaProximoMes);
+      proximaData = new Date(anoProximo, mesCalculado, diaReal);
+    }
   }
 
   return proximaData.toLocaleDateString('pt-BR');
@@ -173,17 +242,45 @@ const LISTA_PLANOS_DISPONIVEIS = [
   }
 ];
 
+// ⭐ LISTA DOS 8 MÓDULOS INCLUÍDOS NO PLANO (EXIBIDOS NO MODAL DE RECURSOS)
+const LISTA_MODULOS_INCLUIDOS = [
+  { icon: 'fas fa-users', color: '#3b82f6', title: 'Gestão de Clientes', desc: 'CRM completo e histórico de clientes' },
+  { icon: 'fas fa-boxes', color: '#10b981', title: 'Gestão de Estoque', desc: 'Acervo com controle de peças e valores' },
+  { icon: 'fas fa-hand-holding-heart', color: '#ec4899', title: 'Locações e Pedidos', desc: 'Orçamentos, reservas e agendamentos' },
+  { icon: 'fas fa-truck', color: '#f59e0b', title: 'Logística & Entregas', desc: 'Controle de saídas, devoluções e frete' },
+  { icon: 'fas fa-file-contract', color: '#8b5cf6', title: 'Emissão de Contratos', desc: 'Gerador e assinatura digital' },
+  { icon: 'fas fa-store', color: '#06b6d4', title: 'Catálogo Digital', desc: 'Vitrine online para seus clientes' },
+  { icon: 'fas fa-palette', color: '#f43f5e', title: 'Projetos Moodboard', desc: 'Criação de projetos visuais e decoração' },
+  { icon: 'fas fa-chart-line', color: '#6366f1', title: 'Financeiro & DRE', desc: 'Controle de caixa, entradas e relatórios' }
+];
+
 const AbaAssinaturaUso = ({
   isSuperAdmin,
   assinatura,
   usoPlano,
   cancelando,
   handleCancelarAssinatura,
-  dataCriacaoConta
+  dataCriacaoConta,
+  usuarioLogado: propUsuarioLogado,
+  isImpersonating: propIsImpersonating
 }) => {
   const navigate = useNavigate();
   const auth = getAuth();
-  const usuarioLogado = auth.currentUser;
+
+  const rawImp = localStorage.getItem('impersonatingTenant');
+  let impData = null;
+  if (rawImp) {
+    try { impData = JSON.parse(rawImp); } catch (e) {}
+  }
+  const isImpersonating = propIsImpersonating !== undefined ? propIsImpersonating : Boolean(impData?.uid);
+
+  const usuarioLogado = propUsuarioLogado || (isImpersonating ? {
+    uid: impData.uid,
+    originalUid: impData.originalUid,
+    email: impData.email,
+    displayName: impData.nome,
+    isImpersonating: true
+  } : auth.currentUser);
 
   const [estatisticasReais, setEstatisticasReais] = useState({
     totalItensEstoque: 0,
@@ -191,6 +288,8 @@ const AbaAssinaturaUso = ({
     totalClientes: 0,
     dataRenovacao: null
   });
+  const [dadosUsuario, setDadosUsuario] = useState(null);
+  const [historicoFaturas, setHistoricoFaturas] = useState([]);
   const [loadingStats, setLoadingStats] = useState(true);
 
   // Modal simples para editar E-mail de Faturamento
@@ -198,10 +297,15 @@ const AbaAssinaturaUso = ({
   const [novoEmail, setNovoEmail] = useState('');
   const [salvandoEmail, setSalvandoEmail] = useState(false);
 
+  // ⭐ MODAL VIP DE RECURSOS & MÓDULOS DO PLANO
+  const [modalRecursosAberto, setModalRecursosAberto] = useState(false);
+
   // 👑 MODAL VIP DE MIGRAÇÃO PARA PLANO ANUAL / UPGRADE DE PLANO (TODOS OS PLANOS)
   const [modalMigracaoAberto, setModalMigracaoAberto] = useState(false);
   const [modalCiclo, setModalCiclo] = useState('anual'); // 'anual' ou 'mensal'
   const [modalPlanoSelecionado, setModalPlanoSelecionado] = useState('premium'); // 'basico', 'premium' ou 'plus'
+  const [carouselIndex, setCarouselIndex] = useState(1);
+  const [touchStartX, setTouchStartX] = useState(null);
   const [metodoMigracao, setMetodoMigracao] = useState('pix'); // 'pix' ou 'cartao'
   const [cpfMigracao, setCpfMigracao] = useState('');
   const [gerandoPix, setGerandoPix] = useState(false);
@@ -220,6 +324,7 @@ const AbaAssinaturaUso = ({
   const [erroBoleto, setErroBoleto] = useState('');
   const [emailEnvioBoleto, setEmailEnvioBoleto] = useState('');
   const [linhaDigitavelCopiada, setLinhaDigitavelCopiada] = useState(false);
+  const [faturaReciboModal, setFaturaReciboModal] = useState(null);
 
   useEffect(() => {
     if (assinatura?.emailCobranca || usuarioLogado?.email) {
@@ -243,24 +348,144 @@ const AbaAssinaturaUso = ({
     return () => window.removeEventListener('theme-change', handleThemeChange);
   }, []);
 
+  // 🔍 Detecção e resolução inteligente do plano e valores
+  const detectarPlanoAtualKey = (uD = dadosUsuario, ass = assinatura) => {
+    const nome = (ass?.planoNome || uD?.planoNome || uD?.plano || '').toLowerCase();
+    const id = (ass?.planoId || uD?.planoId || '').toLowerCase();
+    const pr = String(ass?.precoMensal || uD?.valorAssinatura || '').replace('.', ',');
+    if (id.includes('plus') || nome.includes('plus') || nome.includes('pro') || pr === '159,90') return 'plus';
+    if (id.includes('basico') || id.includes('básico') || nome.includes('basico') || nome.includes('básico') || pr === '49,90') return 'basico';
+    return 'premium';
+  };
+
+  const resolverPlanoInfo = (uD = dadosUsuario, ass = assinatura) => {
+    const key = detectarPlanoAtualKey(uD, ass);
+    const planoObj = LISTA_PLANOS_DISPONIVEIS.find(p => p.id === key) || LISTA_PLANOS_DISPONIVEIS[1];
+    const isAnual = Boolean(
+      ass?.ciclo === 'anual' || 
+      ass?.planoId?.includes('anual') || 
+      ass?.periodo === 'anual' || 
+      uD?.ciclo === 'anual' || 
+      uD?.cicloAssinatura === 'anual' ||
+      String(uD?.planoId || '').includes('anual')
+    );
+
+    let nome = planoObj.nome;
+    if (ass?.planoNome && ass.planoNome !== 'Carregando...' && ass.planoNome !== 'Básico (Gratuito)') {
+      nome = ass.planoNome;
+    } else if (uD?.planoNome) {
+      nome = uD.planoNome;
+    }
+
+    let preco = isAnual ? planoObj.precoAnualTotalFormatado : planoObj.precoMensalFormatado;
+    if (ass?.precoMensal && ass.precoMensal !== '0,00' && ass.precoMensal !== '0') {
+      preco = String(ass.precoMensal).replace('.', ',');
+    } else if (uD?.valorAssinatura && uD.valorAssinatura !== '0,00' && uD.valorAssinatura !== 0) {
+      preco = String(uD.valorAssinatura).replace('.', ',');
+    }
+
+    let metodo = 'Cartão de Crédito';
+    if (ass?.metodoPagamento && ass.metodoPagamento !== 'Nenhum' && ass.metodoPagamento !== 'Nenhum método cadastrado') {
+      metodo = ass.metodoPagamento;
+    } else if (uD?.metodoPagamento && uD.metodoPagamento !== 'Nenhum' && uD.metodoPagamento !== 'Nenhum método cadastrado') {
+      metodo = uD.metodoPagamento;
+    }
+
+    return { key, nome, preco, metodo, isAnual, planoObj };
+  };
+
   useEffect(() => {
     const carregarEstatisticasUso = async () => {
       if (!usuarioLogado) return;
       try {
-        const tenantId = localStorage.getItem('tenantId') || usuarioLogado.uid;
+        const tenantId = impData?.uid || localStorage.getItem('tenantId') || usuarioLogado.uid;
+        const uid = isImpersonating ? (impData?.originalUid || impData?.uid || usuarioLogado.uid) : usuarioLogado.uid;
+        const uEmail = (isImpersonating ? (impData?.email || usuarioLogado.email) : (usuarioLogado.email || assinatura?.emailCobranca || '')).trim();
+        const uEmailLower = uEmail.toLowerCase();
         
         const qEstoque = query(collection(db, "estoque"), where("userId", "==", tenantId));
         const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
         const qClientes = query(collection(db, "clientes"), where("userId", "==", tenantId));
 
-        const [snapEst, snapLoc, snapCli] = await Promise.all([
+        // 🔍 BUSCA TOTAL DE LOGS (empresaId, userId, usuarioEmail e para SuperAdmin histórico global)
+        const promessasConsultas = [
           getDocs(qEstoque).catch(() => ({ size: 0 })),
           getDocs(qLocacoes).catch(() => ({ size: 0 })),
-          getDocs(qClientes).catch(() => ({ size: 0 }))
-        ]);
+          getDocs(qClientes).catch(() => ({ size: 0 })),
+          getDocs(query(collection(db, "logs_atividades"), where("empresaId", "==", tenantId), limit(60))).catch(() => ({ docs: [] })),
+          getDocs(query(collection(db, "logs_atividades"), where("userId", "==", uid), limit(60))).catch(() => ({ docs: [] }))
+        ];
 
-        const userDoc = await getDoc(doc(db, "usuarios", tenantId)).catch(() => null);
-        const uData = userDoc && userDoc.exists() ? userDoc.data() : null;
+        if (tenantId !== uid) {
+          promessasConsultas.push(getDocs(query(collection(db, "logs_atividades"), where("empresaId", "==", uid), limit(60))).catch(() => ({ docs: [] })));
+          promessasConsultas.push(getDocs(query(collection(db, "logs_atividades"), where("userId", "==", tenantId), limit(60))).catch(() => ({ docs: [] })));
+        }
+
+        if (uEmail) {
+          promessasConsultas.push(getDocs(query(collection(db, "logs_atividades"), where("usuarioEmail", "==", uEmail), limit(80))).catch(() => ({ docs: [] })));
+          if (uEmailLower !== uEmail) {
+            promessasConsultas.push(getDocs(query(collection(db, "logs_atividades"), where("usuarioEmail", "==", uEmailLower), limit(80))).catch(() => ({ docs: [] })));
+          }
+        }
+
+        // 🛡️ Busca todos os UIDs vinculados ao e-mail para cobrir 100% de aliases (Google e senha)
+        let uData = null;
+        if (uEmailLower) {
+          try {
+            const qUsersEmail = query(collection(db, "usuarios"), where("email", "==", uEmailLower));
+            const snapUsersEmail = await getDocs(qUsersEmail);
+            if (snapUsersEmail.docs.length > 0) {
+              const melhorDoc = obterMelhorContaPorEmail(snapUsersEmail.docs);
+              if (melhorDoc) {
+                uData = { ...melhorDoc, id: melhorDoc.uid || tenantId };
+              }
+              snapUsersEmail.docs.forEach(uDoc => {
+                const docId = uDoc.id;
+                if (docId && docId !== tenantId && docId !== uid) {
+                  promessasConsultas.push(getDocs(query(collection(db, "logs_atividades"), where("empresaId", "==", docId), limit(60))).catch(() => ({ docs: [] })));
+                  promessasConsultas.push(getDocs(query(collection(db, "logs_atividades"), where("userId", "==", docId), limit(60))).catch(() => ({ docs: [] })));
+                }
+              });
+            }
+          } catch (eAlias) {
+            console.warn("Aviso ao mapear contas vinculadas por email:", eAlias);
+          }
+        }
+
+        if (isSuperAdmin) {
+          promessasConsultas.push(getDocs(query(collection(db, "logs_atividades"), limit(150))).catch(() => ({ docs: [] })));
+        }
+
+        const [snapEst, snapLoc, snapCli, ...snapLogsArr] = await Promise.all(promessasConsultas);
+
+        // Consolidação dos logs em Mapa único para eliminar duplicidades
+        const mapaLogsDocs = new Map();
+        snapLogsArr.forEach(resSnap => {
+          if (resSnap && resSnap.docs) {
+            resSnap.docs.forEach(docSnap => {
+              const d = docSnap.data();
+              const bateEmpresa = d.empresaId === tenantId || d.empresaId === uid || (uData?.uid && d.empresaId === uData.uid);
+              const bateUser = d.userId === tenantId || d.userId === uid || (uData?.uid && d.userId === uData.uid);
+              const dEmail = String(d.usuarioEmail || d.email || '').toLowerCase().trim();
+              const bateEmail = Boolean(uEmailLower && dEmail && dEmail === uEmailLower);
+              if (isSuperAdmin || bateEmpresa || bateUser || bateEmail) {
+                mapaLogsDocs.set(docSnap.id, docSnap);
+              }
+            });
+          }
+        });
+
+        if (!uData) {
+          const userDoc = await getDoc(doc(db, "usuarios", tenantId)).catch(() => null);
+          uData = userDoc && userDoc.exists() ? userDoc.data() : null;
+          if (!uData && tenantId !== uid) {
+            const userDocFallback = await getDoc(doc(db, "usuarios", uid)).catch(() => null);
+            if (userDocFallback && userDocFallback.exists()) {
+              uData = userDocFallback.data();
+            }
+          }
+        }
+        setDadosUsuario(uData);
 
         const docRaw = uData?.cpf || uData?.documento || '';
         const apenasDigitos = String(docRaw).replace(/\D/g, '');
@@ -270,7 +495,110 @@ const AbaAssinaturaUso = ({
           setCpfMigracao('');
         }
 
-        const proximaData = calcularProximaDataRenovacao(uData, assinatura, dataCriacaoConta, isSuperAdmin);
+        // 📄 Montar lista de faturas idêntica ao Controle Geral (Super Admin)
+        const faturasList = [];
+        const infoP = resolverPlanoInfo(uData, assinatura);
+        const isAnual = infoP.isAnual;
+        const pNome = infoP.nome;
+        const pValor = infoP.preco;
+        const pMetodo = infoP.metodo;
+
+        const temAssinaturaAtivaReal = Boolean(
+          uData?.assinaturaAtiva === true ||
+          uData?.statusAssinatura === 'ativa' ||
+          uData?.plano === 'pago' ||
+          uData?.statusPagamentoVulso === 'pago' ||
+          assinatura?.isActive === true ||
+          assinatura?.ativa === true ||
+          assinatura?.status === 'Assinatura Ativa'
+        );
+
+        let logMaisRecenteDate = null;
+        const docsOrdenados = Array.from(mapaLogsDocs.values()).sort((a, b) => {
+          const da = a.data();
+          const db = b.data();
+          const ta = da.criadoEm?.toMillis ? da.criadoEm.toMillis() : (da.dataHora ? new Date(da.dataHora).getTime() : 0);
+          const tb = db.criadoEm?.toMillis ? db.criadoEm.toMillis() : (db.dataHora ? new Date(db.dataHora).getTime() : 0);
+          return tb - ta;
+        });
+
+        docsOrdenados.forEach(docSnap => {
+          const dataLog = docSnap.data();
+          const acao = String(dataLog.acao || '').toUpperCase();
+          const detalhes = String(dataLog.detalhes || '');
+          const detalhesLower = detalhes.toLowerCase();
+
+          // 🛡️ Filtra estritamente: tentativas de checkout, falhas e cancelamentos NUNCA entram como faturas pagas
+          const isTentativaOuErro = 
+            acao.includes('TENTATIVA') || 
+            acao.includes('FALHA') || 
+            acao.includes('RECUSAD') || 
+            acao.includes('ERRO') ||
+            acao.includes('CANCELAMENTO') ||
+            detalhesLower.includes('iniciou o processo') || 
+            detalhesLower.includes('falhou') || 
+            detalhesLower.includes('recusad');
+
+          if (isTentativaOuErro) return;
+
+          // Apenas pagamentos efetivamente aprovados ou liberações oficiais de VIP
+          const isAprovado = 
+            acao.includes('APROVAD') || 
+            acao.includes('PAGAMENTO CONFIRMADO') || 
+            acao.includes('PAGAMENTO PROCESSADO') || 
+            acao.includes('ASSINATURA ATIVA') ||
+            acao.includes('VIP') ||
+            acao.includes('CORTESIA') ||
+            detalhesLower.includes('processado com sucesso') ||
+            detalhesLower.includes('ativada pelo super admin');
+
+          if (isAprovado) {
+            const rawData = dataLog.dataHora ? new Date(dataLog.dataHora) : (dataLog.criadoEm?.toDate ? dataLog.criadoEm.toDate() : null);
+            const dLog = rawData && !isNaN(rawData.getTime()) ? rawData : new Date();
+            
+            if (!logMaisRecenteDate) {
+              logMaisRecenteDate = dLog;
+            }
+
+            const dataFmt = dLog.toLocaleDateString('pt-BR');
+            const horaFmt = dLog.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            
+            let dFimL = new Date(dLog);
+            if (isAnual) {
+              dFimL.setFullYear(dFimL.getFullYear() + 1);
+            } else {
+              dFimL.setMonth(dFimL.getMonth() + 1);
+            }
+            const dataFimFmt = dFimL.toLocaleDateString('pt-BR');
+
+            let val = pValor;
+            const matchValor = detalhes.match(/R\$\s?([\d.,]+)/i);
+            if (matchValor && matchValor[1]) {
+              val = matchValor[1];
+            }
+
+            const isVipAdmin = acao.includes('VIP') || acao.includes('CORTESIA') || detalhesLower.includes('ativada pelo super admin');
+
+            faturasList.push({
+              id: docSnap.id,
+              codigo: `FAT-${docSnap.id.substring(0, 8).toUpperCase()}`,
+              dataPagamento: dataFmt,
+              hora: horaFmt,
+              descricao: isVipAdmin 
+                ? `Licença Especial - Cortesia VIP (${pNome})` 
+                : `Assinatura ${isAnual ? 'Anual' : 'Mensal'} - ${pNome}`,
+              periodo: `${dataFmt} a ${dataFimFmt}`,
+              periodoInicio: dataFmt,
+              periodoFim: dataFimFmt,
+              metodo: isVipAdmin ? 'Cortesia VIP (Super Admin)' : (detalhesLower.includes('pix') ? 'PIX' : detalhesLower.includes('boleto') ? 'Boleto Bancário' : pMetodo),
+              valor: isVipAdmin ? '0,00 (VIP)' : val,
+              status: isVipAdmin ? 'Cortesia VIP' : 'Concluído'
+            });
+          }
+        });
+
+        // 📅 Projeção do ciclo com ancoragem real na data da transação
+        const proximaData = calcularProximaDataRenovacao(uData, assinatura, dataCriacaoConta, isSuperAdmin, logMaisRecenteDate);
 
         setEstatisticasReais({
           totalItensEstoque: snapEst.size || 0,
@@ -278,6 +606,68 @@ const AbaAssinaturaUso = ({
           totalClientes: snapCli.size || 0,
           dataRenovacao: proximaData
         });
+
+        // 🛡️ Saneamento de dados: Se a conta NÃO possui assinatura ativa paga (está em teste),
+        // remove qualquer dataPagamento residual no passado gerada por versões anteriores
+        if (uData && !isSuperAdmin && !temAssinaturaAtivaReal && uData.dataPagamento) {
+          try {
+            const targetDocId = uData.uid || tenantId;
+            await updateDoc(doc(db, "usuarios", targetDocId), { dataPagamento: null });
+            if (tenantId && tenantId !== targetDocId) {
+              await updateDoc(doc(db, "usuarios", tenantId), { dataPagamento: null }).catch(() => {});
+            }
+          } catch (eClean) {
+            console.warn("Aviso ao limpar dataPagamento residual:", eClean);
+          }
+        }
+
+        // Fatura sintética de contingência SOMENTE para contas com assinatura ativa/VIP sem log registrado
+        if (temAssinaturaAtivaReal && faturasList.length === 0) {
+          if (isSuperAdmin) {
+            const dtInicioFmt = dataCriacaoConta ? (parseDataGenerica(dataCriacaoConta) || new Date()).toLocaleDateString('pt-BR') : '23/04/2026';
+            faturasList.push({
+              id: 'fat-master-vitalicio',
+              dataPagamento: dtInicioFmt,
+              hora: '10:00',
+              descricao: 'Licença Master Oficial (Acesso Total Vitalício)',
+              periodo: 'Vitalício (Acesso Permanente)',
+              periodoInicio: dtInicioFmt,
+              periodoFim: 'Vitalício',
+              metodo: 'Administração Global Celebre',
+              valor: '0,00 (Master)',
+              status: 'Vitalício',
+              codigo: 'MASTER-VITALICIO'
+            });
+          } else {
+            const rawInicio = uData?.dataPagamento || uData?.dataAtivacaoVip;
+            if (rawInicio) {
+              const dIniReal = parseDataGenerica(rawInicio) || new Date();
+              let dFimReal = new Date(dIniReal);
+              if (isAnual) {
+                dFimReal.setFullYear(dFimReal.getFullYear() + 1);
+              } else {
+                dFimReal.setMonth(dFimReal.getMonth() + 1);
+              }
+              const dtInicioFmt = dIniReal.toLocaleDateString('pt-BR');
+              const dtFimFmt = dFimReal.toLocaleDateString('pt-BR');
+              faturasList.push({
+                id: 'fat-ciclo-ativo',
+                dataPagamento: dtInicioFmt,
+                hora: '10:00',
+                descricao: `Licença Especial - Cortesia VIP (${pNome})`,
+                periodo: `${dtInicioFmt} a ${dtFimFmt}`,
+                periodoInicio: dtInicioFmt,
+                periodoFim: dtFimFmt,
+                metodo: 'Cortesia VIP (Super Admin)',
+                valor: '0,00 (VIP)',
+                status: 'Cortesia VIP',
+                codigo: `FAT-${(tenantId || 'CELEBRE').substring(0, 8).toUpperCase()}`
+              });
+            }
+          }
+        }
+
+        setHistoricoFaturas(faturasList);
       } catch (err) {
         console.error("Erro ao buscar estatísticas de uso:", err);
       } finally {
@@ -367,95 +757,180 @@ const AbaAssinaturaUso = ({
     }
   };
 
-  const handleImprimirComprovante = () => {
-    const janelaImpressao = window.open('', '_blank');
-    const dataHoje = new Date().toLocaleDateString('pt-BR');
-    const codigoFatura = "FAT-" + Math.floor(100000 + Math.random() * 900000);
-    const planoNome = assinatura?.planoNome || "Plano Premium";
-    const valor = assinatura?.precoMensal || "99,90";
-    const email = novoEmail || usuarioLogado?.email;
+  const infoPlanoAtual = resolverPlanoInfo(dadosUsuario, assinatura);
+  const planoNomeAtual = infoPlanoAtual.nome;
+  const precoMensalAtual = infoPlanoAtual.preco;
+  const planoAtualKey = infoPlanoAtual.key;
+  const isUsuarioAnualAtual = infoPlanoAtual.isAnual;
 
-    janelaImpressao.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Recibo de Pagamento - Celebre Sistema</title>
-        <style>
-          body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 40px; color: #1e293b; max-width: 700px; margin: 0 auto; }
-          .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #c5a059; padding-bottom: 20px; margin-bottom: 30px; }
-          .logo { font-size: 28px; font-weight: 900; color: #0f172a; letter-spacing: 2px; }
-          .badge-pago { background: #dcfce7; color: #15803d; padding: 6px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; text-transform: uppercase; }
-          .grid-info { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
-          .info-box { background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; }
-          .info-box label { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: bold; display: block; margin-bottom: 4px; }
-          .info-box p { margin: 0; font-size: 15px; font-weight: bold; color: #0f172a; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-          th { background: #0f172a; color: white; padding: 12px; text-align: left; font-size: 13px; }
-          td { padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
-          .footer { text-align: center; margin-top: 40px; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div>
-            <div class="logo">CELEBRE</div>
-            <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Comprovante Oficial de Assinatura</div>
-          </div>
-          <div class="badge-pago">✓ PAGAMENTO CONCLUÍDO</div>
-        </div>
+  // 📅 Cálculo dinâmico das datas do recibo de pagamento e histórico
+  const obterDatasRecibo = (faturaCustom = {}) => {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const cicloNome = isUsuarioAnualAtual ? 'Anual' : 'Mensal';
 
-        <div class="grid-info">
-          <div class="info-box">
-            <label>Código da Fatura</label>
-            <p>${codigoFatura}</p>
-          </div>
-          <div class="info-box">
-            <label>Data de Emissão</label>
-            <p>${dataHoje}</p>
-          </div>
-          <div class="info-box">
-            <label>E-mail Cadastrado</label>
-            <p>${email}</p>
-          </div>
-          <div class="info-box">
-            <label>Processamento</label>
-            <p>Mercado Pago Transações</p>
-          </div>
-        </div>
+    // 1. Se foi passada uma fatura específica com dados já consolidados
+    if (faturaCustom.dataPagamento || faturaCustom.data) {
+      const dataPag = faturaCustom.dataPagamento || faturaCustom.data;
+      const horaPag = faturaCustom.hora || '10:00';
+      let perInicio = faturaCustom.periodoInicio;
+      let perFim = faturaCustom.periodoFim;
 
-        <table>
-          <thead>
-            <tr>
-              <th>Item / Descrição</th>
-              <th>Período</th>
-              <th>Método</th>
-              <th style="text-align: right;">Valor</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Assinatura ${planoNome}</strong> - Licença Celebre</td>
-              <td>Mensal/Anual</td>
-              <td>Mercado Pago (Cartão / PIX)</td>
-              <td style="text-align: right; font-weight: bold;">R$ ${valor}</td>
-            </tr>
-          </tbody>
-        </table>
+      if (!perInicio || !perFim) {
+        const partesP = String(faturaCustom.periodo || '').split(' a ');
+        perInicio = partesP[0] || dataPag;
+        perFim = partesP[1];
+        if (!perFim) {
+          const partesD = String(perInicio).split('/');
+          if (partesD.length === 3) {
+            const d = new Date(parseInt(partesD[2], 10), parseInt(partesD[1], 10) - 1, parseInt(partesD[0], 10));
+            if (!isNaN(d.getTime())) {
+              if (cicloNome === 'Anual') d.setFullYear(d.getFullYear() + 1);
+              else d.setMonth(d.getMonth() + 1);
+              perFim = d.toLocaleDateString('pt-BR');
+            }
+          }
+        }
+      }
 
-        <div style="text-align: right; margin-bottom: 40px;">
-          <div style="font-size: 14px; color: #64748b;">Total Pago:</div>
-          <div style="font-size: 26px; font-weight: 800; color: #10b981;">R$ ${valor}</div>
-        </div>
+      return {
+        dataPagamento: dataPag,
+        horaPagamento: horaPag,
+        periodoInicio: perInicio,
+        periodoFim: perFim || estatisticasReais.dataRenovacao || dataPag,
+        periodoTexto: `${perInicio} a ${perFim || estatisticasReais.dataRenovacao || dataPag}`,
+        cicloNome,
+        proximaRenovacao: perFim || estatisticasReais.dataRenovacao || dataPag
+      };
+    }
 
-        <div class="footer">
-          <p>Celebre Sistema de Gestão de Eventos e Locações • CNPJ 00.000.000/0001-00</p>
-          <p>Este comprovante serve como recibo oficial de pagamento referente à assinatura do sistema.</p>
-        </div>
-        <script>window.print();</script>
-      </body>
-      </html>
-    `);
-    janelaImpressao.document.close();
+    // 2. Se houver faturas já carregadas no histórico do componente
+    if (historicoFaturas && historicoFaturas.length > 0) {
+      const fat = historicoFaturas[0];
+      return {
+        dataPagamento: fat.dataPagamento,
+        horaPagamento: fat.hora || '10:00',
+        periodoInicio: fat.periodoInicio || fat.dataPagamento,
+        periodoFim: fat.periodoFim || estatisticasReais.dataRenovacao || fat.dataPagamento,
+        periodoTexto: fat.periodo,
+        cicloNome,
+        proximaRenovacao: fat.periodoFim || estatisticasReais.dataRenovacao || fat.dataPagamento
+      };
+    }
+
+    // 3. Fallback inteligente: data do pagamento é a data de início da vigência do ciclo ativo
+    let dRenov = null;
+    if (estatisticasReais.dataRenovacao && estatisticasReais.dataRenovacao !== 'Vitalício') {
+      const partes = String(estatisticasReais.dataRenovacao).split('/');
+      if (partes.length === 3) {
+        const parsed = new Date(parseInt(partes[2], 10), parseInt(partes[1], 10) - 1, parseInt(partes[0], 10), 12, 0, 0);
+        if (!isNaN(parsed.getTime())) dRenov = parsed;
+      }
+    }
+
+    let dInicio = null;
+    const rawPag = dadosUsuario?.dataPagamento || dadosUsuario?.dataUltimoPagamento || assinatura?.dataPagamento;
+    if (rawPag) {
+      const p = parseDataGenerica(rawPag);
+      if (p) dInicio = p;
+    }
+
+    if (!dInicio && dRenov) {
+      dInicio = new Date(dRenov);
+      if (isUsuarioAnualAtual) {
+        dInicio.setFullYear(dInicio.getFullYear() - 1);
+      } else {
+        dInicio.setMonth(dInicio.getMonth() - 1);
+      }
+    }
+
+    if (!dRenov && dInicio) {
+      dRenov = new Date(dInicio);
+      if (isUsuarioAnualAtual) {
+        dRenov.setFullYear(dRenov.getFullYear() + 1);
+      } else {
+        dRenov.setMonth(dRenov.getMonth() + 1);
+      }
+    }
+
+    if (!dInicio) dInicio = hoje;
+    if (!dRenov) {
+      dRenov = new Date(dInicio);
+      if (isUsuarioAnualAtual) dRenov.setFullYear(dRenov.getFullYear() + 1);
+      else dRenov.setMonth(dRenov.getMonth() + 1);
+    }
+
+    if (isSuperAdmin) {
+      const dataPagFmt = dInicio ? dInicio.toLocaleDateString('pt-BR') : 'Acesso Master';
+      return {
+        dataPagamento: dataPagFmt,
+        horaPagamento: '10:00',
+        periodoInicio: dataPagFmt,
+        periodoFim: 'Vitalício',
+        periodoTexto: 'Acesso Vitalício Contínuo',
+        cicloNome: 'Vitalício',
+        proximaRenovacao: 'Vitalício'
+      };
+    }
+
+    const dtInicioFmt = dInicio.toLocaleDateString('pt-BR');
+    const dtFimFmt = dRenov.toLocaleDateString('pt-BR');
+
+    return {
+      dataPagamento: dtInicioFmt,
+      horaPagamento: '10:00',
+      periodoInicio: dtInicioFmt,
+      periodoFim: dtFimFmt,
+      periodoTexto: `${dtInicioFmt} a ${dtFimFmt} (${cicloNome})`,
+      cicloNome,
+      proximaRenovacao: dtFimFmt
+    };
+  };
+
+  const infoDatasPadrao = obterDatasRecibo();
+
+  const handleImprimirComprovante = (faturaCustom = {}) => {
+    const infoDatas = obterDatasRecibo(faturaCustom);
+    const codigoFatura = faturaCustom.codigo || ("FAT-" + Math.floor(100000 + Math.random() * 900000));
+    const infoP = resolverPlanoInfo(dadosUsuario, assinatura);
+
+    let rawNome = faturaCustom.planoNome || faturaCustom.descricao || infoP.nome;
+    if (rawNome.includes('Carregando...') || rawNome === 'Básico (Gratuito)') {
+      rawNome = infoP.nome;
+    }
+    rawNome = rawNome.replace(/^Assinatura (Mensal|Anual) - /, '').trim();
+    const planoNome = rawNome.toLowerCase().startsWith('plano') ? rawNome : `Plano ${rawNome}`;
+
+    let valor = faturaCustom.valor;
+    if (!valor || valor === '0,00' || valor === '0') {
+      valor = infoP.preco;
+    }
+
+    let metodoPagamento = faturaCustom.metodo;
+    if (!metodoPagamento || metodoPagamento === 'Nenhum' || metodoPagamento === 'Nenhum método cadastrado') {
+      metodoPagamento = infoP.metodo;
+    }
+
+    const email = novoEmail || usuarioLogado?.email || "contato@celebre.com";
+    const nomeCliente = localStorage.getItem('nomeEmpresa') 
+      || usuarioLogado?.displayName 
+      || (usuarioLogado?.email ? usuarioLogado.email.split('@')[0].toUpperCase() : 'ASSINANTE CELEBRE');
+
+    setFaturaReciboModal({
+      codigo: codigoFatura,
+      status: faturaCustom.status || 'concluido',
+      dataPagamento: infoDatas.dataPagamento,
+      horaPagamento: infoDatas.horaPagamento || '10:00',
+      periodoInicio: infoDatas.periodoInicio,
+      periodoFim: infoDatas.periodoFim,
+      cicloNome: infoDatas.cicloNome,
+      empresaNome: nomeCliente,
+      email: email,
+      metodo: metodoPagamento,
+      descricao: `Assinatura ${planoNome.replace(/^Plano /, '')}`,
+      detalhes: 'Licença de Software Celebre • Sistema de Gestão',
+      valor: valor
+    });
   };
 
   const limiteVagas = isSuperAdmin ? 9999 : (usoPlano?.limite || 3);
@@ -466,28 +941,49 @@ const AbaAssinaturaUso = ({
     ? 'var(--dourado)' 
     : (pctVagas >= 100 ? '#ef4444' : (pctVagas > 70 ? '#f59e0b' : '#10b981'));
 
-  const planoNomeAtual = assinatura?.planoNome || "Básico";
-  const precoMensalAtual = assinatura?.precoMensal || "0,00";
-
-  // 🔍 Detecção do plano que o usuário já paga
-  const detectarPlanoAtualKey = () => {
-    const nome = (assinatura?.planoNome || '').toLowerCase();
-    const id = (assinatura?.planoId || '').toLowerCase();
-    if (id.includes('plus') || nome.includes('plus') || nome.includes('pro')) return 'plus';
-    if (id.includes('premium') || nome.includes('premium') || precoMensalAtual === '99,90') return 'premium';
-    if (id.includes('basico') || id.includes('básico') || nome.includes('basico') || nome.includes('básico') || precoMensalAtual === '49,90') return 'basico';
-    return 'premium';
+  const irParaPlanoAnterior = () => {
+    setCarouselIndex((prev) => {
+      const nextIdx = prev > 0 ? prev - 1 : LISTA_PLANOS_DISPONIVEIS.length - 1;
+      const p = LISTA_PLANOS_DISPONIVEIS[nextIdx];
+      if (p) {
+        setModalPlanoSelecionado(p.id);
+        setCienteDowngrade(false);
+        setDadosPixMigracao(null);
+        setErroPix('');
+      }
+      return nextIdx;
+    });
   };
 
-  const planoAtualKey = detectarPlanoAtualKey();
-  const isUsuarioAnualAtual = Boolean(
-    assinatura?.ciclo === 'anual' || 
-    assinatura?.planoId?.includes('anual') ||
-    assinatura?.periodo === 'anual'
-  );
+  const irParaProximoPlano = () => {
+    setCarouselIndex((prev) => {
+      const nextIdx = prev < LISTA_PLANOS_DISPONIVEIS.length - 1 ? prev + 1 : 0;
+      const p = LISTA_PLANOS_DISPONIVEIS[nextIdx];
+      if (p) {
+        setModalPlanoSelecionado(p.id);
+        setCienteDowngrade(false);
+        setDadosPixMigracao(null);
+        setErroPix('');
+      }
+      return nextIdx;
+    });
+  };
+
+  const selecionarPlanoPorIndex = (idx) => {
+    setCarouselIndex(idx);
+    const p = LISTA_PLANOS_DISPONIVEIS[idx];
+    if (p) {
+      setModalPlanoSelecionado(p.id);
+      setCienteDowngrade(false);
+      setDadosPixMigracao(null);
+      setErroPix('');
+    }
+  };
 
   const abrirModalUpgrade = () => {
     const proximo = planoAtualKey === 'basico' ? 'premium' : 'plus';
+    const idx = LISTA_PLANOS_DISPONIVEIS.findIndex(p => p.id === proximo);
+    setCarouselIndex(idx >= 0 ? idx : 1);
     setModalPlanoSelecionado(proximo);
     setModalCiclo('mensal');
     setDadosPixMigracao(null);
@@ -500,6 +996,8 @@ const AbaAssinaturaUso = ({
   };
 
   const abrirModalAnual = () => {
+    const idx = LISTA_PLANOS_DISPONIVEIS.findIndex(p => p.id === planoAtualKey);
+    setCarouselIndex(idx >= 0 ? idx : 1);
     setModalPlanoSelecionado(planoAtualKey);
     setModalCiclo('anual');
     setDadosPixMigracao(null);
@@ -768,42 +1266,64 @@ const AbaAssinaturaUso = ({
       {/* ── CARD PRINCIPAL: STATUS DO PLANO & PRÓXIMA COBRANÇA ── */}
       <div className="config-card span-2-col-full assinatura-card-topo">
         <div className="card-top-bar gold-bar"></div>
-        <div className="config-card-header">
-          <div className="card-header-icon gold">
-            <i className="fas fa-crown"></i>
-          </div>
-          <div style={{ flex: 1 }}>
-            <div className="plano-top-badges">
-              <span className={`plano-status-badge ${assinatura?.isActive || isSuperAdmin ? 'ativo' : 'alerta'}`}>
-                <span className="status-dot"></span>
-                {assinatura?.status || 'Plano Ativo'}
-              </span>
-              <span className="plano-tipo-badge">
-                {isSuperAdmin ? 'PAINEL MASTER VITALÍCIO' : 'ASSINATURA MENSAL'}
-              </span>
-              {dataCriacaoConta && (
-                <span className="plano-criacao-tag">
-                  <i className="fas fa-calendar-check"></i> Conta Criada em: {dataCriacaoConta}
-                </span>
-              )}
+        
+        <div className="assinatura-topo-hero">
+          {/* BLOCO PRINCIPAL: ÍCONE + BADGES + TÍTULO E VALOR */}
+          <div className="assinatura-topo-main">
+            <div className="assinatura-crown-medallion">
+              <i className="fas fa-crown"></i>
             </div>
-            <h3 style={{ margin: '4px 0 2px 0' }}>{planoNomeAtual}</h3>
-            <p className="subtext">
-              {!isSuperAdmin ? (
-                <>Valor da assinatura: <strong>R$ {precoMensalAtual}</strong>/mês</>
-              ) : (
-                'Acesso total e irrestrito a todos os módulos do sistema Celebre.'
-              )}
-            </p>
+            
+            <div className="assinatura-topo-info">
+              <div className="plano-top-badges">
+                <span className={`plano-status-badge ${assinatura?.isActive || isSuperAdmin ? 'ativo' : 'alerta'}`}>
+                  <span className="status-dot"></span>
+                  {assinatura?.status || 'Plano Ativo'}
+                </span>
+                <span className="plano-tipo-badge">
+                  {isSuperAdmin ? 'PAINEL MASTER VITALÍCIO' : 'ASSINATURA MENSAL'}
+                </span>
+                {dataCriacaoConta && (
+                  <span className="plano-criacao-tag">
+                    <i className="fas fa-calendar-check"></i> Conta Criada em: {dataCriacaoConta}
+                  </span>
+                )}
+              </div>
+
+              <div className="plano-title-price-row">
+                <h3 className="plano-hero-nome">{planoNomeAtual}</h3>
+                {!isSuperAdmin ? (
+                  <div className="plano-hero-preco">
+                    <span className="preco-rotulo">Valor da assinatura:</span>
+                    <strong className="preco-valor">R$ {precoMensalAtual}</strong>
+                    <span className="preco-ciclo">/mês</span>
+                  </div>
+                ) : (
+                  <span className="plano-master-pill">Acesso Total Vitalício</span>
+                )}
+              </div>
+            </div>
           </div>
 
-          <button 
-            type="button" 
-            className="btn-upgrade-plano"
-            onClick={abrirModalUpgrade}
-          >
-            <i className="fas fa-rocket"></i> <span>Fazer Upgrade de Plano</span>
-          </button>
+          {/* BOTÕES DE AÇÃO DO PLANO */}
+          <div className="plano-header-actions">
+            <button 
+              type="button" 
+              className="btn-ver-recursos-plano"
+              onClick={() => setModalRecursosAberto(true)}
+              title="Ver recursos e ferramentas incluídas no seu plano"
+            >
+              <i className="fas fa-star" style={{ color: 'var(--dourado)' }}></i> <span>Recursos (8)</span>
+            </button>
+
+            <button 
+              type="button" 
+              className="btn-upgrade-plano"
+              onClick={abrirModalUpgrade}
+            >
+              <i className="fas fa-rocket"></i> <span>Upgrade de Plano</span>
+            </button>
+          </div>
         </div>
 
         {/* 📅 BANNER DE DESTAQUE: DATA DE RENOVAÇÃO / VENCIMENTO DA COBRANÇA */}
@@ -812,13 +1332,33 @@ const AbaAssinaturaUso = ({
             <i className={`fas ${isSuperAdmin ? 'fa-infinity' : 'fa-calendar-alt'}`}></i>
           </div>
           <div className="vencimento-banner-info">
-            <div className="vencimento-titulo">
-              {isSuperAdmin ? 'Licença Celebre:' : 'Data de Renovação / Vencimento:'}{' '}
-              <span className="vencimento-data-destaque">{estatisticasReais.dataRenovacao || '—'}</span>
+            <div className="vencimento-header-row">
+              <span className="vencimento-label">
+                {isSuperAdmin ? 'Licença Celebre:' : 'Data de Renovação / Vencimento:'}
+              </span>
+              <span className="vencimento-data-destaque">
+                {estatisticasReais.dataRenovacao || '—'}
+              </span>
+              {!isSuperAdmin && estatisticasReais.dataRenovacao && estatisticasReais.dataRenovacao !== 'Vitalício' && (
+                <span className="vencimento-dias-pill" style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '3px 10px',
+                  background: 'rgba(16, 185, 129, 0.12)',
+                  color: '#10b981',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  borderRadius: '12px',
+                  fontSize: '11.5px',
+                  fontWeight: '600'
+                }}>
+                  <i className="fas fa-clock"></i> Ciclo de 30 dias ativo
+                </span>
+              )}
             </div>
             <p className="vencimento-subtexto">
               {!isSuperAdmin ? (
-                <>A sua assinatura será cobrada automaticamente no cartão cadastrado em <strong>{estatisticasReais.dataRenovacao || '—'}</strong>. Seu acesso aos recursos premium permanece ativo sem interrupções.</>
+                <>Cobrança automática no cartão cadastrado em <strong>{estatisticasReais.dataRenovacao || '—'}</strong> · Acesso aos recursos premium ativo e sem interrupções.</>
               ) : (
                 'Sua conta é Master Vitalícia e não possui cobranças ou renovações recorrentes.'
               )}
@@ -917,51 +1457,7 @@ const AbaAssinaturaUso = ({
         </div>
       </div>
 
-      {/* ⭐ SEÇÃO 3: RECURSOS INCLUÍDOS NO SEU PLANO (GRID FULL WIDTH BALANCEADO 4x2) */}
-      <div className="assinatura-card-bloco">
-        <div className="card-bloco-header">
-          <div>
-            <h3 className="card-bloco-title">
-              <i className="fas fa-star" style={{ color: 'var(--dourado)' }}></i> Recursos Incluídos no Seu Plano
-            </h3>
-            <p className="card-bloco-desc">Todas as ferramentas ativas e disponíveis para a sua empresa.</p>
-          </div>
-          <span className="modulos-liberados-badge">
-            <i className="fas fa-check-double"></i> 8 Módulos Liberados
-          </span>
-        </div>
-
-        <div className="assinatura-modulos-grid">
-          {[
-            { icon: 'fas fa-users', color: '#3b82f6', title: 'Gestão de Clientes', desc: 'CRM completo e histórico de clientes' },
-            { icon: 'fas fa-boxes', color: '#10b981', title: 'Gestão de Estoque', desc: 'Acervo com controle de peças e valores' },
-            { icon: 'fas fa-hand-holding-heart', color: '#ec4899', title: 'Locações e Pedidos', desc: 'Orçamentos, reservas e agendamentos' },
-            { icon: 'fas fa-truck', color: '#f59e0b', title: 'Logística & Entregas', desc: 'Controle de saídas, devoluções e frete' },
-            { icon: 'fas fa-file-contract', color: '#8b5cf6', title: 'Emissão de Contratos', desc: 'Gerador e assinatura digital' },
-            { icon: 'fas fa-store', color: '#06b6d4', title: 'Catálogo Digital', desc: 'Vitrine online para seus clientes' },
-            { icon: 'fas fa-palette', color: '#f43f5e', title: 'Projetos Moodboard', desc: 'Criação de projetos visuais e decoração' },
-            { icon: 'fas fa-chart-line', color: '#6366f1', title: 'Financeiro & DRE', desc: 'Controle de caixa, entradas e relatórios' }
-          ].map((item, index) => (
-            <div key={index} className="modulo-item-card">
-              <div className="modulo-top-row">
-                <div className="modulo-icon-box" style={{ backgroundColor: `${item.color}1a`, color: item.color }}>
-                  <i className={item.icon}></i>
-                </div>
-                <span className="modulo-incluido-tag">
-                  <i className="fas fa-check-circle"></i> Incluído
-                </span>
-              </div>
-
-              <div className="modulo-text-block">
-                <h4 className="modulo-title">{item.title}</h4>
-                <p className="modulo-desc">{item.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 📄 SEÇÃO 4: HISTÓRICO DE FATURAMENTO RECENTE */}
+      {/* 📄 SEÇÃO 3: HISTÓRICO DE FATURAMENTO RECENTE */}
       <div className="assinatura-card-bloco">
         <h3 className="card-bloco-title" style={{ marginBottom: '14px' }}>
           <i className="fas fa-history" style={{ color: 'var(--texto-secundario)' }}></i> Histórico Recente de Faturamento
@@ -971,8 +1467,9 @@ const AbaAssinaturaUso = ({
           <table className="assinatura-tabela">
             <thead>
               <tr>
-                <th>Data</th>
+                <th>Data Pagamento</th>
                 <th>Descrição</th>
+                <th>Período / Vigência</th>
                 <th>Método</th>
                 <th>Valor</th>
                 <th>Status</th>
@@ -980,24 +1477,63 @@ const AbaAssinaturaUso = ({
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td className="data-col">{new Date().toLocaleDateString('pt-BR')}</td>
-                <td className="desc-col">Assinatura Mensal - {planoNomeAtual}</td>
-                <td className="metodo-col">Mercado Pago (Cartão / PIX)</td>
-                <td className="valor-col">R$ {precoMensalAtual}</td>
-                <td>
-                  <span className="status-concluido-pill">Concluído</span>
-                </td>
-                <td style={{ textAlign: 'right' }}>
-                  <button 
-                    type="button" 
-                    onClick={handleImprimirComprovante}
-                    className="btn-imprimir-recibo"
-                  >
-                    <i className="fas fa-print"></i> Imprimir Recibo
-                  </button>
-                </td>
-              </tr>
+              {historicoFaturas && historicoFaturas.length > 0 ? (
+                historicoFaturas.map((fat, idx) => {
+                  const valorExibido = (fat.valor && fat.valor !== '0,00' && fat.valor !== '0') ? fat.valor : infoPlanoAtual.preco;
+                  const metodoExibido = (fat.metodo && fat.metodo !== 'Nenhum' && fat.metodo !== 'Nenhum método cadastrado') ? fat.metodo : infoPlanoAtual.metodo;
+                  const descExibida = (!fat.descricao || fat.descricao.includes('Carregando...'))
+                    ? `Assinatura ${infoDatasPadrao.cicloNome} - ${infoPlanoAtual.nome}`
+                    : fat.descricao;
+
+                  const faturaSaneada = {
+                    ...fat,
+                    valor: valorExibido,
+                    metodo: metodoExibido,
+                    descricao: descExibida
+                  };
+
+                  return (
+                    <tr key={fat.id || idx}>
+                      <td className="data-col">{fat.dataPagamento}</td>
+                      <td className="desc-col">{descExibida}</td>
+                      <td className="periodo-col">
+                        <span className="periodo-badge">{fat.periodo}</span>
+                      </td>
+                      <td className="metodo-col">{metodoExibido}</td>
+                      <td className="valor-col">R$ {valorExibido}</td>
+                      <td>
+                        <span className="status-concluido-pill">{fat.status}</span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button 
+                          type="button" 
+                          onClick={() => handleImprimirComprovante(faturaSaneada)}
+                          className="btn-imprimir-recibo"
+                        >
+                          <i className="fas fa-print"></i> Imprimir Recibo
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--texto-secundario)' }}>
+                    <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                      <i className="fas fa-gift" style={{ fontSize: '28px', color: 'var(--dourado)' }}></i>
+                      <strong style={{ fontSize: '15px', color: 'var(--texto-principal)' }}>
+                        {isSuperAdmin ? 'Acesso Master Vitalício Permanente' : 'Período de Teste Gratuito Ativo'}
+                      </strong>
+                      <p style={{ margin: 0, fontSize: '13px', maxWidth: '440px', lineHeight: '1.4' }}>
+                        {isSuperAdmin
+                          ? 'Sua conta de Super Administrador possui licença permanente sem necessidade de faturas.'
+                          : `Sua empresa está em período de avaliação gratuita até ${estatisticasReais.dataRenovacao || 'o término do teste'}. Nenhuma cobrança foi realizada e não há faturas pendentes.`
+                        }
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -1035,6 +1571,82 @@ const AbaAssinaturaUso = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ⭐ MODAL VIP: RECURSOS & MÓDULOS INCLUÍDOS NO PLANO */}
+      {modalRecursosAberto && (
+        <div className="assinatura-modal-overlay" onClick={() => setModalRecursosAberto(false)}>
+          <div className="modal-recursos-plano-card" onClick={e => e.stopPropagation()}>
+            
+            {/* CABEÇALHO DO MODAL */}
+            <div className="modal-recursos-header">
+              <div className="modal-recursos-header-left">
+                <div className="modal-recursos-icon-circle">
+                  <i className="fas fa-crown"></i>
+                </div>
+                <div>
+                  <div className="modal-recursos-top-badges">
+                    <span className="modal-recursos-badge-plano">Plano {planoNomeAtual}</span>
+                    <span className="modulos-liberados-badge">
+                      <i className="fas fa-check-double"></i> 8 Módulos Liberados
+                    </span>
+                  </div>
+                  <h3 className="modal-recursos-title">
+                    Recursos Incluídos no Seu Plano
+                  </h3>
+                  <p className="modal-recursos-sub">
+                    Todas as ferramentas ativas, ilimitadas e prontas para uso na sua empresa.
+                  </p>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                className="modal-recursos-close-btn"
+                onClick={() => setModalRecursosAberto(false)}
+                title="Fechar"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* GRID DE MÓDULOS NO MODAL */}
+            <div className="modal-recursos-grid">
+              {LISTA_MODULOS_INCLUIDOS.map((item, index) => (
+                <div key={index} className="modulo-item-card">
+                  <div className="modulo-top-row">
+                    <div className="modulo-icon-box" style={{ backgroundColor: `${item.color}1a`, color: item.color }}>
+                      <i className={item.icon}></i>
+                    </div>
+                    <span className="modulo-incluido-tag">
+                      <i className="fas fa-check-circle"></i> Incluído
+                    </span>
+                  </div>
+
+                  <div className="modulo-text-block">
+                    <h4 className="modulo-title">{item.title}</h4>
+                    <p className="modulo-desc">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* RODAPÉ DO MODAL */}
+            <div className="modal-recursos-footer">
+              <div className="modal-recursos-footer-info">
+                <i className="fas fa-shield-alt" style={{ color: '#10b981' }}></i>
+                <span>Acesso ilimitado e irrestrito sem cobranças adicionais por módulo.</span>
+              </div>
+              <button 
+                type="button" 
+                className="btn-modal-recursos-fechar"
+                onClick={() => setModalRecursosAberto(false)}
+              >
+                Entendido
+              </button>
+            </div>
+
           </div>
         </div>
       )}
@@ -1098,27 +1710,88 @@ const AbaAssinaturaUso = ({
               </div>
             </div>
 
-            {/* GRID DE CARDS DOS 3 PLANOS */}
-            <div className="modal-planos-grid">
-              {LISTA_PLANOS_DISPONIVEIS.map((plano) => {
-                const isPlanoAtual = plano.id === planoAtualKey;
-                const isSelected = modalPlanoSelecionado === plano.id;
-                const isDestaque = plano.destaque;
-                const nivelPlanoAtual = HIERARQUIA_PLANOS[planoAtualKey] || 2;
-                const nivelPlanoCard = HIERARQUIA_PLANOS[plano.id] || 1;
-                const isDowngradeCard = nivelPlanoCard < nivelPlanoAtual;
+            {/* 📱 CONTROLE DE NAVEGAÇÃO LATERAL MOBILE (FLECHAS INDICATIVAS & ABAS RÁPIDAS) */}
+            <div className="modal-carousel-nav-wrapper">
+              <button
+                type="button"
+                className="modal-carousel-arrow-btn prev"
+                onClick={irParaPlanoAnterior}
+                title="Plano Anterior"
+                aria-label="Plano Anterior"
+              >
+                <i className="fas fa-chevron-left"></i>
+              </button>
 
-                return (
-                  <div
-                    key={plano.id}
-                    className={`modal-plano-card ${isPlanoAtual ? 'is-plano-atual' : ''} ${isSelected ? 'is-selected' : ''} ${isDowngradeCard && !isPlanoAtual ? 'is-downgrade-card' : ''} ${isDestaque && !isPlanoAtual && !isDowngradeCard ? 'is-destaque' : ''}`}
-                    onClick={() => {
-                      setModalPlanoSelecionado(plano.id);
-                      setCienteDowngrade(false);
-                      setDadosPixMigracao(null);
-                      setErroPix('');
-                    }}
+              <div className="modal-carousel-pills-track">
+                {LISTA_PLANOS_DISPONIVEIS.map((p, idx) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={`modal-carousel-pill-item ${idx === carouselIndex ? 'active' : ''}`}
+                    onClick={() => selecionarPlanoPorIndex(idx)}
                   >
+                    <span className="pill-dot"></span>
+                    <span>{p.nome}</span>
+                    {p.id === planoAtualKey && <span className="pill-sub-tag">Atual</span>}
+                    {p.destaque && p.id !== planoAtualKey && <span className="pill-sub-tag gold">★</span>}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className="modal-carousel-arrow-btn next"
+                onClick={irParaProximoPlano}
+                title="Próximo Plano"
+                aria-label="Próximo Plano"
+              >
+                <i className="fas fa-chevron-right"></i>
+              </button>
+            </div>
+
+            {/* CONTAINER COM FLECHAS FLUTUANTES LATERAIS E SUPORTE A TOUCH SWIPE */}
+            <div 
+              className="modal-planos-carousel-container"
+              onTouchStart={(e) => setTouchStartX(e.targetTouches[0].clientX)}
+              onTouchEnd={(e) => {
+                if (touchStartX === null) return;
+                const touchEndX = e.changedTouches[0].clientX;
+                const diff = touchStartX - touchEndX;
+                if (diff > 40) irParaProximoPlano();
+                else if (diff < -40) irParaPlanoAnterior();
+                setTouchStartX(null);
+              }}
+            >
+              {/* FLECHA LATERAL ESQUERDA FLUTUANTE */}
+              <button
+                type="button"
+                className="modal-carousel-floating-arrow prev"
+                onClick={irParaPlanoAnterior}
+                title="Plano Anterior"
+                aria-label="Plano Anterior"
+              >
+                <i className="fas fa-chevron-left"></i>
+              </button>
+
+              {/* GRID DE CARDS DOS 3 PLANOS */}
+              <div className="modal-planos-grid">
+                {LISTA_PLANOS_DISPONIVEIS.map((plano, idx) => {
+                  const isPlanoAtual = plano.id === planoAtualKey;
+                  const isSelected = modalPlanoSelecionado === plano.id;
+                  const isCarouselActive = idx === carouselIndex;
+                  const isDestaque = plano.destaque;
+                  const nivelPlanoAtual = HIERARQUIA_PLANOS[planoAtualKey] || 2;
+                  const nivelPlanoCard = HIERARQUIA_PLANOS[plano.id] || 1;
+                  const isDowngradeCard = nivelPlanoCard < nivelPlanoAtual;
+
+                  return (
+                    <div
+                      key={plano.id}
+                      className={`modal-plano-card ${isPlanoAtual ? 'is-plano-atual' : ''} ${isSelected ? 'is-selected' : ''} ${isCarouselActive ? 'is-carousel-active' : ''} ${isDowngradeCard && !isPlanoAtual ? 'is-downgrade-card' : ''} ${isDestaque && !isPlanoAtual && !isDowngradeCard ? 'is-destaque' : ''}`}
+                      onClick={() => {
+                        selecionarPlanoPorIndex(idx);
+                      }}
+                    >
                     {/* RIBBON / SELO SUPERIOR */}
                     {isPlanoAtual ? (
                       <div className="modal-plano-ribbon atual">
@@ -1247,6 +1920,18 @@ const AbaAssinaturaUso = ({
                   </div>
                 );
               })}
+            </div>
+
+              {/* FLECHA LATERAL DIREITA FLUTUANTE */}
+              <button
+                type="button"
+                className="modal-carousel-floating-arrow next"
+                onClick={irParaProximoPlano}
+                title="Próximo Plano"
+                aria-label="Próximo Plano"
+              >
+                <i className="fas fa-chevron-right"></i>
+              </button>
             </div>
 
             {/* BANDEJA INFERIOR: AVISO SE FOR PLANO ATUAL MENSAL OU CHECKOUT TRAY */}
@@ -1717,6 +2402,14 @@ const AbaAssinaturaUso = ({
           </div>
         </div>
       )}
+
+      {/* 🧾 MODAL DO RECIBO OFICIAL CELEBRE */}
+      <ModalReciboOficial
+        isOpen={Boolean(faturaReciboModal)}
+        onClose={() => setFaturaReciboModal(null)}
+        fatura={faturaReciboModal}
+        isAdmin={false}
+      />
 
     </div>
   );

@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
-import { db } from '../../firebaseConfig';
-import { collection, addDoc, serverTimestamp, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { enviarConfirmacaoReativacaoEmail } from '../../utils/emailReativacaoService';
 import { calcularPeriodoTeste } from '../../utils/periodoTesteUtils';
 import { CUPOM_OFICIAL_PRIMEIRO_ACESSO } from '../../utils/emailTrialService';
@@ -174,6 +173,16 @@ const Checkout = () => {
   const valorPlano = Math.round(valorComDesconto * 100) / 100;
   const valorEconomizado = Math.round((valorPlanoOriginal - valorPlano) * 100) / 100;
   
+  // 🛡️ REGRA DE SEGURANÇA: Bloqueio contra cobrança duplicada no mesmo ciclo para o mesmo plano
+  const jaPossuiAssinaturaAtivaMesmoPlano = Boolean(
+    userData &&
+    (userData.plano === 'pago' || userData.statusAssinatura === 'ativa') &&
+    userData.dataProximaCobranca &&
+    new Date(userData.dataProximaCobranca).getTime() > (Date.now() + 2 * 24 * 60 * 60 * 1000) &&
+    (!isUpgrade) &&
+    (userData.planoId === planoSelecionado.id || !userData.planoId)
+  );
+
   const initialization = {
     amount: valorPlano,
     payer: { email: usuarioLogado.email, entityType: 'individual' }
@@ -198,6 +207,14 @@ const Checkout = () => {
 
   // Processamento do Cartão
   const onSubmit = async ({ selectedPaymentMethod, formData }) => {
+    // 🛡️ Verificação de bloqueio de duplo pagamento
+    if (jaPossuiAssinaturaAtivaMesmoPlano) {
+      const dVenc = new Date(userData.dataProximaCobranca).toLocaleDateString('pt-BR');
+      setMensagem(`Sua conta já possui a assinatura do ${planoSelecionado.nome || 'Plano'} ativa e quitada com vigência até ${dVenc}. Para sua segurança, pagamentos duplicados no mesmo ciclo estão bloqueados.`);
+      setTipoMensagem('alerta');
+      return;
+    }
+
     setMensagem('A processar pagamento seguro no Mercado Pago...');
     setTipoMensagem('info');
 
@@ -223,6 +240,26 @@ const Checkout = () => {
         
         if (resultado.status === 'authorized' || resultado.status === 'approved' || resultado.status === 'in_process') {
           try {
+            const dataPag = new Date();
+
+            // 🛡️ REGRA CRÍTICA: Se o usuário já possui teste ativo ou dias de cortesia/vigência futura,
+            // a nova vigência PAGA deve somar a partir do término do benefício anterior (NÃO comer dias de cortesia!)
+            let dataBase = new Date(dataPag);
+            const vencimentoAtualRaw = userData?.dataProximaCobranca || userData?.dataFimTeste || infoTeste?.dataFimDate;
+            if (vencimentoAtualRaw) {
+              const dVenc = new Date(vencimentoAtualRaw);
+              if (!isNaN(dVenc.getTime()) && dVenc.getTime() > dataPag.getTime()) {
+                dataBase = new Date(dVenc);
+              }
+            }
+
+            const dataProx = new Date(dataBase);
+            if (String(planoSelecionado.id || '').includes('anual')) {
+              dataProx.setFullYear(dataProx.getFullYear() + 1);
+            } else {
+              dataProx.setMonth(dataProx.getMonth() + 1);
+            }
+
             const userRef = doc(db, 'usuarios', usuarioLogado.uid);
             await updateDoc(userRef, {
               statusConta: 'ativo',
@@ -231,8 +268,30 @@ const Checkout = () => {
               statusAssinatura: 'ativa',
               planoId: planoSelecionado.id,
               cupomUtilizado: cupomAplicado?.codigo || null,
-              valorAssinatura: valorPlano
+              valorAssinatura: valorPlano,
+              dataPagamento: dataPag.toISOString(),
+              dataProximaCobranca: dataProx.toISOString()
             });
+
+            if (usuarioLogado.email) {
+              const qDup = query(collection(db, 'usuarios'), where('email', '==', usuarioLogado.email.toLowerCase().trim()));
+              const snapDup = await getDocs(qDup).catch(() => ({ docs: [] }));
+              for (const d of snapDup.docs) {
+                if (d.id !== usuarioLogado.uid) {
+                  await updateDoc(doc(db, 'usuarios', d.id), {
+                    statusConta: 'ativo',
+                    dataSuspensao: null,
+                    plano: 'pago',
+                    statusAssinatura: 'ativa',
+                    planoId: planoSelecionado.id,
+                    cupomUtilizado: cupomAplicado?.codigo || null,
+                    valorAssinatura: valorPlano,
+                    dataPagamento: dataPag.toISOString(),
+                    dataProximaCobranca: dataProx.toISOString()
+                  }).catch(() => {});
+                }
+              }
+            }
 
             // Dispara e-mail de reativação caso a conta estivesse suspensa ou fluxo de reativação
             if (location.state?.isReativacao || usuarioLogado?.email) {
@@ -294,7 +353,9 @@ const Checkout = () => {
                 email: usuarioLogado.email,
                 identification: { type: "CPF", number: cpfLimpo } 
             },
-            userId: usuarioLogado.uid
+            userId: usuarioLogado.uid,
+            planoId: planoSelecionado.id,
+            planoNome: planoSelecionado.nome
         };
         
         const resposta = await fetch(URL_DO_SEU_ROBO, {
@@ -330,6 +391,32 @@ const Checkout = () => {
         setCarregandoAlternativo(false);
     }
   };
+
+  // 🔄 Listener em tempo real para detecção de aprovação do PIX no Mercado Pago
+  useEffect(() => {
+    if (!usuarioLogado?.uid || !dadosPix) return;
+
+    const userRef = doc(db, 'usuarios', usuarioLogado.uid);
+    const unsubscribe = onSnapshot(userRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        if (data.statusPagamentoVulso === 'aprovado' || (data.statusConta === 'ativo' && data.plano === 'pago' && data.statusAssinatura === 'ativa')) {
+          setDadosPix(null);
+          setMensagem('🎉 Pagamento PIX Aprovado com Sucesso! Sua assinatura já está ativa.');
+          setTipoMensagem('sucesso');
+          setTimeout(() => {
+            if (location.state?.from) {
+              navigate(location.state.from);
+            } else {
+              navigate('/dashboard');
+            }
+          }, 2500);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [usuarioLogado?.uid, dadosPix, location.state, navigate]);
 
   const handleCopiarPix = () => {
     if (dadosPix?.copiaECola) {
@@ -785,6 +872,60 @@ const Checkout = () => {
                 : 'Escolha abaixo seu método de preferência para ativação imediata.'}
             </p>
 
+            {jaPossuiAssinaturaAtivaMesmoPlano ? (
+              <div style={{
+                background: '#ecfdf5',
+                border: '1.5px solid #a7f3d0',
+                borderRadius: '16px',
+                padding: '28px 24px',
+                textAlign: 'center',
+                margin: '10px 0 20px 0'
+              }}>
+                <div style={{
+                  width: '54px',
+                  height: '54px',
+                  borderRadius: '50%',
+                  background: '#10b981',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 16px auto',
+                  fontSize: '24px',
+                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
+                }}>
+                  <i className="fas fa-shield-alt"></i>
+                </div>
+                <h4 style={{ color: '#065f46', fontSize: '18px', fontWeight: '900', margin: '0 0 10px 0' }}>
+                  Assinatura Já Ativa no Ciclo Vigente!
+                </h4>
+                <p style={{ color: '#047857', fontSize: '13.5px', lineHeight: '1.5', margin: '0 0 20px 0' }}>
+                  Sua empresa já possui o <strong>{planoSelecionado.nome || 'Plano Premium'}</strong> ativo com vigência até <strong>{new Date(userData.dataProximaCobranca).toLocaleDateString('pt-BR')}</strong>.
+                  <br /><br />
+                  Para sua total proteção contra cobranças indevidas ou pagamentos duplicados, não é permitido realizar dois pagamentos para o mesmo plano no mesmo ciclo.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard')}
+                  style={{
+                    background: '#065f46',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '13px 26px',
+                    fontWeight: '800',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <i className="fas fa-arrow-left"></i> Voltar ao Dashboard
+                </button>
+              </div>
+            ) : (
+              <>
             {/* NAV TABS PILLS ELEGANTES */}
             <div style={{
               display: 'flex',
@@ -1114,6 +1255,8 @@ const Checkout = () => {
                   </div>
                 )}
               </div>
+            )}
+              </>
             )}
 
             <div style={{ textAlign: 'center', marginTop: '28px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>

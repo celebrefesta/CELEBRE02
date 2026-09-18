@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { updateProfile } from 'firebase/auth';
-import { formatarDataExibicao } from '../../utils/periodoTesteUtils';
+import { doc, getDoc, updateDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { updateProfile, getAuth } from 'firebase/auth';
+import { formatarDataExibicao, obterMelhorContaPorEmail } from '../../utils/periodoTesteUtils';
 import { validarCPF, validarDataNascimento } from '../../utils/validadores';
 import './Configuracoes.css';
 
@@ -48,8 +48,33 @@ const formatCEP = (value) => {
   return digits.replace(/(\d{5})(\d{1,3})$/, '$1-$2');
 };
 
-const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, nomeEmpresa, registrarLog, dataCriacaoConta }) => {
+const AbaMeuPerfil = ({
+  usuarioLogado,
+  isCollaborator,
+  isSuperAdmin,
+  isOwner,
+  nomeEmpresa,
+  registrarLog,
+  dataCriacaoConta,
+  isImpersonating: propIsImpersonating
+}) => {
   const navigate = useNavigate();
+  const auth = getAuth();
+
+  // 🛡️ Detecção de modo suporte / impersonação de cliente
+  const rawImp = localStorage.getItem('impersonatingTenant');
+  let impData = null;
+  if (rawImp) {
+    try { impData = JSON.parse(rawImp); } catch (e) { }
+  }
+  const isImpersonating = propIsImpersonating !== undefined
+    ? propIsImpersonating
+    : (Boolean(impData?.uid) || Boolean(usuarioLogado?.isImpersonating));
+
+  const targetUid = isImpersonating ? (impData?.uid || usuarioLogado?.uid) : usuarioLogado?.uid;
+  const targetEmail = isImpersonating ? (impData?.email || usuarioLogado?.email) : usuarioLogado?.email;
+  const targetNome = isImpersonating ? (impData?.nome || usuarioLogado?.displayName) : usuarioLogado?.displayName;
+
   const [carregando, setCarregando] = useState(true);
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
   const [uploadingFoto, setUploadingFoto] = useState(false);
@@ -72,6 +97,7 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
     cidade: '',
     uf: '',
     email: '',
+    empresa: '',
     asoStatus: '',
     asoTipo: '',
     asoDataExame: '',
@@ -96,19 +122,58 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
   // Carrega os dados reais do Firestore
   useEffect(() => {
     const carregarDadosUsuario = async () => {
-      if (!usuarioLogado?.uid) return;
+      if (!targetUid && !targetEmail) return;
       try {
-        const userRef = doc(db, 'usuarios', usuarioLogado.uid);
-        const userSnap = await getDoc(userRef);
-
+        let uData = null;
         let dataCriacaoFinal = dataCriacaoConta || '';
-        if (userSnap.exists()) {
-          const uData = userSnap.data();
-          const rawCad = uData.dataCadastro || uData.criadoEm || usuarioLogado.metadata?.creationTime;
+
+        // 1. Tenta carregar documento pelo targetUid principal
+        if (targetUid) {
+          try {
+            const userRef = doc(db, 'usuarios', targetUid);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+              uData = userSnap.data();
+            }
+          } catch (eDoc) {
+            console.warn("Aviso ao buscar doc do usuario por targetUid:", eDoc);
+          }
+        }
+
+        // 2. Fallback: se estiver impersonando e houver originalUid diferente
+        if (!uData && isImpersonating && impData?.originalUid && impData.originalUid !== targetUid) {
+          try {
+            const origRef = doc(db, 'usuarios', impData.originalUid);
+            const origSnap = await getDoc(origRef);
+            if (origSnap.exists()) {
+              uData = origSnap.data();
+            }
+          } catch (eOrig) { }
+        }
+
+        // 3. Fallback inteligente por e-mail do cliente alvo (para pegar todas as contas vinculadas)
+        const emailParaBusca = (targetEmail || '').toLowerCase().trim();
+        if ((!uData || !uData.nome) && emailParaBusca) {
+          try {
+            const qUsers = query(collection(db, 'usuarios'), where('email', '==', emailParaBusca));
+            const snapUsers = await getDocs(qUsers);
+            if (!snapUsers.empty) {
+              const melhor = obterMelhorContaPorEmail(snapUsers.docs);
+              if (melhor) {
+                uData = { ...(uData || {}), ...melhor };
+              }
+            }
+          } catch (eEmail) {
+            console.warn("Aviso ao buscar dados do perfil por email:", eEmail);
+          }
+        }
+
+        if (uData) {
+          const rawCad = uData.dataCadastro || uData.criadoEm || (!isImpersonating ? usuarioLogado?.metadata?.creationTime : null);
           dataCriacaoFinal = formatarDataExibicao(rawCad) || dataCriacaoFinal || '—';
 
           let rawSobrenome = (uData.sobrenome || '').trim();
-          let rawNome = (uData.nome || uData.nomeCompleto || uData.nomeExibicao || usuarioLogado.displayName || '').trim();
+          let rawNome = (uData.nome || uData.nomeCompleto || uData.nomeExibicao || targetNome || '').trim();
 
           let nomeInicial = '';
           let sobrenomeInicial = capitalize(rawSobrenome);
@@ -120,8 +185,11 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
               sobrenomeInicial = capitalize(partes.slice(1).join(' ')); // O restante vai para Sobrenome
             }
           } else {
-            nomeInicial = isCollaborator ? 'Colaborador' : 'Admin';
+            nomeInicial = isCollaborator ? 'Colaborador' : (isImpersonating ? 'Cliente' : 'Admin');
           }
+
+          const cargoPadrao = isSuperAdmin ? 'Administrador Geral' : (isOwner ? 'Proprietário(a)' : 'Gestor(a)');
+          const cargoFinal = capitalize(uData.cargo || cargoPadrao);
 
           setDadosPerfil(prev => ({
             ...prev,
@@ -129,11 +197,11 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
             sobrenome: sobrenomeInicial,
             cpf: formatCPF(uData.cpf || uData.documento || ''),
             telefone: formatTelefone(uData.telefone || ''),
-            cargo: capitalize(uData.cargo || (isSuperAdmin ? 'Administrador Geral' : (isOwner ? 'Proprietário(a)' : 'Gestor(a)'))),
+            cargo: cargoFinal,
             aniversario: uData.aniversario || '',
             dataCriacao: dataCriacaoFinal,
             bio: uData.bio || '',
-            fotoUrl: uData.fotoUrl || uData.photoURL || usuarioLogado.photoURL || '',
+            fotoUrl: uData.fotoUrl || uData.photoURL || (!isImpersonating ? usuarioLogado?.photoURL : '') || '',
             cep: formatCEP(uData.cep || ''),
             rua: capitalize(uData.rua || uData.endereco || ''),
             numero: uData.numero || '',
@@ -141,11 +209,12 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
             bairro: capitalize(uData.bairro || ''),
             cidade: capitalize(uData.cidade || ''),
             uf: (uData.uf || '').toUpperCase(),
-            email: usuarioLogado.email || ''
+            email: uData.email || targetEmail || '',
+            empresa: uData.empresa || uData.nomeEmpresa || ''
           }));
 
           if (isCollaborator) {
-            const qEquipe = query(collection(db, 'equipe'), where('email', '==', usuarioLogado.email));
+            const qEquipe = query(collection(db, 'equipe'), where('email', '==', targetEmail));
             const snapEquipe = await getDocs(qEquipe);
             if (!snapEquipe.empty) {
               const equipeData = snapEquipe.docs[0].data();
@@ -161,6 +230,18 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
               }));
             }
           }
+        } else {
+          // Fallback gracioso caso o documento no Firestore ainda não exista
+          const partes = (targetNome || '').split(/\s+/);
+          const cargoPadrao = isSuperAdmin ? 'Administrador Geral' : (isOwner ? 'Proprietário(a)' : 'Gestor(a)');
+          setDadosPerfil(prev => ({
+            ...prev,
+            nome: capitalize(partes[0]) || (isCollaborator ? 'Colaborador' : 'Cliente'),
+            sobrenome: capitalize(partes.slice(1).join(' ')),
+            email: targetEmail || '',
+            cargo: cargoPadrao,
+            dataCriacao: dataCriacaoFinal || '—'
+          }));
         }
       } catch (error) {
         console.error("Erro ao carregar perfil:", error);
@@ -170,7 +251,7 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
     };
 
     carregarDadosUsuario();
-  }, [usuarioLogado, isCollaborator, isSuperAdmin, isOwner]);
+  }, [usuarioLogado, targetUid, targetEmail, isCollaborator, isSuperAdmin, isOwner, isImpersonating]);
 
   // Função para buscar CEP automaticamente via ViaCEP
   const handleBuscarCep = async (cepInput) => {
@@ -189,7 +270,7 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
           }));
         }
       } catch (e) {
-        console.error("Erro ao consultar CEP:", e);
+        console.error("Erro ao buscar CEP:", e);
       }
     }
   };
@@ -212,12 +293,22 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
       setDadosPerfil(prev => ({ ...prev, fotoUrl: base64String }));
 
       try {
-        await updateProfile(usuarioLogado, { photoURL: base64String });
-        const userRef = doc(db, 'usuarios', usuarioLogado.uid);
-        await updateDoc(userRef, { fotoUrl: base64String, photoURL: base64String });
+        if (!isImpersonating && auth.currentUser) {
+          try {
+            await updateProfile(auth.currentUser, { photoURL: base64String });
+          } catch (eAuth) { }
+        }
+        const userRef = doc(db, 'usuarios', targetUid);
+        await setDoc(userRef, { fotoUrl: base64String, photoURL: base64String }, { merge: true });
+
+        if (isImpersonating && impData?.originalUid && impData.originalUid !== targetUid) {
+          try {
+            await setDoc(doc(db, 'usuarios', impData.originalUid), { fotoUrl: base64String, photoURL: base64String }, { merge: true });
+          } catch (eOrig) { }
+        }
 
         if (isCollaborator) {
-          const qEquipe = query(collection(db, 'equipe'), where('email', '==', usuarioLogado.email));
+          const qEquipe = query(collection(db, 'equipe'), where('email', '==', targetEmail));
           const snapEquipe = await getDocs(qEquipe);
           if (!snapEquipe.empty) {
             await updateDoc(doc(db, 'equipe', snapEquipe.docs[0].id), { fotoUrl: base64String });
@@ -225,7 +316,7 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
         }
 
         if (registrarLog) {
-          await registrarLog("FOTO DE PERFIL ATUALIZADA", `Fez upload de uma nova foto de perfil.`);
+          await registrarLog("FOTO DE PERFIL ATUALIZADA", isImpersonating ? "[MODO SUPORTE] Upload de nova foto de perfil do cliente." : "Fez upload de uma nova foto de perfil.");
         }
         alert("✅ Sua foto de perfil foi atualizada com sucesso!");
       } catch (err) {
@@ -244,9 +335,19 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
     setUploadingFoto(true);
     try {
       setDadosPerfil(prev => ({ ...prev, fotoUrl: '' }));
-      await updateProfile(usuarioLogado, { photoURL: '' });
-      const userRef = doc(db, 'usuarios', usuarioLogado.uid);
-      await updateDoc(userRef, { fotoUrl: '', photoURL: '' });
+      if (!isImpersonating && auth.currentUser) {
+        try {
+          await updateProfile(auth.currentUser, { photoURL: '' });
+        } catch (eAuth) { }
+      }
+      const userRef = doc(db, 'usuarios', targetUid);
+      await setDoc(userRef, { fotoUrl: '', photoURL: '' }, { merge: true });
+
+      if (isImpersonating && impData?.originalUid && impData.originalUid !== targetUid) {
+        try {
+          await setDoc(doc(db, 'usuarios', impData.originalUid), { fotoUrl: '', photoURL: '' }, { merge: true });
+        } catch (eOrig) { }
+      }
       alert("Foto removida!");
     } catch (e) {
       console.error(e);
@@ -285,9 +386,16 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
 
       const nomeCompletoCombinado = sobrenomeFormatado ? `${nomeFormatado} ${sobrenomeFormatado}` : nomeFormatado;
 
-      await updateProfile(usuarioLogado, { displayName: nomeCompletoCombinado });
-      const userRef = doc(db, 'usuarios', usuarioLogado.uid);
-      await updateDoc(userRef, {
+      if (!isImpersonating && auth.currentUser) {
+        try {
+          await updateProfile(auth.currentUser, { displayName: nomeCompletoCombinado });
+        } catch (eAuth) {
+          console.warn("Aviso ao atualizar displayName no Auth:", eAuth);
+        }
+      }
+
+      const userRef = doc(db, 'usuarios', targetUid);
+      await setDoc(userRef, {
         nome: nomeFormatado,
         nomeCompleto: nomeCompletoCombinado,
         sobrenome: sobrenomeFormatado,
@@ -303,11 +411,31 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
         bairro: bairroFormatado,
         cidade: cidadeFormatada,
         uf: ufFormatada,
-        endereco: enderecoCompleto
-      });
+        endereco: enderecoCompleto,
+        email: dadosPerfil.email || targetEmail
+      }, { merge: true });
+
+      if (isImpersonating && impData?.originalUid && impData.originalUid !== targetUid) {
+        try {
+          await setDoc(doc(db, 'usuarios', impData.originalUid), {
+            nome: nomeFormatado,
+            nomeCompleto: nomeCompletoCombinado,
+            sobrenome: sobrenomeFormatado,
+            cpf: dadosPerfil.cpf,
+            telefone: dadosPerfil.telefone,
+            cargo: cargoFormatado
+          }, { merge: true });
+        } catch (eOrig) { }
+      }
+
+      if (isImpersonating) {
+        try {
+          localStorage.setItem('funcName', nomeCompletoCombinado);
+        } catch (eLs) { }
+      }
 
       if (isCollaborator) {
-        const qEquipe = query(collection(db, 'equipe'), where('email', '==', usuarioLogado.email));
+        const qEquipe = query(collection(db, 'equipe'), where('email', '==', targetEmail));
         const snapEquipe = await getDocs(qEquipe);
         if (!snapEquipe.empty) {
           const funcDocId = snapEquipe.docs[0].id;
@@ -321,7 +449,7 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
       }
 
       if (registrarLog) {
-        await registrarLog("ATUALIZAÇÃO DE PERFIL", `Atualizou os dados da ficha pessoal.`);
+        await registrarLog("ATUALIZAÇÃO DE PERFIL", isImpersonating ? "[MODO SUPORTE] Atualizou os dados cadastrais do cliente." : "Atualizou os dados da ficha pessoal.");
       }
       alert('✅ Perfil atualizado com sucesso!');
     } catch (error) {
@@ -432,7 +560,7 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
 
               <p className="profile-cracha-detail-item">
                 <i className="fas fa-building"></i>
-                <span>Empresa: <strong>{nomeEmpresa || 'Sua Empresa'}</strong></span>
+                <span>Empresa: <strong>{nomeEmpresa || dadosPerfil.empresa || 'Sua Empresa'}</strong></span>
               </p>
 
               <div className="profile-cracha-meta-row">

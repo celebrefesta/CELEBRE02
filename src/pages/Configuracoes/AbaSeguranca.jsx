@@ -12,7 +12,7 @@ import { db, auth } from '../../firebaseConfig';
 import { collection, query, where, getDocs, orderBy, limit, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { enviarComprovanteExclusaoEmail } from '../../utils/emailExclusaoService';
 
-const AbaSeguranca = ({ usuarioLogado, registrarLog }) => {
+const AbaSeguranca = ({ usuarioLogado, registrarLog, isImpersonating }) => {
   const navigate = useNavigate();
   const [enviandoReset, setEnviandoReset] = useState(false);
   const [resetEnviadoComSucesso, setResetEnviadoComSucesso] = useState(false);
@@ -109,6 +109,9 @@ const AbaSeguranca = ({ usuarioLogado, registrarLog }) => {
   // ✉️ SOLICITAR ALTERAÇÃO DE EMAIL VIA EMAIL SEGURO
   const handleSolicitarAlteracaoEmail = async (e) => {
     e.preventDefault();
+    if (isImpersonating) {
+      return alert("⚠️ Você está operando em Modo Suporte. A alteração de e-mail de acesso deve ser realizada diretamente pelo próprio cliente.");
+    }
     if (!novoEmail || !novoEmail.trim()) {
       return alert("⚠️ Por favor, digite o novo e-mail de acesso.");
     }
@@ -167,6 +170,9 @@ const AbaSeguranca = ({ usuarioLogado, registrarLog }) => {
   // ⏸️ DESATIVAR CONTA TEMPORARIAMENTE
   const handleDesativarConta = async () => {
     if (!usuarioLogado) return;
+    if (isImpersonating) {
+      return alert("⚠️ Você está operando em Modo Suporte. A desativação de conta deve ser gerenciada pelo cliente ou via painel de Controle Geral.");
+    }
     setProcessandoDesativacao(true);
     try {
       const userRef = doc(db, "usuarios", usuarioLogado.uid);
@@ -197,6 +203,9 @@ const AbaSeguranca = ({ usuarioLogado, registrarLog }) => {
   const handleExcluirContaDefinitivamente = async (e) => {
     e.preventDefault();
     if (!usuarioLogado) return;
+    if (isImpersonating) {
+      return alert("⚠️ Você está operando em Modo Suporte. A exclusão de contas deve ser gerenciada pelo cliente ou pelo Super Admin em Controle Geral.");
+    }
 
     if (confirmacaoTexto.trim().toUpperCase() !== 'EXCLUIR') {
       return alert("⚠️ Para confirmar a exclusão, você deve digitar a palavra EXCLUIR exatamente em letras maiúsculas.");
