@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { auth, db } from '../../firebaseConfig';
 import { onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { parseDataGenerica } from '../../utils/periodoTesteUtils';
 import logoImage from '../../assets/LOGO_CELEBRE.png';
 import './ContaSuspensa.css';
 
@@ -35,11 +36,33 @@ const ContaSuspensa = () => {
             const data = userSnap.data();
             setDadosConta(data);
 
-            const ehSuspenso = data.statusConta === 'suspenso' || data.status === 'suspenso' || data.status === 'excluido';
+            // 🔍 Cálculo da data de última atividade real da conta:
+            const datasAtividade = [
+              parseDataGenerica(data.dataPagamento),
+              parseDataGenerica(data.dataProximaCobranca),
+              parseDataGenerica(data.dataFimTeste),
+              parseDataGenerica(data.ultimoAcesso),
+              parseDataGenerica(data.dataCadastro || data.criadoEm)
+            ].filter(Boolean);
+
+            const timestampMaisRecente = datasAtividade.length > 0 
+              ? Math.max(...datasAtividade.map(d => d.getTime()))
+              : 0;
+
+            const diasSemAtividade = timestampMaisRecente > 0
+              ? Math.max(0, Math.round((Date.now() - timestampMaisRecente) / (1000 * 60 * 60 * 24)))
+              : 999;
+
+            const ehSuspenso = (data.statusConta === 'suspenso' || data.status === 'suspenso' || data.status === 'excluido') && diasSemAtividade > 180;
             if (ehSuspenso) {
               setStatusVerificacao('suspenso');
             } else {
-              // Documento ativo: redireciona para o sistema
+              // Falso-positivo de inatividade ou documento ativo: desfaz a suspensão e redireciona para o sistema
+              if (data.statusConta === 'suspenso' || data.status === 'suspenso') {
+                try {
+                  await updateDoc(doc(db, 'usuarios', user.uid), { statusConta: 'bloqueado', status: 'bloqueado' });
+                } catch (eFix) {}
+              }
               navigate('/dashboard', { replace: true });
               return;
             }

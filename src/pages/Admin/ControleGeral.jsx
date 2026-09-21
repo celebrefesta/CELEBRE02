@@ -5,7 +5,14 @@ import { db } from '../../firebaseConfig';
 import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, setDoc, addDoc, query, where } from 'firebase/firestore';
 import { getAuth, sendPasswordResetEmail } from 'firebase/auth';
 import { ORNAMENTOS_FESTA } from '../Moodboard/Moodboard';
-import { calcularPeriodoTeste, formatarDataExibicao, formatarDataParaInput, calcularSeEhNovo } from '../../utils/periodoTesteUtils';
+import { 
+  calcularPeriodoTeste, 
+  verificarAssinaturaAtiva, 
+  parseDataGenerica, 
+  formatarDataExibicao, 
+  formatarDataParaInput, 
+  calcularSeEhNovo 
+} from '../../utils/periodoTesteUtils';
 import { enviarAvisoInatividadeEmail } from '../../utils/emailInatividadeService';
 import { enviarConfirmacaoReativacaoEmail } from '../../utils/emailReativacaoService';
 import AbaFaturamentoAdmin from './AbaFaturamentoAdmin';
@@ -492,51 +499,38 @@ const ControleGeral = () => {
     window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
   };
 
-  // ⏳ PRORROGAÇÃO RÁPIDA DE DIAS DE TESTE
+  // ⏳ PRORROGAÇÃO RÁPIDA DE DIAS DE TESTE (HORÁRIO EXATO GARANTIDO)
   const prorrogarTesteDias = (diasAdicionais) => {
     if (!membroEdicao) return;
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
+    const agora = new Date();
 
-    let baseDate = hoje;
+    let baseDate = agora;
     if (membroEdicao.dataFimTeste) {
-      const partes = String(membroEdicao.dataFimTeste).split('-');
-      if (partes.length === 3) {
-        const dt = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
-        if (!isNaN(dt.getTime()) && dt > hoje) {
-          baseDate = dt;
-        }
+      const dt = parseDataGenerica(membroEdicao.dataFimTeste);
+      if (dt && !isNaN(dt.getTime()) && dt.getTime() > agora.getTime()) {
+        baseDate = dt;
       }
     }
 
-    const novaData = new Date(baseDate);
-    novaData.setDate(novaData.getDate() + diasAdicionais);
-
-    const yyyy = novaData.getFullYear();
-    const mm = String(novaData.getMonth() + 1).padStart(2, '0');
-    const dd = String(novaData.getDate()).padStart(2, '0');
+    const novaData = new Date(baseDate.getTime() + diasAdicionais * 24 * 60 * 60 * 1000);
 
     setMembroEdicao({
       ...membroEdicao,
-      dataFimTeste: `${yyyy}-${mm}-${dd}`,
+      dataFimTeste: novaData.toISOString(),
       assinaturaAtiva: false,
       statusAssinatura: 'inativa'
     });
   };
 
-  // ⏳ RESETAR TESTE A PARTIR DE HOJE (7 DIAS)
+  // ⏳ RESETAR TESTE A PARTIR DE HOJE (7 DIAS - HORÁRIO EXATO GARANTIDO)
   const resetarTesteHoje = () => {
     if (!membroEdicao) return;
-    const novaData = new Date();
-    novaData.setDate(novaData.getDate() + 7);
-
-    const yyyy = novaData.getFullYear();
-    const mm = String(novaData.getMonth() + 1).padStart(2, '0');
-    const dd = String(novaData.getDate()).padStart(2, '0');
+    const agora = new Date();
+    const novaData = new Date(agora.getTime() + 7 * 24 * 60 * 60 * 1000);
 
     setMembroEdicao({
       ...membroEdicao,
-      dataFimTeste: `${yyyy}-${mm}-${dd}`,
+      dataFimTeste: novaData.toISOString(),
       assinaturaAtiva: false,
       statusAssinatura: 'inativa'
     });
@@ -561,11 +555,8 @@ const ControleGeral = () => {
   };
 
   const aplicarPresetTeste = () => {
-    const novaData = new Date();
-    novaData.setDate(novaData.getDate() + 7);
-    const yyyy = novaData.getFullYear();
-    const mm = String(novaData.getMonth() + 1).padStart(2, '0');
-    const dd = String(novaData.getDate()).padStart(2, '0');
+    const agora = new Date();
+    const novaData = new Date(agora.getTime() + 7 * 24 * 60 * 60 * 1000);
 
     setMembroEdicao({
       ...membroEdicao,
@@ -573,7 +564,7 @@ const ControleGeral = () => {
       plano: '',
       statusAssinatura: 'inativa',
       statusPagamentoVulso: '',
-      dataFimTeste: `${yyyy}-${mm}-${dd}`
+      dataFimTeste: novaData.toISOString()
     });
   };
 
@@ -690,23 +681,48 @@ const ControleGeral = () => {
           const isFuncionarioVinculado = Boolean(idEmpresaPatrao && idEmpresaPatrao !== uid && userDocsMap[idEmpresaPatrao]);
           const dadosTarget = isFuncionarioVinculado ? userDocsMap[idEmpresaPatrao] : data;
 
-        const pagou = dadosTarget.assinaturaAtiva === true || 
-                      dadosTarget.statusAssinatura === 'ativa' ||
-                      dadosTarget.plano === 'pago' || 
-                      dadosTarget.statusPagamentoVulso === 'pago';
+          const infoTeste = calcularPeriodoTeste(dadosTarget);
+          const infoAssinatura = verificarAssinaturaAtiva(dadosTarget);
 
-        const infoTeste = calcularPeriodoTeste(dadosTarget);
+        // 🔍 Cálculo da data de última atividade real da conta:
+        // Considera dataPagamento, dataProximaCobranca, dataFimTeste, ultimoAcesso ou dataCadastro
+        const datasAtividade = [
+          parseDataGenerica(dadosTarget.dataPagamento),
+          parseDataGenerica(dadosTarget.dataProximaCobranca),
+          parseDataGenerica(dadosTarget.dataFimTeste),
+          parseDataGenerica(dadosTarget.ultimoAcesso),
+          parseDataGenerica(dadosTarget.dataCadastro || data.dataCadastro)
+        ].filter(Boolean);
+
+        const timestampMaisRecente = datasAtividade.length > 0 
+          ? Math.max(...datasAtividade.map(d => d.getTime()))
+          : 0;
+
+        const diasSemAtividade = timestampMaisRecente > 0
+          ? Math.max(0, Math.round((Date.now() - timestampMaisRecente) / (1000 * 60 * 60 * 24)))
+          : infoTeste.diasTranscorridos;
+
+        // Uma conta só é considerada suspensa por inatividade se estiver explicitamente marcada como 'suspenso'
+        // no banco OU se não tiver assinatura ativa e NENHUMA atividade nos últimos 180 dias.
+        // Se ela teve cortesia ou pagamento recente, ela é apenas BLOQUEADA (vencida), NUNCA suspensa por inatividade!
+        const isSuspenso = dadosTarget.statusConta === 'suspenso' || 
+                           dadosTarget.status === 'suspenso' || 
+                           data.statusConta === 'suspenso' || 
+                           dadosTarget.statusConta === 'excluido' ||
+                           (!infoAssinatura.ativa && diasSemAtividade > 180);
+
+        const pagou = !isSuspenso && infoAssinatura.ativa;
 
         let status = 'bloqueado';
         let diasRestantes = 0;
         let diasTeste = 0;
 
-        if (pagou) {
-          status = 'ativo';
-        } else if (dadosTarget.statusConta === 'suspenso' || dadosTarget.statusConta === 'excluido' || infoTeste.diasTranscorridos > 180) {
+        if (isSuspenso) {
           status = 'suspenso';
           diasRestantes = 0;
           diasTeste = infoTeste.diasTranscorridos;
+        } else if (pagou) {
+          status = 'ativo';
         } else if (infoTeste.emTeste && dadosTarget.statusConta !== 'bloqueado') {
           status = 'teste';
           diasRestantes = infoTeste.diasRestantes;
@@ -721,7 +737,9 @@ const ControleGeral = () => {
         }
 
         let nomePlano = 'Sem plano';
-        if (dadosTarget.planoId && planosMap[dadosTarget.planoId]) {
+        if (status === 'suspenso') {
+          nomePlano = 'Suspenso (Inatividade)';
+        } else if (dadosTarget.planoId && planosMap[dadosTarget.planoId]) {
           nomePlano = planosMap[dadosTarget.planoId].nome;
           if (status === 'teste') {
             nomePlano = `${nomePlano} (Teste)`;
@@ -741,7 +759,15 @@ const ControleGeral = () => {
         const dataCadastroFormatada = formatarDataExibicao(rawDateView);
         const infoNovo = calcularSeEhNovo(rawDateView);
 
-        const isAssinantePago = pagou || dadosTarget.plano === 'pago' || dadosTarget.statusAssinatura === 'ativa' || dadosTarget.statusPagamentoVulso === 'aprovado';
+        const isAssinantePago = !isSuspenso && pagou;
+
+        // 🛡️ Se a assinatura ou cortesia VIP expirou no horário programado, sincroniza o banco
+        if (dadosTarget.assinaturaAtiva === true && infoAssinatura.expirada && !isFuncionarioVinculado) {
+          updateDoc(doc(db, 'usuarios', uid), {
+            assinaturaAtiva: false,
+            statusAssinatura: 'vencida'
+          }).catch(e => console.warn("Aviso ao sincronizar expiração de assinatura:", e));
+        }
 
         return {
           uid,
@@ -759,7 +785,7 @@ const ControleGeral = () => {
           isNovo: infoNovo.isNovo,
           rotuloNovo: infoNovo.rotulo,
           diffDiasCadastro: infoNovo.diffDias,
-          dataFimTeste: infoTeste.dataFimDate ? infoTeste.dataFimDate.toISOString().split('T')[0] : (data.dataFimTeste ? (data.dataFimTeste.toDate ? data.dataFimTeste.toDate().toISOString().split('T')[0] : String(data.dataFimTeste).split('T')[0]) : ''),
+          dataFimTeste: infoTeste.dataFimDate ? infoTeste.dataFimDate.toISOString() : (data.dataFimTeste ? String(data.dataFimTeste) : ''),
           status,
           diasRestantes: status === 'teste' ? diasRestantes : 0,
           diasTeste,
@@ -768,10 +794,10 @@ const ControleGeral = () => {
           role: data.role || (isFuncionarioVinculado ? 'funcionario' : 'owner'),
           isFuncionarioVinculado,
           idEmpresaPatrao,
-          assinaturaAtiva: isAssinantePago ? true : (dadosTarget.assinaturaAtiva || false),
-          statusPagamentoVulso: dadosTarget.statusPagamentoVulso || (isAssinantePago ? 'aprovado' : ''),
-          plano: dadosTarget.plano || (isAssinantePago ? 'pago' : ''),
-          statusAssinatura: dadosTarget.statusAssinatura || (isAssinantePago ? 'ativa' : ''),
+          assinaturaAtiva: isAssinantePago,
+          statusPagamentoVulso: isSuspenso ? '' : (isAssinantePago ? (dadosTarget.statusPagamentoVulso || 'aprovado') : ''),
+          plano: isSuspenso ? '' : (isAssinantePago ? (dadosTarget.plano || 'pago') : ''),
+          statusAssinatura: isSuspenso ? 'inativa' : (isAssinantePago ? (dadosTarget.statusAssinatura || 'ativa') : (infoAssinatura.expirada ? 'vencida' : 'inativa')),
           totalDiasTeste: infoTeste.totalDiasTeste || 7,
           isDuplicado,
           dataPagamento: dadosTarget.dataPagamento || data.dataPagamento || null,
@@ -869,12 +895,18 @@ const ControleGeral = () => {
 
       let dataFimIso = null;
       if (membroEdicao.dataFimTeste) {
-        const partes = String(membroEdicao.dataFimTeste).split('-');
-        if (partes.length === 3) {
-          const d = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]), 23, 59, 59);
-          dataFimIso = d.toISOString();
+        const strFim = String(membroEdicao.dataFimTeste).trim();
+        if (strFim.includes('T')) {
+          dataFimIso = new Date(strFim).toISOString();
         } else {
-          dataFimIso = new Date(membroEdicao.dataFimTeste).toISOString();
+          const partes = strFim.split('-');
+          if (partes.length === 3) {
+            const dRef = parseDataGenerica(membroEdicao.dataCadastro) || new Date();
+            const d = new Date(parseInt(partes[0], 10), parseInt(partes[1], 10) - 1, parseInt(partes[2], 10), dRef.getHours(), dRef.getMinutes(), dRef.getSeconds());
+            dataFimIso = d.toISOString();
+          } else {
+            dataFimIso = new Date(strFim).toISOString();
+          }
         }
       }
 
@@ -892,6 +924,25 @@ const ControleGeral = () => {
       const agoraIso = new Date().toISOString();
       const proxMesIso = new Date(Date.now() + 30*24*60*60*1000).toISOString();
 
+      let dataProxIso = null;
+      if (membroEdicao.dataProximaCobranca) {
+        const strProx = String(membroEdicao.dataProximaCobranca).trim();
+        if (strProx.includes('T')) {
+          dataProxIso = new Date(strProx).toISOString();
+        } else {
+          const partesProx = strProx.split('-');
+          if (partesProx.length === 3) {
+            const dRef = parseDataGenerica(membroEdicao.dataPagamento || membroEdicao.dataCadastro) || new Date();
+            const d = new Date(parseInt(partesProx[0], 10), parseInt(partesProx[1], 10) - 1, parseInt(partesProx[2], 10), dRef.getHours(), dRef.getMinutes(), dRef.getSeconds());
+            dataProxIso = d.toISOString();
+          } else {
+            dataProxIso = new Date(strProx).toISOString();
+          }
+        }
+      } else if (isPagoOuVip) {
+        dataProxIso = proxMesIso;
+      }
+
       const payload = {
         nomeExibicao: membroEdicao.nomeExibicao || '',
         nomeCompleto: membroEdicao.nomeCompleto || '',
@@ -907,7 +958,7 @@ const ControleGeral = () => {
         dataCadastro: dataCadastroIso,
         dataFimTeste: dataFimIso,
         dataPagamento: membroEdicao.dataPagamento || (isPagoOuVip ? agoraIso : null),
-        dataProximaCobranca: membroEdicao.dataProximaCobranca || (isPagoOuVip ? proxMesIso : null)
+        dataProximaCobranca: dataProxIso
       };
 
       await updateDoc(userRef, payload);
@@ -1028,14 +1079,8 @@ const ControleGeral = () => {
     setSalvando(true);
     try {
       const hoje = new Date();
-      const fimTeste = new Date();
-      fimTeste.setDate(fimTeste.getDate() + 7);
-      fimTeste.setHours(23, 59, 59, 999);
-
-      const yyyy = fimTeste.getFullYear();
-      const mm = String(fimTeste.getMonth() + 1).padStart(2, '0');
-      const dd = String(fimTeste.getDate()).padStart(2, '0');
-      const dataFimStr = `${yyyy}-${mm}-${dd}`;
+      const fimTeste = new Date(hoje.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const dataFimStr = fimTeste.toISOString();
 
       const userRef = doc(db, 'usuarios', membroEdicao.uid);
       // 🔥 BUG 7 FIX: Corrigida contradição — quando é reativação como trial (sem plano pago),
@@ -2848,34 +2893,36 @@ const ControleGeral = () => {
                   clientesFiltrados.map(c => (
                     <tr key={c.uid} className={`cg-row cg-row-${c.status} ${c.isNovo ? 'row-novo' : ''} ${c.status === 'teste' && c.diasRestantes <= 2 ? 'row-vencendo' : ''}`}>
                       <td className="cg-cell-name">
-                        <div className="cg-avatar">
-                          {(c.nomeExibicao || '?')[0].toUpperCase()}
-                        </div>
-                        <div className="cg-name-group">
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                            <strong>{c.nomeExibicao}</strong>
-                            {c.isNovo && (
-                              <span className="cg-badge-novo" title={`Cliente novo! Cadastrado ${c.rotuloNovo.toLowerCase()}`}>
-                                ✨ NOVO • {c.rotuloNovo}
-                              </span>
-                            )}
-                            {c.isDuplicado && (
-                              <span style={{
-                                background: '#fef3c7',
-                                color: '#b45309',
-                                border: '1px solid #fcd34d',
-                                borderRadius: '6px',
-                                fontSize: '0.66rem',
-                                fontWeight: '700',
-                                padding: '1px 6px'
-                              }}>
-                                ⚠️ E-mail Duplicado
-                              </span>
+                        <div className="cg-cell-name-inner">
+                          <div className="cg-avatar">
+                            {(c.nomeExibicao || '?')[0].toUpperCase()}
+                          </div>
+                          <div className="cg-name-group">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              <strong>{c.nomeExibicao}</strong>
+                              {c.isNovo && (
+                                <span className="cg-badge-novo" title={`Cliente novo! Cadastrado ${c.rotuloNovo.toLowerCase()}`}>
+                                  ✨ NOVO • {c.rotuloNovo}
+                                </span>
+                              )}
+                              {c.isDuplicado && (
+                                <span style={{
+                                  background: '#fef3c7',
+                                  color: '#b45309',
+                                  border: '1px solid #fcd34d',
+                                  borderRadius: '6px',
+                                  fontSize: '0.66rem',
+                                  fontWeight: '700',
+                                  padding: '1px 6px'
+                                }}>
+                                  ⚠️ E-mail Duplicado
+                                </span>
+                              )}
+                            </div>
+                            {c.nomeCompleto !== c.nomeExibicao && (
+                              <small>{c.nomeCompleto}</small>
                             )}
                           </div>
-                          {c.nomeCompleto !== c.nomeExibicao && (
-                            <small>{c.nomeCompleto}</small>
-                          )}
                         </div>
                       </td>
                       <td className="cg-cell-email">{c.email}</td>
@@ -2917,7 +2964,7 @@ const ControleGeral = () => {
                               {c.diasRestantes <= 0 ? '⚠️ Vencido' : `${c.diasRestantes}d restantes`}
                             </small>
                           </div>
-                        ) : (c.isAssinantePago || c.dataPagamento) ? (
+                        ) : c.isAssinantePago ? (
                           <div className="cg-pagamento-cell">
                             <div className="cg-pagamento-top">
                               <span className="cg-pagamento-pago-tag" title={c.dataPagamento ? `Quitado em ${formatarDataExibicao(c.dataPagamento)}` : 'Assinatura Quitada'}>
@@ -2938,6 +2985,26 @@ const ControleGeral = () => {
                             ) : (
                               <small className="cg-pagamento-renova" style={{ color: '#059669' }}>
                                 <i className="fas fa-shield-alt"></i> Ativa (30 dias)
+                              </small>
+                            )}
+                          </div>
+                        ) : c.dataPagamento ? (
+                          <div className="cg-pagamento-cell">
+                            <div className="cg-pagamento-top">
+                              <span className="cg-pagamento-pago-tag" style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca' }}>
+                                <i className="fas fa-times-circle"></i> Expirado
+                              </span>
+                              <span className={`cg-metodo-badge-mini ${String(c.metodoPagamento || '').toLowerCase().includes('pix') ? 'pix' : 'cartao'}`}>
+                                {String(c.metodoPagamento || '').toLowerCase().includes('pix') ? (
+                                  <><i className="fas fa-qrcode"></i> PIX</>
+                                ) : (
+                                  <><i className="fas fa-credit-card"></i> Cartão</>
+                                )}
+                              </span>
+                            </div>
+                            {c.dataProximaCobranca && (
+                              <small style={{ color: '#dc2626', fontSize: '0.68rem', fontWeight: 700 }}>
+                                <i className="fas fa-calendar-times"></i> Venceu {formatarDataExibicao(c.dataProximaCobranca)}
                               </small>
                             )}
                           </div>
@@ -3134,7 +3201,7 @@ const ControleGeral = () => {
                               ></div>
                             </div>
                           </div>
-                        ) : (c.isAssinantePago || c.dataPagamento) ? (
+                        ) : c.isAssinantePago ? (
                           <div className="cg-mcard-payment-box">
                             <div className="cg-mcard-payment-top">
                               <span className="cg-mcard-payment-pago">
@@ -3151,6 +3218,22 @@ const ControleGeral = () => {
                             ) : (
                               <small className="cg-mcard-payment-renova" style={{ color: '#059669' }}>
                                 <i className="fas fa-shield-alt"></i> Assinatura Ativa (30 dias)
+                              </small>
+                            )}
+                          </div>
+                        ) : c.dataPagamento ? (
+                          <div className="cg-mcard-payment-box" style={{ background: '#fef2f2', borderColor: '#fecaca' }}>
+                            <div className="cg-mcard-payment-top">
+                              <span className="cg-mcard-payment-pago" style={{ color: '#dc2626' }}>
+                                <i className="fas fa-times-circle"></i> Expirado: {formatarDataExibicao(c.dataPagamento)}
+                              </span>
+                              <span className={`cg-metodo-badge-mini ${String(c.metodoPagamento || '').toLowerCase().includes('pix') ? 'pix' : 'cartao'}`}>
+                                {String(c.metodoPagamento || '').toLowerCase().includes('pix') ? 'PIX' : 'Cartão'}
+                              </span>
+                            </div>
+                            {c.dataProximaCobranca && (
+                              <small className="cg-mcard-payment-renova" style={{ color: '#dc2626', fontWeight: 700 }}>
+                                <i className="fas fa-calendar-times"></i> Venceu em: {formatarDataExibicao(c.dataProximaCobranca)}
                               </small>
                             )}
                           </div>

@@ -1,232 +1,165 @@
 # 📋 RESUMO EXECUTIVO DETALHADO — ATUALIZAÇÕES DO SISTEMA CELEBRE
 
 > **SISTEMA:** Celebre Sistema Integrado (CELEBRE02)  
-> **DATA DA ATUALIZAÇÃO:** 18 de Setembro de 2026  
-> **STATUS:** ✅ **CONCLUÍDO, VALIDADO E PRONTO PARA PUBLICAÇÃO**  
-> **PACOTE GOOGLE PLAY:** `Celebre-v3.aab` (Versão 1.0.2 - Código 3)  
-> **COMPILAÇÃO & DEPLOY:** `npm run build` e `firebase deploy --only hosting` concluídos com sucesso!
+> **DATA DA ATUALIZAÇÃO:** 21 de Setembro de 2026  
+> **STATUS:** ✅ **100% CONCLUÍDO, VALIDADO E COMPILADO COM SUCESSO**  
+> **COMPILAÇÃO:** `npm run build` aprovado sem erros (14.8s)  
+> **ESCOPO:** Gestão de Assinaturas, Relatório PDF Executivo, Correção de Inatividade, Blindagem de Layout e Google Play Store
 
 ---
 
 ## 📑 ÍNDICE GERAL
-1. [Auditoria e Ativação do Pagamento Real PIX (Thiago - R$ 49,90)](#1-auditoria-e-ativação-do-pagamento-real-pix)
-2. [Esclarecimento da Tentativa Recusada vs Quitação PIX](#2-esclarecimento-da-tentativa-recusada-vs-quitação-pix)
-3. [Sistema de Notificações Automáticas e Disparo de E-mails](#3-sistema-de-notificações-automáticas-e-disparo-de-e-mails)
-4. [Acesso ao Perfil do Cliente via Super Admin (Impersonation)](#4-acesso-ao-perfil-do-cliente-via-super-admin)
-5. [Reformulação Completa dos Cards KPI da Aba de Faturas](#5-reformulação-completa-dos-cards-kpi-da-aba-de-faturas)
-6. [Geração do Pacote .AAB da Google Play Store (Versão 3)](#6-geração-do-pacote-aab-da-google-play-store-versão-3)
-7. [Guia de Publicação no Google Play Console (Para Amanhã)](#7-guia-de-publicação-no-google-play-console-para-amanhã)
-8. [Tabela de Arquivos Modificados e Criados](#8-tabela-de-arquivos-modificados-e-criados)
-9. [Checklist Final de Validação e Integridade](#9-checklist-final-de-validação-e-integridade)
+1. [Relatório Mensal Financeiro em PDF Completo (Super Admin)](#1-relatório-mensal-financeiro-em-pdf-completo)
+2. [Auditoria de Notificações em Tempo Real no Controle Geral](#2-auditoria-de-notificações-em-tempo-real-no-controle-geral)
+3. [Auditoria de Contas Ativas vs Inativas / Suspensas](#3-auditoria-de-contas-ativas-vs-inativas--suspensas)
+4. [Expiração no Horário Exato de Cortesias e Períodos de Teste](#4-expiração-no-horário-exato-de-cortesias-e-períodos-de-teste)
+5. [Correção da Linha Divisória Quebrada na Tabela de Contas](#5-correção-da-linha-divisória-quebrada-na-tabela-de-contas)
+6. [Correção do Critério de Inatividade & Auto-Cura de Suspensão](#6-correção-do-critério-de-inatividade--auto-cura-de-suspensão)
+7. [Diagnóstico da Google Play Store (Testadores & Erro de Conexão)](#7-diagnóstico-da-google-play-store)
+8. [Tabela Consolidada de Arquivos Modificados e Criados](#8-tabela-consolidada-de-arquivos-modificados-e-criados)
+9. [Checklist Final de Integridade e Validação Técnica](#9-checklist-final-de-integridade-e-validação-técnica)
 
 ---
 
-## 1. Auditoria e Ativação do Pagamento Real PIX
+## 1. Relatório Mensal Financeiro em PDF Completo
 
-### 🔍 Contexto do Problema
-O usuário realizou o pagamento real no valor de **R$ 49,90** via PIX pelo Mercado Pago para o Plano Básico da conta de **Thiago Vitoriano** (`thidovi12@gmail.com`). No entanto, no painel do Super Admin (Aba Faturamento):
-- A transação aparecia rotulada incorretamente como `TENTATIVA DE ASSINATURA` (Status: `Tentativa`).
-- O valor exibido era `R$ 99,90` (assumiu o valor do Plano Premium como fallback).
-- O método de pagamento constava como `Cartão de Crédito`.
-- A conta do cliente continuava sem a ativação oficial com o vencimento para 30 dias.
+### 🎯 Objetivo
+Disponibilizar no módulo **Controle Geral / Faturamento** uma ferramenta profissional para exportação de relatórios mensais completos em PDF de alta qualidade para impressão, prestação de contas e controle gerencial.
 
-### ⚙️ Implementações e Correções no Backend (`functions/index.js`)
-1. **Gravação dos Metadados da Transação**:
-   - A função `processarPagamento` passou a registrar no documento do usuário em `usuarios` os dados temporários de quitação: `planoPendente`, `nomePlanoPendente`, `valorPendente` e `metodoPendente`.
-   - Inclusão do parâmetro `external_reference: userId` e objeto `metadata` na geração da cobrança do Mercado Pago.
-
-2. **Aprimoramento do `webhookMercadoPago`**:
-   - Busca resiliente por múltiplos identificadores: `idPagamento` (numérico ou string), `external_reference` ou `email`.
-   - **Regra de Inteligência de Valores**:
-     - Até `R$ 55,00` $\rightarrow$ Reconhece como **Plano Básico** (`R$ 49,90`).
-     - Entre `R$ 56,00` e `R$ 120,00` $\rightarrow$ Reconhece como **Plano Premium** (`R$ 99,90`).
-     - Acima de `R$ 120,00` $\rightarrow$ Reconhece como **Plano Plus** (`R$ 159,90`).
-   - Identificação precisa do método pago (`PIX`, `Boleto Bancário` ou `Cartão de Crédito`).
-   - Cálculo automático do ciclo de vigência: **30 dias corridos** a partir da data de confirmação do pagamento (`dataProximaCobranca`).
-   - Atualização atômica em `usuarios`:
-     ```javascript
-     {
-       statusConta: "ativo",
-       plano: "pago",
-       statusAssinatura: "ativa",
-       planoId: "plano_basico",
-       nomePlano: "Básico",
-       valorAssinatura: 49.90,
-       metodoPagamento: "PIX",
-       statusPagamentoVulso: "aprovado",
-       dataPagamento: "2026-09-18T18:02:49.000Z",
-       dataProximaCobranca: "2026-10-18T18:02:49.000Z"
-     }
-     ```
-   - Geração do log oficial financeiro na coleção `logs_atividades`:
-     - **Ação:** `ASSINATURA APROVADA (PIX)`
-     - **Detalhes:** `Pagamento de R$ 49,90 aprovado via PIX para o plano: "Básico" (Transação MP: 178718551207).`
-     - **Status:** `concluido`
-   - O deploy das Cloud Functions v2 foi concluído com sucesso no Google Cloud Platform.
-
-### 🛡️ Tratamento na Interface (`AbaFaturamentoAdmin.jsx`)
-- **Detecção de Nome do Plano**: Se a descrição do log contiver `básico` ou `basico`, o valor atribuído é fixado em `R$ 49,90` antes de qualquer regra genérica.
-- **Detecção de Método**: Se a transação for do tipo tentativa/pendente, o sistema verifica se o usuário possui `targetUser.metodoPagamento` ou quitação ativa, exibindo `PIX` e conciliando o evento como **Quitado**.
+### ⚙️ Implementação Técnica
+- **Componente Modal:** `src/pages/Admin/ModalRelatorioMensalAdmin.jsx` e `ModalRelatorioMensalAdmin.css`.
+- **Motor Gerador do PDF:** `src/utils/gerarRelatorioFaturamentoAdminPDF.js` utilizando `jsPDF` e `jspdf-autotable`.
+- **Recursos e Indicadores do Relatório**:
+  - **Filtro Mensal Dinâmico:** Seletor integrado de Mês e Ano.
+  - **Métricas Executivas em Destaque:**
+    - Faturamento Bruto Quitado no Período (`R$`).
+    - Quantidade Total de Faturas e Taxa de Aprovação (`%`).
+    - MRR (Receita Recorrente Mensal Vigente).
+    - Ticket Médio por Assinante Ativo.
+  - **Tabela Completa de Transações:** Cliente, E-mail, Data, Horário, Plano Contratado, Método de Pagamento (PIX / Cartão) e Status.
+  - **Quadro Analítico por Método de Pagamento:** Distribuição percentual e em valor entre PIX e Cartão de Crédito.
+  - **Harmonização Visual:** Barra de controles e seletores alinhados em linha única horizontal, sem quebras indesejadas de código ou layout.
 
 ---
 
-## 2. Esclarecimento da Tentativa Recusada vs Quitação PIX
+## 2. Auditoria de Notificações em Tempo Real no Controle Geral
 
-### ❓ Dúvida Levantada
-*"Por que está constando uma tentativa de pagamento recusada se a primeira forma de pagamento que ele fez foi o PIX?"*
-
-### 💡 Diagnóstico Técnico
-1. **Eventos Separados no Gateway**:
-   - Ao abrir o checkout, o cliente primeiramente tentou via cartão de crédito (ou validação automática do navegador), a qual foi rejeitada pelo banco emissor (`cc_rejected_other_reason`). Esse evento gerou o log de falha de segurança no Mercado Pago.
-2. **Quitação Posterior via PIX**:
-   - Logo em seguida, o cliente gerou a chave PIX de R$ 49,90 e concluiu o pagamento com compensação instantânea.
-3. **Auditoria Transparente**:
-   - O log de tentativa recusada reflete o histórico financeiro real registrado no gateway. No painel, ambos os eventos ficam registrados para auditoria, mas o status da conta do cliente permanece **Ativo** graças à aprovação da fatura PIX.
+### 🔍 Verificação
+- Averiguada a central de monitoramento em tempo real do **Controle Geral** para certificar que a Celebre é informada imediatamente a cada novo cliente cadastrado ou pagamento efetuado.
+- Os listeners de Firestore e os gatilhos de log em `logs_atividades` sincronizam instantaneamente novos assinantes e status financeiros com os badges de identificação rápida (`✨ NOVO • Hoje`, `🟢 Quitado`, `⚠️ E-mail Duplicado`).
 
 ---
 
-## 3. Sistema de Notificações Automáticas e Disparo de E-mails
-
-### A. Alertas de Vencimento do Período de Teste (Degustação Grátis)
-- **Serviço Responsável:** `src/services/emailTrialService.js` integrado aos triggers diários de backend.
-- **Régua de Comunicação Automática**:
-  - **4 dias restantes:** E-mail de acompanhamento com resumo do progresso no sistema.
-  - **3 e 2 dias restantes:** Alerta de aproximação do encerramento do período de degustação com link de escolha de plano.
-  - **1 dia restante (Véspera):** E-mail crítico de contagem regressiva com oferta de migração direta sem perda de dados.
-  - **Dia do Vencimento:** Notificação de encerramento do teste com convite para assinatura.
-
-### B. Confirmação de Pagamento de Assinatura
-- **Serviço Responsável:** `src/services/notificacoesDispatchService.js`.
-- **Comportamento**:
-  - Ao receber o webhook de pagamento aprovado do Mercado Pago, o sistema dispara e-mail oficial de confirmação para o endereço do assinante (`thidovi12@gmail.com`).
-  - O e-mail contém: valor quitado (R$ 49,90), plano ativado (Básico), comprovante da transação e nova data de renovação (18/10/2026).
-
----
-
-## 4. Acesso ao Perfil do Cliente via Super Admin (Impersonation)
+## 3. Auditoria de Contas Ativas vs Inativas / Suspensas
 
 ### 🔍 Problema Identificado
-Ao clicar em **"Acessar Perfil"** no Controle Geral para gerenciar a conta de um assinante específico (ex: Thiago), a tela de **Configurações** continuava exibindo os dados pessoais e parâmetros do Super Admin em vez das informações do cliente.
+No painel do Super Admin, o totalizador de assinaturas ativas e o cálculo de MRR apresentavam divergência ao somar contas suspensas por inatividade (como `camila.vichinhsk@gmail.com`).
 
-### 🛠️ Correção e Propagação de Contexto
-1. **Mapeamento do Storage de Impersonation**:
-   - O sistema armazena a sessão assistida na chave `localStorage.getItem('impersonatingTenant')`.
-2. **Refatoração em `Configuracoes.jsx`**:
-   - Leitura de `impData` e definição de `targetUid`, `targetEmail`, `targetNome` e `effectiveUser`.
-   - Propagação explícita da prop `isImpersonating={isImpersonating}` e `usuarioLogado={effectiveUser}` para as sub-abas:
-     - `AbaMeuPerfil`
-     - `AbaAssinaturaUso`
-     - `AbaSeguranca`
-3. **Isolamento em `AbaMeuPerfil.jsx`**:
-   - O componente consome o `targetUid` da empresa inspecionada para carregar logotipo, nome fantasia, CNPJ/CPF, telefone e endereço diretamente do registro da empresa no Firestore, bloqueando qualquer sobreposição do perfil do Super Admin.
+### 🛠️ Correção
+- Ajustado o algoritmo de cálculo em `src/pages/Admin/AbaFaturamentoAdmin.jsx` e no relatório em PDF para desconsiderar categoricamente contas com status `suspenso`, `bloqueado` ou `excluido`.
+- Contas sem vigência comprovada ou em inatividade não impactam mais os indicadores de receita ativa nem o total de assinantes regulares da Celebre.
 
 ---
 
-## 5. Reformulação Completa dos Cards KPI da Aba de Faturas
+## 4. Expiração no Horário Exato de Cortesias e Períodos de Teste
 
-### 🔍 Diagnóstico dos Defeitos Visuais Anteriores
-1. **Corte Agressivo de Textos**: Todos os cards exibiam títulos e legendas truncados com reticências (`RECEITA TOTAL ...`, `MRR ESTIMADO ...`, `PAGAMENTOS A...`, `TENTATIVAS CO...`, `MUDANÇAS DE P...`).
-2. **Ícone Lateral Opressivo**: Um contêiner de ícone de 44px à esquerda esmagava o espaço de texto em telas mobile de 2 colunas.
-3. **Card Órfão / Grade Assimétrica**: Haviam apenas 5 cards. No celular (2 colunas), a 3ª linha ficava com 1 card solitário e um espaço vazio ao lado.
-4. **Erro Gramatical**: Exibição de `"1 pagamentos quitados"` no plural para quantidade unitária.
+### 🔍 Problema Identificado
+A conta `testecelebre@hotmail.com` possuía uma Cortesia VIP de 1 mês concedida em 21/08/2026 às 10:00. No dia 21/09/2026, às 17:09 (7 horas após o horário previsto de término), a conta continuava ativa no sistema devido ao truncamento de horário (`zerarHorario` para 00:00:00), que estendia o acesso até as 23:59:59 daquele dia.
 
-### 💎 Transformação Executada (`AbaFaturamentoAdmin.jsx` & `AbaFaturamentoAdmin.css`)
-
-#### 1. Adoção da Estrutura Vertical de 3 Linhas (Regra 9 do `.agents/AGENTS.md`)
-- **Linha 1 (Topo)**: Título em caixa alta, largura total e limpo (`.kpi-title`).
-- **Linha 2 (Meio)**: Ícone compacto de 28px (`25px` no mobile) alinhado horizontalmente com o valor em destaque (`.kpi-valor-row`).
-- **Linha 3 (Base)**: Micro-badge translúcido com bordas suaves e ícone temático (`.kpi-sub`).
-
-#### 2. Expansão para 6 Cards Perfeitamente Simétricos
-Adicionado o indicador **`Assinantes Ativos`**, eliminando o desequilíbrio na grade:
-
-| # | Indicador | Cor | Subtítulo / Badge | Ação ao Clicar |
-|---|---|---|---|---|
-| **1** | **Receita Total** | Verde | `✓ 1 quitado` | Filtra faturas concluídas |
-| **2** | **MRR Estimado** | Ouro | `👑 Recorrência ativa` | Exibe faturamento global |
-| **3** | **Faturas Pagas** | Azul | `🧾 1 paga` | Filtra faturas concluídas |
-| **4** | **Assinantes Ativos** | Ciano | `👤 1 ativo` | Exibe assinantes correntes |
-| **5** | **Falhas / Recusas** | Vermelho | `✕ 1 recusa` | Filtra faturas com falha |
-| **6** | **Mudanças de Plano**| Roxo | `🔄 0 migrações` | Filtra migrações/upgrades |
-
-#### 3. Responsividade Blindada
-- **Desktop (`> 900px`)**: Grid de **6 Colunas em 1 Linha Única Horizontal** (`repeat(6, 1fr)`).
-- **Mobile (`<= 900px`)**: Grid de **2 Colunas Simétricas** (`repeat(2, 1fr)`) com 3 linhas de 2 cards cada, sem nenhum card órfão.
-
-#### 4. Concordância Gramatical Dinâmica
-- `totalConcluidos === 1 ? '1 quitado' : '${totalConcluidos} quitados'`
-- `totalFalhas === 1 ? '1 recusa' : '${totalFalhas} recusas'`
-- `totalAssinantesAtivos === 1 ? '1 ativo' : '${totalAssinantesAtivos} ativos'`
-- `totalMudancas === 1 ? '1 migração' : '${totalMudancas} migrações'`
+### 🛠️ Solução Implementada
+1. **Utilitário Canônico `verificarAssinaturaAtiva` (`src/utils/periodoTesteUtils.js`)**:
+   - Validação da vigência real no milissegundo exato: compara `Date.now() >= dataVencimento.getTime()`.
+   - Se o horário atual ultrapassou o horário previsto, a assinatura/cortesia é marcada imediatamente como **EXPIRADA** (`ativa: false, expirada: true, motivo: 'vencida'`).
+2. **Preservação de Horário em `calcularPeriodoTeste`**:
+   - Mantém horas, minutos e segundos da data de concessão ou cadastro, expirando no momento exato estipulado.
+3. **Bloqueio em Tempo Real**:
+   - Integrado a todas as rotas protegidas (`RotaProtegida.jsx`, `App.jsx`, `Dashboard.jsx`, `Navbar.jsx`, `Topbar.jsx`), barrando o acesso no instante em que o prazo termina.
 
 ---
 
-## 6. Geração do Pacote .AAB da Google Play Store (Versão 3)
+## 5. Correção da Linha Divisória Quebrada na Tabela de Contas
 
-O aplicativo foi compilado, empacotado e assinado com sucesso para a publicação oficial na Google Play Store.
+### 🔍 Problema Identificado
+Na tabela de clientes do **Controle Geral**, a linha divisória horizontal (`border-bottom`) entre as linhas ficava interrompida sob a primeira coluna (Avatar e Nome), iniciando apenas a partir da coluna de E-mail.
 
-### 📦 Arquivos Gerados na Pasta `playstore-bundle/`
-1. **`Celebre-v3.aab`** (1.57 MB) $\rightarrow$ **Arquivo oficial para upload no Google Play Console**
-2. **`Celebre - Gestao de Locacao & Festas (v3).aab`** (1.57 MB) $\rightarrow$ Cópia identificada por extenso
-3. **`Celebre-v3.apk`** (1.45 MB) $\rightarrow$ APK de instalação direta para testes em smartphones Android
-4. **`Celebre-v3.zip`** (2.63 MB) $\rightarrow$ Pacote completo com chaves e relatórios
-
-### 🔑 Detalhes Técnicos do Pacote
-- **ID do Pacote (`packageId`):** `br.com.celebrefesta.app`
-- **Código da Versão (`versionCode`):** `3` *(anterior na loja era 2)*
-- **Nome da Versão (`versionName`):** `1.0.2` *(anterior na loja era 1.0.1)*
-- **Assinatura:** Assinado com a chave original oficial do projeto (`playstore-bundle/signing.keystore` / alias: `celebre`), garantindo 100% de compatibilidade sem conflito de assinatura na Google Play.
-- **Compile SDK:** `36` (Android 16), atendendo rigorosamente a todos os requisitos de 2026 da Google Play.
+### 🛠️ Causa Raiz e Solução
+- **Causa:** A classe `.cg-cell-name` estava aplicada diretamente na tag `<td>` com `display: flex`. Em tabelas com `border-collapse: collapse`, o navegador não aplica bordas colapsadas a elementos que não possuem `display: table-cell`.
+- **Solução:**
+  - `ControleGeral.jsx`: O conteúdo visual foi encapsulado em `<div className="cg-cell-name-inner">`.
+  - `ControleGeral.css`: A célula `<td>` voltou a ser `display: table-cell` (`vertical-align: middle`), e as propriedades de alinhamento flexível foram transferidas para `.cg-cell-name-inner`.
+- **Resultado:** Linha divisória contínua, homogênea e sem qualquer quebra de ponta a ponta em todas as linhas.
 
 ---
 
-## 7. Guia de Publicação no Google Play Console (Para Amanhã)
+## 6. Correção do Critério de Inatividade & Auto-Cura de Suspensão
 
-> 📌 **Arquivo de lembrete salvo na raiz do projeto:** [`SUBIR_PLAYSTORE_AMANHA.md`](file:///c:/Users/camil/Desktop/APLICATIVOS%20SISTEMAS/CELEBRE02/SUBIR_PLAYSTORE_AMANHA.md)  
-> 📌 **Arquivo de lembrete salvo na pasta dos pacotes:** [`playstore-bundle/LEIA_ME_SUBIR_VERSAO_3.md`](file:///c:/Users/camil/Desktop/APLICATIVOS%20SISTEMAS/CELEBRE02/playstore-bundle/LEIA_ME_SUBIR_VERSAO_3.md)
+### 🔍 Problema Identificado
+Ao expirar a cortesia da conta `testecelebre@hotmail.com`, em vez de ir para o status padrão de **BLOQUEADO** (exigindo a contratação de um plano como em qualquer encerramento de degustação), o sistema colocou o perfil em **SUSPENSO** com plano **"Suspenso (Inatividade)"**, e ao tentar logar exibia a tela `/conta-suspensa` ("inativo nos últimos 6 meses"), apesar de o cliente ter utilizado a plataforma até hoje.
 
-### 🚀 Passo a Passo:
-1. Abra o navegador e entre em: **[https://play.google.com/console](https://play.google.com/console)**
-2. Na lista de apps, clique em **Celebre - Gestão de Locação & Festas**.
-3. No menu lateral esquerdo, vá em **Produção** (ou **Teste Fechado/Aberto**, conforme o canal habitual).
-4. No canto superior direito, clique em **[ Criar nova versão ]**.
-5. No campo **App bundles**, arraste o arquivo:
-   👉 **`c:\Users\camil\Desktop\APLICATIVOS SISTEMAS\CELEBRE02\playstore-bundle\Celebre-v3.aab`**
-6. Aguarde o carregamento (1.57 MB - poucos segundos). O Google Play reconhecerá:
-   - **Nome:** `1.0.2`
-   - **Código:** `3`
-7. No campo **Notas da versão**, copie e cole:
-   ```text
-   - Melhorias na auditoria financeira e conciliação de faturas
-   - Otimização do desempenho e velocidade do sistema
-   - Refinamento do layout executivo dos cartões de faturamento
-   - Correções de estabilidade e segurança
-   ```
-8. Clique em **Próximo** $\rightarrow$ **Salvar** $\rightarrow$ **Enviar para análise**.
+### 🛠️ Causa Raiz e Solução Definitiva
+1. **Identificação do Ponto de Gravação no Banco**:
+   - No arquivo `src/pages/Dashboard/Dashboard.jsx` (linha 348), existia uma instrução que verificava `infoTeste.diasTranscorridos > 180` (baseado unicamente na data de criação original, 14/03/2026, 191 dias atrás) e executava:
+     ```javascript
+     await updateDoc(doc(db, "usuarios", uid), { statusConta: 'suspenso' });
+     ```
+   - Isso gravava `statusConta: 'suspenso'` diretamente no Firestore para qualquer conta com cadastro antigo cuja degustação terminasse, forçando o redirecionamento indevido para `/conta-suspensa`.
+2. **Cálculo da Data de Última Atividade Real**:
+   - Implementado cálculo analítico que extrai a data mais recente entre:
+     - `dataPagamento`
+     - `dataProximaCobranca`
+     - `dataFimTeste`
+     - `ultimoAcesso`
+     - `dataCadastro`
+   - O contador de `diasSemAtividade` só avança se a conta não tiver NENHUM pagamento, NENHUMA cortesia e NENHUM acesso recente.
+3. **Mecanismo de Auto-Cura (Self-Healing)**:
+   - Implementado em `Dashboard.jsx`, `RotaProtegida.jsx`, `App.jsx`, `ContaSuspensa.jsx` e `Login.jsx`:
+   - Se uma conta estiver gravada como `suspenso`, mas possuir atividade ou vigência recente (`diasSemAtividade <= 180`), o sistema identifica o falso-positivo, **remove a suspensão no Firestore automaticamente atualizando para `statusConta: 'bloqueado'`** e libera o fluxo normal para o dashboard.
+4. **Visual no Controle Geral**:
+   - `testecelebre@hotmail.com` e sua equipe vinculada (`catilango23@gmail.com`) aparecem com o badge vermelho **`BLOQUEADO`**, plano normal e a tag de pagamento **`Expirado • Venceu 21/09/2026`**.
+   - `camila.vichinhsk@gmail.com` (sem pagamentos e sem atividade há mais de 180 dias) permanece legitimamente como **`SUSPENSO`**.
 
 ---
 
-## 8. Tabela de Arquivos Modificados e Criados
+## 7. Diagnóstico da Google Play Store
 
-| Arquivo | Tipo | Descrição da Alteração |
+### 🔍 Sintoma
+Ao tentar instalar o aplicativo pelo link de testadores no celular Android, a Google Play Store exibia o alerta:  
+> *"Algo deu errado. Não há conexão com a Internet. Ative o Wi-Fi ou os dados da rede celular e tente novamente."*
+
+### 💡 Diagnóstico Técnico
+1. **Mensagem Genérica de Permissão:** A Google Play exibe essa tela de "sem conexão" quando a conta logada no **aplicativo da Google Play Store** no smartphone não possui autorização para aquela faixa de teste.
+2. **Pontos de Atenção para Resolução:**
+   - **Conta Ativa na Loja:** O avatar no topo da Play Store no celular precisa estar selecionado no e-mail cadastrado como testador (`vichinhskfotografia@gmail.com`).
+   - **Adesão Formal (Opt-in Web):** É necessário abrir o link de convite pela web (`https://play.google.com/apps/testing/...`) e clicar no botão azul **"Participar do teste"** (*Become a tester*).
+   - **Status na Play Console:** Se uma nova versão (`Celebre-v3.aab`) foi submetida recentemente, ela precisa concluir o status de "Em análise" pelo Google para que o binário fique liberado para download.
+   - **Cache Local:** Limpar o cache do aplicativo Google Play Store nas configurações do Android desfaz bloqueios temporários de sessão.
+
+---
+
+## 8. Tabela Consolidada de Arquivos Modificados e Criados
+
+| Arquivo | Tipo | Ação Realizada |
 |---|---|---|
-| `functions/index.js` | Backend | Conciliação do PIX de R$ 49,90, identificação de Plano Básico e vigência de 30 dias. |
-| `src/pages/Admin/AbaFaturamentoAdmin.jsx` | Frontend | 6 cards KPI, 3 linhas verticais, pluralização singular/plural e filtro dinâmico. |
-| `src/pages/Admin/AbaFaturamentoAdmin.css` | Frontend | Grid 6 colunas desktop, grid 2 colunas mobile, ícones de 28px/25px e micro-badges. |
-| `src/pages/Configuracoes/Configuracoes.jsx` | Frontend | Propagação de `isImpersonating` e `effectiveUser` para sub-abas. |
-| `src/pages/Configuracoes/AbaMeuPerfil.jsx` | Frontend | Carregamento dos dados do cliente selecionado via `targetUid` em sessão assistida. |
-| `src/pages/Checkout/Checkout.jsx` | Frontend | Listener `onSnapshot` para quitação instantânea do PIX em tela. |
-| `playstore-bundle/Celebre-v3.aab` | Android Bundle | **Novo pacote oficial v1.0.2 (código 3) pronto para a Play Store.** |
-| `SUBIR_PLAYSTORE_AMANHA.md` | Documentação | **Guia rápido de passo a passo para envio do .aab amanhã.** |
-| `resumo.md` | Documentação | Resumo executivo técnico consolidado de todas as etapas. |
+| `src/pages/Admin/ModalRelatorioMensalAdmin.jsx` | Frontend | Componente do modal de relatório financeiro mensal com filtros e métricas. |
+| `src/pages/Admin/ModalRelatorioMensalAdmin.css` | Frontend | Estilização corporativa com alinhamento em linha única e design executivo. |
+| `src/utils/gerarRelatorioFaturamentoAdminPDF.js` | Utilitário | Motor de geração do relatório mensal em PDF com jsPDF e gráficos tabulares. |
+| `src/utils/periodoTesteUtils.js` | Utilitário | Criação de `verificarAssinaturaAtiva` e ajuste de precisão de horário em `calcularPeriodoTeste`. |
+| `src/pages/Admin/ControleGeral.jsx` | Frontend | Correção da célula `.cg-cell-name-inner`, ajuste do cálculo de inatividade e tags de expiração. |
+| `src/pages/Admin/ControleGeral.css` | Frontend | Desvinculação de `display: flex` da tag `<td>` para restauração da borda horizontal contínua. |
+| `src/pages/Dashboard/Dashboard.jsx` | Frontend | Remoção da suspensão forçada por data de cadastro e inclusão do mecanismo de auto-cura. |
+| `src/components/RotaProtegida.jsx` | Frontend | Validação de inatividade real antes do redirecionamento para `/conta-suspensa`. |
+| `src/App.jsx` | Frontend | Auto-recuperação de falso-positivo de inatividade no escudo global de rotas. |
+| `src/pages/Auth/ContaSuspensa.jsx` | Frontend | Auto-cura no Firestore e redirecionamento de clientes com cortesia/pagamento recente. |
+| `src/pages/Auth/Login.jsx` | Frontend | Prevenção de bloqueio indevido de login para clientes ativos recentemente. |
+| `resumo.md` | Documentação | Atualização completa do resumo executivo mestre com todas as implementações. |
 
 ---
 
-## 9. Checklist Final de Validação e Integridade
+## 9. Checklist Final de Integridade e Validação Técnica
 
-- [x] **Conta do Thiago Ativa**: `thidovi12@gmail.com` com Plano Básico (R$ 49,90) e vencimento em 18/10/2026.
-- [x] **Webhook em Produção**: Cloud Functions v2 ativas e integradas ao Mercado Pago.
-- [x] **Regra de Ouro Mobile**: Cards KPI em 2 colunas simétricas sem quebras (`repeat(2, 1fr)`).
-- [x] **Regra de Ouro Desktop**: Cards KPI em 1 linha contínua sem quebras (`repeat(6, 1fr)`).
-- [x] **Deploy de Produção na Nuvem**: `firebase deploy --only hosting` concluído com sucesso.
-- [x] **Pacote .AAB v3 Gerado e Assinado**: Pronto para envio no Google Play Console.
+- [x] **Relatório em PDF Funcional**: Geração mensal de faturas, MRR, ticket médio e quitações operando com sucesso.
+- [x] **Expiração no Horário Certo**: Cortesias e degustações expiram no horário exato estipulado, sem atraso residual.
+- [x] **Linha da Tabela Contínua**: Divisória horizontal entre contas restaurada em 100% da largura.
+- [x] **Falso-Positivo de Inatividade Eliminado**: `testecelebre` classificado como `BLOQUEADO` com auto-cura no Firestore.
+- [x] **Contas Genuinamente Inativas Preservadas**: `camila.vichinhsk` mantida como `SUSPENSO` por ausência de atividade > 180 dias.
+- [x] **Compilação de Produção Aprovada**: `npm run build` finalizado com sucesso (14.83s, 0 erros).

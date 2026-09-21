@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import ModalReciboOficial from '../../components/ModalReciboOficial';
-import { calcularPeriodoTeste } from '../../utils/periodoTesteUtils';
+import ModalRelatorioMensalAdmin from './ModalRelatorioMensalAdmin';
+import { calcularPeriodoTeste, verificarAssinaturaAtiva } from '../../utils/periodoTesteUtils';
 import './AbaFaturamentoAdmin.css';
 
 // 🎯 Tabela canônica de planos para cálculo de MRR e valores padrão
@@ -26,6 +28,8 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
   const [filtroPeriodo, setFiltroPeriodo] = useState('todos'); // 'todos' | 'hoje' | '7dias' | 'mes_atual' | 'mes_anterior'
   const [itemDetalhesModal, setItemDetalhesModal] = useState(null);
   const [faturaReciboModal, setFaturaReciboModal] = useState(null);
+  const [modalRelatorioPDF, setModalRelatorioPDF] = useState(false);
+  const [mostrarJsonBruto, setMostrarJsonBruto] = useState(false);
 
   // 🔄 CARREGAR LOGS FINANCEIROS E CONSOLIDAR COM A BASE DE CLIENTES
   const carregarDadosFinanceiros = async () => {
@@ -233,58 +237,69 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
 
         const uD = cli.rawUserData || {};
         const infoTeste = calcularPeriodoTeste(uD);
+        const infoAss = verificarAssinaturaAtiva(uD);
 
         // Ignora contas em período de teste gratuito (NUNCA sintetiza fatura para quem está em teste/degustação)
         if (cli.status === 'teste' || infoTeste.emTeste) return;
 
-        const pagou = cli.assinaturaAtiva === true || cli.statusAssinatura === 'ativa' || cli.plano === 'pago';
-        if (pagou && !empresasComFaturaAtiva.has(cli.tenantId) && !empresasComFaturaAtiva.has(cli.uid)) {
+        // Ignora contas suspensas, bloqueadas ou excluídas
+        if (cli.status === 'suspenso' || cli.statusConta === 'suspenso' || uD.statusConta === 'suspenso' || cli.status === 'bloqueado' || cli.status === 'excluido') return;
+
+        // Apenas sintetiza para quem estiver com assinatura/cortesia VIP comprovadamente ATIVA e NÃO EXPIRADA
+        if (!infoAss.ativa) return;
+
+        if (!empresasComFaturaAtiva.has(cli.tenantId) && !empresasComFaturaAtiva.has(cli.uid)) {
           // Só sintetiza se houver data de pagamento explicitamente informada
           if (!uD.dataPagamento) return;
           let dPag = new Date(uD.dataPagamento);
           if (isNaN(dPag.getTime())) return;
 
           const isAnualFallback = Boolean(uD.ciclo === 'anual' || String(cli.planoId || '').includes('anual'));
-          let dFimFallback = new Date(dPag);
-          if (isAnualFallback) {
-            dFimFallback.setFullYear(dFimFallback.getFullYear() + 1);
-          } else {
-            dFimFallback.setMonth(dFimFallback.getMonth() + 1);
+          let dFimFallback = infoAss.dataVencimento ? new Date(infoAss.dataVencimento) : new Date(dPag);
+          if (!infoAss.dataVencimento) {
+            if (isAnualFallback) {
+              dFimFallback.setFullYear(dFimFallback.getFullYear() + 1);
+            } else {
+              dFimFallback.setMonth(dFimFallback.getMonth() + 1);
+            }
           }
-          const perInicioF = dPag.toLocaleDateString('pt-BR');
-          const perFimF = dFimFallback.toLocaleDateString('pt-BR');
+
+          // Se a data e horário de vigência já expiraram, não sintetiza
+          if (Date.now() >= dFimFallback.getTime()) return;
+
+          const perInicioFallback = dPag.toLocaleDateString('pt-BR');
+          const perFimFallback = dFimFallback.toLocaleDateString('pt-BR');
 
           listaConsolidada.push({
-            id: `fat-ativa-${cli.uid}`,
-            codigo: `FAT-${(cli.tenantId || cli.uid).substring(0, 8).toUpperCase()}`,
+            id: `syn-${cli.uid || cli.tenantId}`,
+            codigo: `FAT-${(cli.uid || cli.tenantId || 'VIP').substring(0, 8).toUpperCase()}`,
             dataObj: dPag,
-            dataFormatada: perInicioF,
+            dataFormatada: perInicioFallback,
             horaFormatada: '10:00',
             acao: 'LIBERAÇÃO VIP (SUPER ADMIN)',
-            detalhes: `Assinatura de ${cli.nomePlano || 'Plano Premium'} concedida pelo Super Admin como Licença Especial / Cortesia VIP.`,
-            empresaNome: cli.nomeExibicao || cli.nomeCompleto || 'Empresa Assinante',
-            email: cli.email,
+            detalhes: `Assinatura de ${cli.nomePlano || 'Plano'} concedida pelo Super Admin.`,
+            empresaNome: cli.nomeExibicao || cli.nomeCompleto || 'Empresa VIP',
+            email: cli.email || '—',
             telefone: cli.telefone || '',
             clienteObj: cli,
-            metodo: 'Cortesia VIP (Admin)',
+            metodo: cli.metodoPagamento || 'Cortesia',
             valor: 0.00,
             status: 'cortesia',
             tipoEvento: 'cortesia',
             rawLog: null,
-            periodo: `${perInicioF} a ${perFimF}`,
-            periodoInicio: perInicioF,
-            periodoFim: perFimF,
+            periodo: `${perInicioFallback} a ${perFimFallback}`,
+            periodoInicio: perInicioFallback,
+            periodoFim: perFimFallback,
             cicloNome: isAnualFallback ? 'Anual' : 'Mensal'
           });
         }
       });
 
-      // Ordena por data decrescente (mais recentes primeiro)
+      // Ordenar: mais recente primeiro
       listaConsolidada.sort((a, b) => b.dataObj.getTime() - a.dataObj.getTime());
-
       setFaturas(listaConsolidada);
     } catch (err) {
-      console.error("Erro ao carregar auditoria financeira no Controle Geral:", err);
+      console.error("Erro ao carregar faturas de auditoria:", err);
     } finally {
       setLoading(false);
     }
@@ -322,7 +337,13 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
     let mrrTotal = 0;
     let totalAssinantesAtivos = 0;
     clientes.forEach(c => {
-      const isAtivo = c.assinaturaAtiva === true || c.statusAssinatura === 'ativa' || c.plano === 'pago';
+      // 🚫 Filtro rigoroso: descarta equipe, admin e contas suspensas ou bloqueadas
+      if (c.isFuncionarioVinculado || c.role === 'funcionario') return;
+      if (c.status === 'admin' || c.email === 'celebrefesta25@gmail.com') return;
+      if (c.status === 'suspenso' || c.statusConta === 'suspenso' || c.rawUserData?.statusConta === 'suspenso' || c.status === 'excluido') return;
+      if (c.status === 'bloqueado') return;
+
+      const isAtivo = c.status === 'ativo' && (c.assinaturaAtiva === true || c.statusAssinatura === 'ativa' || c.plano === 'pago' || c.isAssinantePago) && verificarAssinaturaAtiva(c).ativa;
       if (isAtivo) {
         totalAssinantesAtivos++;
         const rawP = String(c.planoId || c.plano || '').toLowerCase();
@@ -607,6 +628,16 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
             >
               <i className="fas fa-file-csv"></i>
               <span>Exportar CSV</span>
+            </button>
+
+            <button 
+              type="button" 
+              className="cg-fat-btn-action pdf" 
+              onClick={() => setModalRelatorioPDF(true)}
+              title="Emitir e baixar Relatório Mensal em PDF Completo"
+            >
+              <i className="fas fa-file-pdf"></i>
+              <span>Relatório Mensal PDF</span>
             </button>
           </div>
         </div>
@@ -912,65 +943,176 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
         </div>
       </div>
 
-      {/* 🔍 MODAL DE DETALHES TÉCNICOS DA TRANSAÇÃO */}
-      {itemDetalhesModal && (
+      {/* 🔍 MODAL DE DETALHES TÉCNICOS DA TRANSAÇÃO (CELEBRE LUXURY ENTERPRISE) */}
+      {itemDetalhesModal && createPortal(
         <div className="cg-fat-modal-backdrop" onClick={() => setItemDetalhesModal(null)}>
           <div className="cg-fat-modal-card" onClick={e => e.stopPropagation()}>
             
+            {/* Cabeçalho de Alto Padrão Celebre Luxury */}
             <div className="cg-fat-modal-header">
               <div className="modal-header-left">
                 <div className={`modal-header-icon ${itemDetalhesModal.status}`}>
-                  <i className={itemDetalhesModal.status === 'concluido' ? 'fas fa-check' : itemDetalhesModal.status === 'falha' ? 'fas fa-times' : 'fas fa-info'}></i>
+                  <i className={
+                    itemDetalhesModal.status === 'concluido' ? 'fas fa-check-circle' :
+                    itemDetalhesModal.status === 'falha' ? 'fas fa-times-circle' :
+                    itemDetalhesModal.status === 'cortesia' ? 'fas fa-crown' : 'fas fa-clock'
+                  }></i>
                 </div>
                 <div>
-                  <h3 className="modal-title">Auditoria da Transação • {itemDetalhesModal.codigo}</h3>
-                  <span className="modal-subtitle">Registro de Faturamento do Super Admin</span>
+                  <div className="modal-header-tags">
+                    <span className="modal-badge-protocol">{itemDetalhesModal.codigo}</span>
+                    <span className={`modal-badge-status-pill ${itemDetalhesModal.status}`}>
+                      {itemDetalhesModal.status === 'concluido' ? 'QUITADO' :
+                       itemDetalhesModal.status === 'falha' ? 'RECUSADO / FALHA' :
+                       itemDetalhesModal.status === 'cortesia' ? 'CORTESIA VIP' : 'PENDENTE'}
+                    </span>
+                  </div>
+                  <h3 className="modal-title">Auditoria da Transação</h3>
+                  <span className="modal-subtitle">
+                    <i className="fas fa-shield-alt"></i> Registro de Faturamento & Gateway • Super Admin Celebre
+                  </span>
                 </div>
               </div>
-              <button type="button" className="modal-btn-close" onClick={() => setItemDetalhesModal(null)}>✕</button>
+              <button 
+                type="button" 
+                className="modal-btn-close" 
+                onClick={() => setItemDetalhesModal(null)}
+                title="Fechar Auditoria"
+              >
+                ✕
+              </button>
             </div>
 
             <div className="cg-fat-modal-body">
               
+              {/* Banner de Diagnóstico Executivo */}
+              <div className={`fat-modal-status-banner status-${itemDetalhesModal.status}`}>
+                <div className="status-banner-icon">
+                  <i className={
+                    itemDetalhesModal.status === 'concluido' ? 'fas fa-check-double' :
+                    itemDetalhesModal.status === 'falha' ? 'fas fa-exclamation-triangle' :
+                    itemDetalhesModal.status === 'cortesia' ? 'fas fa-gem' : 'fas fa-hourglass-half'
+                  }></i>
+                </div>
+                <div className="status-banner-content">
+                  <h4>
+                    {itemDetalhesModal.status === 'concluido' ? 'Pagamento Aprovado e Compensado' :
+                     itemDetalhesModal.status === 'falha' ? 'Transação Não Concluída / Falha Bancária' :
+                     itemDetalhesModal.status === 'cortesia' ? 'Licença VIP Concedida pelo Super Admin' : 'Tentativa de Checkout Registrada'}
+                  </h4>
+                  <p>{itemDetalhesModal.detalhes || 'Sem observações operacionais registradas para esta fatura.'}</p>
+                </div>
+              </div>
+
+              {/* Grade de Informações Estruturadas (Cards 2x2) */}
               <div className="modal-info-grid">
+                
+                {/* 1. Empresa / Assinante */}
                 <div className="modal-info-item">
-                  <label>Empresa / Assinante</label>
-                  <strong>{itemDetalhesModal.empresaNome}</strong>
-                  <span>{itemDetalhesModal.email}</span>
+                  <div className="modal-info-item-head">
+                    <i className="fas fa-building info-head-icon"></i>
+                    <label>Empresa / Assinante</label>
+                  </div>
+                  <strong className="info-main-val">{itemDetalhesModal.empresaNome}</strong>
+                  <span className="info-sub-val"><i className="fas fa-envelope"></i> {itemDetalhesModal.email}</span>
+                  {itemDetalhesModal.telefone && (
+                    <span className="info-sub-val"><i className="fas fa-phone-alt"></i> {itemDetalhesModal.telefone}</span>
+                  )}
                 </div>
 
+                {/* 2. Valor & Faturamento */}
                 <div className="modal-info-item">
-                  <label>Data & Hora</label>
-                  <strong>{itemDetalhesModal.dataFormatada} às {itemDetalhesModal.horaFormatada}</strong>
-                  <span>Processamento bancário</span>
-                </div>
-
-                <div className="modal-info-item">
-                  <label>Forma de Processamento</label>
-                  <strong>{itemDetalhesModal.metodo}</strong>
-                  <span>{itemDetalhesModal.status === 'cortesia' ? 'Concessão Administrativa' : 'Gateway Mercado Pago'}</span>
-                </div>
-
-                <div className="modal-info-item">
-                  <label>Valor</label>
-                  <strong className={itemDetalhesModal.status === 'concluido' ? 'green-text' : itemDetalhesModal.status === 'cortesia' ? 'blue-text' : 'red-text'}>
+                  <div className="modal-info-item-head">
+                    <i className="fas fa-wallet info-head-icon"></i>
+                    <label>Valor da Fatura</label>
+                  </div>
+                  <strong className={`info-main-val valor-destaque ${
+                    itemDetalhesModal.status === 'concluido' ? 'green-text' : 
+                    itemDetalhesModal.status === 'cortesia' ? 'blue-text' : 'red-text'
+                  }`}>
                     R$ {formatarMoeda(itemDetalhesModal.status === 'cortesia' ? 0 : itemDetalhesModal.valor)}
                   </strong>
-                  <span>Status: {itemDetalhesModal.status.toUpperCase()}</span>
+                  <span className="info-sub-val">
+                    {itemDetalhesModal.status === 'cortesia' ? 'Licença Isenta de Cobrança' : `Ciclo ${itemDetalhesModal.cicloNome || 'Mensal'}`}
+                  </span>
                 </div>
+
+                {/* 3. Forma de Processamento */}
+                <div className="modal-info-item">
+                  <div className="modal-info-item-head">
+                    <i className="fas fa-credit-card info-head-icon"></i>
+                    <label>Canal & Meio de Pagamento</label>
+                  </div>
+                  <strong className="info-main-val">
+                    <span className={`fat-metodo-badge ${String(itemDetalhesModal.metodo || '').toLowerCase().includes('pix') ? 'pix' : 'cartao'}`}>
+                      {itemDetalhesModal.metodo}
+                    </span>
+                  </strong>
+                  <span className="info-sub-val">
+                    {itemDetalhesModal.status === 'cortesia' ? 'Chancela Administrativa Super Admin' : 'Gateway Mercado Pago'}
+                  </span>
+                </div>
+
+                {/* 4. Data e Hora */}
+                <div className="modal-info-item">
+                  <div className="modal-info-item-head">
+                    <i className="fas fa-calendar-alt info-head-icon"></i>
+                    <label>Data & Hora do Registro</label>
+                  </div>
+                  <strong className="info-main-val">
+                    {itemDetalhesModal.dataFormatada} às {itemDetalhesModal.horaFormatada}
+                  </strong>
+                  <span className="info-sub-val">
+                    Período: {itemDetalhesModal.periodo || 'Ciclo Corrente'}
+                  </span>
+                </div>
+
               </div>
 
-              <div className="modal-detalhes-bloco">
-                <label>Descrição Completa do Evento / Motivo</label>
-                <div className="detalhes-log-text">
-                  {itemDetalhesModal.detalhes || 'Sem detalhes adicionais registrados.'}
+              {/* Rastreabilidade Técnica & Metadados Limpos (Sem JSON cru jogado na tela) */}
+              <div className="modal-tech-audit-card">
+                <div className="tech-audit-header">
+                  <div className="tech-audit-title">
+                    <i className="fas fa-fingerprint"></i>
+                    <span>Rastreabilidade Técnica da Operação</span>
+                  </div>
+                  {itemDetalhesModal.rawLog && (
+                    <button 
+                      type="button" 
+                      className="btn-toggle-json-payload"
+                      onClick={() => setMostrarJsonBruto(!mostrarJsonBruto)}
+                    >
+                      <i className={`fas ${mostrarJsonBruto ? 'fa-chevron-up' : 'fa-code'}`}></i>
+                      {mostrarJsonBruto ? 'Ocultar JSON' : 'Inspecionar Payload JSON'}
+                    </button>
+                  )}
                 </div>
-              </div>
 
-              {itemDetalhesModal.rawLog && (
-                <div className="modal-detalhes-bloco">
-                  <label>Auditoria Técnica (Logs de Sistema)</label>
-                  <pre className="detalhes-json-box">
+                <div className="tech-audit-rows">
+                  <div className="tech-row">
+                    <span className="tech-k">Identificador do Log:</span>
+                    <span className="tech-v code-mono">{itemDetalhesModal.id}</span>
+                  </div>
+                  <div className="tech-row">
+                    <span className="tech-k">Evento do Sistema:</span>
+                    <span className="tech-v">{itemDetalhesModal.acao || 'Transação'}</span>
+                  </div>
+                  {itemDetalhesModal.rawLog?.empresaId && (
+                    <div className="tech-row">
+                      <span className="tech-k">ID da Empresa (Tenant):</span>
+                      <span className="tech-v code-mono">{itemDetalhesModal.rawLog.empresaId}</span>
+                    </div>
+                  )}
+                  {itemDetalhesModal.rawLog?.dataHora && (
+                    <div className="tech-row">
+                      <span className="tech-k">Carimbo de Data/Hora (UTC):</span>
+                      <span className="tech-v code-mono">{itemDetalhesModal.rawLog.dataHora}</span>
+                    </div>
+                  )}
+                </div>
+
+                {mostrarJsonBruto && itemDetalhesModal.rawLog && (
+                  <pre className="tech-raw-json-viewer">
                     {JSON.stringify({
                       id: itemDetalhesModal.id,
                       acao: itemDetalhesModal.acao,
@@ -980,8 +1122,8 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
                       dataHora: itemDetalhesModal.rawLog.dataHora
                     }, null, 2)}
                   </pre>
-                </div>
-              )}
+                )}
+              </div>
 
             </div>
 
@@ -991,7 +1133,7 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
                 className="btn-modal-secundario"
                 onClick={() => setItemDetalhesModal(null)}
               >
-                Fechar
+                <i className="fas fa-times"></i> Fechar
               </button>
 
               <div className="modal-footer-actions">
@@ -1022,21 +1164,19 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
                     <i className="fas fa-receipt"></i> Ver Comprovante Oficial
                   </button>
                 ) : (
-                  <button 
-                    type="button" 
-                    className="btn-modal-print disabled"
-                    disabled
-                    style={{ opacity: 0.45, cursor: 'not-allowed' }}
-                    title="Tentativas de checkout não geram comprovante fiscal de quitação"
+                  <div 
+                    className="badge-modal-sem-recibo"
+                    title="Tentativas de checkout não concluídas não geram comprovante fiscal de quitação"
                   >
-                    <i className="fas fa-ban"></i> Sem Recibo (Não Quitado)
-                  </button>
+                    <i className="fas fa-ban"></i> Sem Recibo Fiscal (Não Quitado)
+                  </div>
                 )}
               </div>
             </div>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* 🧾 MODAL DO RECIBO OFICIAL CELEBRE */}
@@ -1045,6 +1185,14 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
         onClose={() => setFaturaReciboModal(null)}
         fatura={faturaReciboModal}
         isAdmin={true}
+      />
+
+      {/* 📄 MODAL DO RELATÓRIO MENSAL EM PDF COMPLETO */}
+      <ModalRelatorioMensalAdmin
+        isOpen={modalRelatorioPDF}
+        onClose={() => setModalRelatorioPDF(false)}
+        faturas={faturas}
+        clientes={clientes}
       />
 
     </div>

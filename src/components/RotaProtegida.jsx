@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { auth, db } from '../firebaseConfig';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { calcularPeriodoTeste } from '../utils/periodoTesteUtils';
+import { calcularPeriodoTeste, verificarAssinaturaAtiva, parseDataGenerica } from '../utils/periodoTesteUtils';
 
 const parseFirestoreDate = (dateVal) => {
   if (!dateVal) return null;
@@ -114,18 +114,42 @@ const RotaProtegida = ({ recursoExigido, children }) => {
                 if (userSnap.exists()) {
                     const dadosUsuario = userSnap.data();
 
+                    // 🔍 Cálculo da data de última atividade real da conta:
+                    const datasAtividade = [
+                        parseDataGenerica(dadosUsuario.dataPagamento),
+                        parseDataGenerica(dadosUsuario.dataProximaCobranca),
+                        parseDataGenerica(dadosUsuario.dataFimTeste),
+                        parseDataGenerica(dadosUsuario.ultimoAcesso),
+                        parseDataGenerica(dadosUsuario.dataCadastro || dadosUsuario.criadoEm)
+                    ].filter(Boolean);
+
+                    const timestampMaisRecente = datasAtividade.length > 0 
+                        ? Math.max(...datasAtividade.map(d => d.getTime()))
+                        : 0;
+
+                    const diasSemAtividade = timestampMaisRecente > 0
+                        ? Math.max(0, Math.round((Date.now() - timestampMaisRecente) / (1000 * 60 * 60 * 24)))
+                        : 999;
+
                     // ⏸️ CONTA SUSPENSA POR INATIVIDADE:
-                    // Redireciona diretamente para a tela oficial de reativação de conta
+                    // Só bloqueia na tela de suspensão se a conta realmente estiver sem atividade há mais de 180 dias
                     if (dadosUsuario.statusConta === 'suspenso' || dadosUsuario.status === 'suspenso') {
-                        setTemAcesso('suspenso');
-                        return;
+                        if (diasSemAtividade <= 180) {
+                            // Falso-positivo de inatividade (ex: teve cortesia ou pagamento recente). Auto-corrige!
+                            try {
+                                updateDoc(doc(db, "usuarios", tenantId), { 
+                                    statusConta: 'bloqueado',
+                                    status: 'bloqueado'
+                                }).catch(() => {});
+                            } catch (eFix) {}
+                        } else {
+                            setTemAcesso('suspenso');
+                            return;
+                        }
                     }
 
-                    const assinaturaAtiva =
-                        dadosUsuario.assinaturaAtiva === true || 
-                        dadosUsuario.statusAssinatura === 'ativa' ||
-                        dadosUsuario.plano === 'pago' || 
-                        dadosUsuario.statusPagamentoVulso === 'pago';
+                    const infoAssinatura = verificarAssinaturaAtiva(dadosUsuario);
+                    const assinaturaAtiva = infoAssinatura.ativa;
 
                     // LÓGICA SIMPLES DE TESTE: 7 dias a partir de dataCadastro da empresa (Centralizado e Unificado)
                     let testeAtivo = false;

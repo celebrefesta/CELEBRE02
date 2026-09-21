@@ -4,7 +4,7 @@ import './Usuarios.css';
 import { db } from '../firebaseConfig'; 
 import { collection, getDocs, doc, query, where, getDoc, setDoc, updateDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { calcularPeriodoTeste } from '../utils/periodoTesteUtils';
+import { calcularPeriodoTeste, verificarAssinaturaAtiva } from '../utils/periodoTesteUtils';
 
 const Usuarios = () => {
   const navigate = useNavigate();
@@ -96,7 +96,8 @@ const Usuarios = () => {
         });
         const infoT = calcularPeriodoTeste(userData);
         const testeAtivo = infoT.emTeste;
-        const assinaturaAtiva = userData.plano === 'pago' || userData.statusPagamentoVulso === 'pago' || userData.statusAssinatura === 'ativa';
+        const infoAssinatura = verificarAssinaturaAtiva(userData);
+        const assinaturaAtiva = infoAssinatura.ativa;
 
         if (userData.email === "celebrefesta25@gmail.com") {
              acessoLiberado = true; limite = 9999; planoEhPro = true;

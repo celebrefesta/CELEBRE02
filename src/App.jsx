@@ -1,7 +1,7 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { getAuth, onAuthStateChanged } from 'firebase/auth'; 
-import { collection, query, where, getDocs, doc, getDoc, setDoc } from 'firebase/firestore'; 
+import { collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'; 
 import { db } from './firebaseConfig'; 
 import { verificarELimparMidiasBackground } from './utils/limpezaMidiaService'; 
 
@@ -12,7 +12,7 @@ import InstallAppPrompt from './components/InstallAppPrompt/InstallAppPrompt';
 import './App.css';
 import './styles/design-lock.css'; /* 🔒 DESIGN LOCK — importado por último, vence toda a cascata */
 import { aplicarCorDestaqueGlobal } from './utils/themeUtils';
-import { calcularPeriodoTeste } from './utils/periodoTesteUtils';
+import { calcularPeriodoTeste, verificarAssinaturaAtiva, parseDataGenerica } from './utils/periodoTesteUtils';
 
 import RotaPrivada from './components/RotaPrivada'; 
 import RotaAdmin from './components/RotaAdmin'; 
@@ -249,19 +249,43 @@ const TravaSeguranca = ({ children, modulo, recursoExigido }) => {
         if (userSnap.exists()) {
             const dadosUsr = userSnap.data();
             
+            // 🔍 Cálculo da data de última atividade real da conta:
+            const datasAtividade = [
+                parseDataGenerica(dadosUsr.dataPagamento),
+                parseDataGenerica(dadosUsr.dataProximaCobranca),
+                parseDataGenerica(dadosUsr.dataFimTeste),
+                parseDataGenerica(dadosUsr.ultimoAcesso),
+                parseDataGenerica(dadosUsr.dataCadastro || dadosUsr.criadoEm)
+            ].filter(Boolean);
+
+            const timestampMaisRecente = datasAtividade.length > 0 
+                ? Math.max(...datasAtividade.map(d => d.getTime()))
+                : 0;
+
+            const diasSemAtividade = timestampMaisRecente > 0
+                ? Math.max(0, Math.round((Date.now() - timestampMaisRecente) / (1000 * 60 * 60 * 24)))
+                : 999;
+
             // ⏸️ CONTA SUSPENSA POR INATIVIDADE:
-            // Redireciona imediatamente para a tela dedicada de reativação
+            // Só redireciona se estiver marcada como 'suspenso' E realmente sem atividade (> 180 dias)
             if (dadosUsr.statusConta === 'suspenso' || dadosUsr.status === 'suspenso') {
-                cachePermissoesRotas.set(cacheKey, { status: 'suspenso', timestamp: Date.now() });
-                setStatusAcesso('suspenso');
-                return;
+                if (diasSemAtividade <= 180) {
+                    // Falso-positivo de inatividade em conta com cortesia/pagamento recente! Auto-corrige o banco
+                    try {
+                        updateDoc(doc(db, "usuarios", tenantId), { 
+                            statusConta: 'bloqueado',
+                            status: 'bloqueado'
+                        }).catch(() => {});
+                    } catch (eFix) {}
+                } else {
+                    cachePermissoesRotas.set(cacheKey, { status: 'suspenso', timestamp: Date.now() });
+                    setStatusAcesso('suspenso');
+                    return;
+                }
             }
 
-            const assinaturaAtiva = 
-                dadosUsr.assinaturaAtiva === true || 
-                dadosUsr.statusAssinatura === 'ativa' || 
-                dadosUsr.plano === 'pago' || 
-                dadosUsr.statusPagamentoVulso === 'pago';
+            const infoAssinatura = verificarAssinaturaAtiva(dadosUsr);
+            const assinaturaAtiva = infoAssinatura.ativa;
 
             // LÓGICA SIMPLES: 7 dias a partir de dataCadastro da empresa (Centralizado e Unificado)
             let testeAtivo = false;

@@ -106,6 +106,119 @@ export const zerarHorario = (data) => {
   return d;
 };
 
+/**
+ * 👑 Utilitário Oficial Celebre para Verificação Rigorosa de Assinatura e Cortesia
+ * 
+ * Regra de Ouro:
+ * - Contas suspensas ou excluídas: NUNCA ativas.
+ * - Super Admin: Sempre ativo (vitalício).
+ * - Planos Pagos / Cortesias VIP: Devem possuir vigência comprovada.
+ * - Se a data de vencimento / próxima cobrança (dataProximaCobranca ou dataPagamento + ciclo)
+ *   já passou do HORÁRIO EXATO (hora:minuto:segundo), a assinatura é considerada EXPIRADA imediatamente!
+ */
+export const verificarAssinaturaAtiva = (usuarioOuDados) => {
+  if (!usuarioOuDados) {
+    return { ativa: false, expirada: false, motivo: 'sem_dados', dataVencimento: null };
+  }
+
+  // 1. Suspensão por inatividade ou exclusão anula qualquer assinatura
+  const statusConta = usuarioOuDados.statusConta;
+  const status = usuarioOuDados.status;
+  if (statusConta === 'suspenso' || status === 'suspenso' || statusConta === 'excluido' || status === 'excluido') {
+    return { ativa: false, expirada: false, motivo: 'suspenso', dataVencimento: null };
+  }
+
+  // 2. Super Admin da Celebre é sempre vitalício
+  if (usuarioOuDados.email === 'celebrefesta25@gmail.com' || status === 'admin') {
+    return { ativa: true, expirada: false, motivo: 'admin', dataVencimento: null };
+  }
+
+  // 3. Flags de contratação ou concessão VIP
+  const temFlagAssinatura = Boolean(
+    usuarioOuDados.assinaturaAtiva === true ||
+    usuarioOuDados.assinaturaAtiva === 'true' ||
+    usuarioOuDados.statusAssinatura === 'ativa' ||
+    usuarioOuDados.plano === 'pago' ||
+    usuarioOuDados.statusPagamentoVulso === 'pago' ||
+    usuarioOuDados.statusPagamentoVulso === 'aprovado' ||
+    usuarioOuDados.isAssinantePago === true
+  );
+
+  if (!temFlagAssinatura) {
+    return { ativa: false, expirada: false, motivo: 'sem_assinatura', dataVencimento: null };
+  }
+
+  // 4. Determinação da data e horário exato de vencimento
+  const rawVencimento = usuarioOuDados.dataProximaCobranca 
+    || usuarioOuDados.dataVencimento 
+    || usuarioOuDados.vencimento;
+
+  let dataVenc = null;
+
+  if (rawVencimento) {
+    dataVenc = parseDataGenerica(rawVencimento);
+    // Se a data veio em formato puro YYYY-MM-DD (sem horário), herda o horário do pagamento ou cadastro
+    if (dataVenc && typeof rawVencimento === 'string' && !rawVencimento.includes('T')) {
+      const dRef = parseDataGenerica(usuarioOuDados.dataPagamento || usuarioOuDados.dataCadastro);
+      if (dRef) {
+        dataVenc.setHours(dRef.getHours(), dRef.getMinutes(), dRef.getSeconds(), dRef.getMilliseconds());
+      }
+    }
+  }
+
+  // Se não possui dataProximaCobranca explícita, projeta a partir da data de pagamento
+  if (!dataVenc && usuarioOuDados.dataPagamento) {
+    const dPag = parseDataGenerica(usuarioOuDados.dataPagamento);
+    if (dPag) {
+      dataVenc = new Date(dPag);
+      const isAnual = Boolean(
+        usuarioOuDados.ciclo === 'anual' ||
+        String(usuarioOuDados.planoId || '').toLowerCase().includes('anual')
+      );
+      if (isAnual) {
+        dataVenc.setFullYear(dataVenc.getFullYear() + 1);
+      } else {
+        dataVenc.setMonth(dataVenc.getMonth() + 1);
+      }
+    }
+  }
+
+  // Fallback para data de cadastro caso não haja nenhuma data de pagamento
+  if (!dataVenc && usuarioOuDados.dataCadastro) {
+    const dCad = parseDataGenerica(usuarioOuDados.dataCadastro);
+    if (dCad) {
+      dataVenc = new Date(dCad);
+      dataVenc.setMonth(dataVenc.getMonth() + 1);
+    }
+  }
+
+  // Se tem flag de assinatura mas nenhuma data pôde ser extraída, considera ativo
+  if (!dataVenc) {
+    return { ativa: true, expirada: false, motivo: 'ativa_sem_data', dataVencimento: null };
+  }
+
+  // 5. ⏰ VERIFICAÇÃO DE HORÁRIO EXATO:
+  // Se o instante atual já ultrapassou o horário exato de término da assinatura / cortesia
+  const agora = new Date();
+  const expirou = agora.getTime() >= dataVenc.getTime();
+
+  if (expirou) {
+    return {
+      ativa: false,
+      expirada: true,
+      motivo: 'vencida',
+      dataVencimento: dataVenc
+    };
+  }
+
+  return {
+    ativa: true,
+    expirada: false,
+    motivo: 'vigente',
+    dataVencimento: dataVenc
+  };
+};
+
 export const calcularPeriodoTeste = (usuarioOuDados) => {
   if (!usuarioOuDados) {
     return {
@@ -114,6 +227,7 @@ export const calcularPeriodoTeste = (usuarioOuDados) => {
       diaAtual: 0,
       diasTranscorridos: 0,
       dataFimFormatada: '—',
+      dataFimHoraFormatada: '',
       dataFimDate: null
     };
   }
@@ -124,47 +238,56 @@ export const calcularPeriodoTeste = (usuarioOuDados) => {
     || usuarioOuDados.dataInicioTeste;
 
   const dataCad = parseDataGenerica(rawCadastro) || new Date();
-  const cadMeia = zerarHorario(dataCad);
-  const hojeMeia = zerarHorario(new Date());
+  const agora = new Date();
 
   // Dias transcorridos desde o cadastro em dias de calendário civis cheios
+  const cadMeia = zerarHorario(dataCad);
+  const hojeMeia = zerarHorario(agora);
   const diffMs = hojeMeia.getTime() - cadMeia.getTime();
   const diasTranscorridos = Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)));
 
-  // Data de término: ou a estipulada manualmente pelo admin em dataFimTeste ou 7 dias após o cadastro
+  // Data de término: ou a estipulada em dataFimTeste ou 7 dias após o cadastro
+  // PRESERVA o horário exato (hora, minuto, segundo) para expiração no momento preciso!
   let dataFimTeste = null;
   if (usuarioOuDados.dataFimTeste) {
     const fimPersonalizado = parseDataGenerica(usuarioOuDados.dataFimTeste);
     if (fimPersonalizado) {
-      dataFimTeste = zerarHorario(fimPersonalizado);
+      dataFimTeste = new Date(fimPersonalizado);
+      // Se veio no formato puro YYYY-MM-DD sem hora:
+      if (typeof usuarioOuDados.dataFimTeste === 'string' && !usuarioOuDados.dataFimTeste.includes('T')) {
+        // Herda o horário de cadastro para expirar no mesmo horário
+        dataFimTeste.setHours(dataCad.getHours(), dataCad.getMinutes(), dataCad.getSeconds(), dataCad.getMilliseconds());
+      }
     }
   }
 
   if (!dataFimTeste) {
-    dataFimTeste = new Date(cadMeia);
+    dataFimTeste = new Date(dataCad);
     dataFimTeste.setDate(dataFimTeste.getDate() + 7);
   }
 
   // Duração total do teste concedida em dias civis
-  const diffTotalMs = dataFimTeste.getTime() - cadMeia.getTime();
+  const diffTotalMs = dataFimTeste.getTime() - dataCad.getTime();
   const totalDiasTeste = Math.max(1, Math.round(diffTotalMs / (1000 * 60 * 60 * 24)));
 
+  // ⏰ VERIFICAÇÃO DE HORÁRIO EXATO DO TESTE:
+  // O teste está ativo SOMENTE ENQUANTO o timestamp atual for menor que dataFimTeste
+  const emTeste = agora.getTime() < dataFimTeste.getTime();
+
   // Dias restantes até a data final
-  const diffAteFimMs = dataFimTeste.getTime() - hojeMeia.getTime();
-  const diasRestantesCalculados = Math.round(diffAteFimMs / (1000 * 60 * 60 * 24));
-  const diasRestantes = Math.max(0, diasRestantesCalculados);
+  const diffAteFimMs = dataFimTeste.getTime() - agora.getTime();
+  const diasRestantes = emTeste 
+    ? Math.max(1, Math.ceil(diffAteFimMs / (1000 * 60 * 60 * 24)))
+    : 0;
 
-  // 🔒 BUG 6 FIX: Considera o teste ativo até o FIM do último dia civil (≥ 0 restantes).
-  // Antes: diasRestantesCalculados > 0 bloqueava o usuário às 00:00 do último dia.
-  // Agora: diasRestantesCalculados >= 0 garante acesso até as 23:59 da dataFimTeste.
-  const emTeste = hojeMeia <= dataFimTeste && diasRestantesCalculados >= 0;
-
-  // Dia atual do teste relativo ao total (ex: Dia 1 de 15, Dia 2 de 15...)
+  // Dia atual do teste relativo ao total (ex: Dia 1 de 7, Dia 2 de 7...)
   const diaAtual = Math.min(totalDiasTeste, diasTranscorridos + 1);
 
   let dataFimFormatada = '—';
+  let dataFimHoraFormatada = '';
   try {
     dataFimFormatada = dataFimTeste.toLocaleDateString('pt-BR');
+    dataFimHoraFormatada = `${String(dataFimTeste.getHours()).padStart(2, '0')}:${String(dataFimTeste.getMinutes()).padStart(2, '0')}`;
   } catch {}
 
   return {
@@ -174,6 +297,7 @@ export const calcularPeriodoTeste = (usuarioOuDados) => {
     totalDiasTeste,
     diasTranscorridos,
     dataFimFormatada,
+    dataFimHoraFormatada,
     dataFimDate: dataFimTeste
   };
 };
@@ -198,18 +322,9 @@ export const obterMelhorContaPorEmail = (docs) => {
     const data = typeof docSnap.data === 'function' ? docSnap.data() : docSnap;
     const id = docSnap.id || data.id || null;
 
-    // Assinatura ativa sempre vence
-    const temAssinatura =
-      data.assinaturaAtiva === true ||
-      data.statusAssinatura === 'ativa' ||
-      data.plano === 'pago' ||
-      data.statusPagamentoVulso === 'pago';
-
-    const melhorTemAssinatura =
-      melhorDoc?.assinaturaAtiva === true ||
-      melhorDoc?.statusAssinatura === 'ativa' ||
-      melhorDoc?.plano === 'pago' ||
-      melhorDoc?.statusPagamentoVulso === 'pago';
+    // Assinatura ativa (não vencida) sempre vence
+    const temAssinatura = verificarAssinaturaAtiva(data).ativa;
+    const melhorTemAssinatura = melhorDoc ? verificarAssinaturaAtiva(melhorDoc).ativa : false;
 
     if (!melhorDoc) {
       melhorDoc = data;

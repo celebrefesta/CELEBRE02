@@ -2047,6 +2047,9 @@
 }
 
 .cg-cell-name {
+  vertical-align: middle;
+}
+.cg-cell-name-inner {
   display: flex;
   align-items: center;
   gap: 12px;

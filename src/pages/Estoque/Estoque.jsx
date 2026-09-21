@@ -10,7 +10,7 @@ import { getAuth } from 'firebase/auth';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { CATEGORIAS_FISICAS } from '../../catalogoDeTemas'; 
-import { calcularPeriodoTeste } from '../../utils/periodoTesteUtils'; 
+import { calcularPeriodoTeste, verificarAssinaturaAtiva } from '../../utils/periodoTesteUtils'; 
 
 // Page component for Estoque Management
 const Estoque = () => {
@@ -193,11 +193,13 @@ const Estoque = () => {
           const infoT = calcularPeriodoTeste(userData);
           let testeAtivo = infoT.emTeste;
 
+          const infoAssinatura = verificarAssinaturaAtiva(userData);
+
           // Se está no teste grátis, acesso total com limite máximo
           if (testeAtivo) {
               acessoLiberado = true;
               limiteMaximo = 10000; // Acesso completo durante o teste
-          } else if (userData.plano === 'pago' || userData.statusPagamentoVulso === 'pago' || userData.statusAssinatura === 'ativa' || userData.assinaturaAtiva === true) {
+          } else if (infoAssinatura.ativa) {
               // Teste acabou, mas a empresa pagou um plano
               acessoLiberado = true;
               limiteMaximo = 1000; // Assume Básico como padrão

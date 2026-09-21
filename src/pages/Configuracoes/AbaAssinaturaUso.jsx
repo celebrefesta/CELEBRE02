@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
-import { calcularPeriodoTeste, parseDataGenerica, obterMelhorContaPorEmail } from '../../utils/periodoTesteUtils';
+import { calcularPeriodoTeste, verificarAssinaturaAtiva, parseDataGenerica, obterMelhorContaPorEmail } from '../../utils/periodoTesteUtils';
 import { aplicarCorDestaqueGlobal } from '../../utils/themeUtils';
 import { formatCPF } from '../../utils/mascaras';
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
@@ -21,16 +21,9 @@ export const calcularProximaDataRenovacao = (uData, assinatura, dataCriacaoConta
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
 
-  // Detecta se há assinatura paga ativa via qualquer campo possível do sistema
-  const temAssinaturaAtiva = Boolean(
-    uData?.assinaturaAtiva === true ||
-    uData?.statusAssinatura === 'ativa' ||
-    uData?.plano === 'pago' ||
-    uData?.statusPagamentoVulso === 'pago' ||
-    assinatura?.isActive === true ||
-    assinatura?.ativa === true ||
-    assinatura?.status === 'Assinatura Ativa'
-  );
+  // Detecta se há assinatura paga ativa e não vencida
+  const infoAss = verificarAssinaturaAtiva(uData || assinatura);
+  const temAssinaturaAtiva = infoAss.ativa;
 
   // 1. Se o usuário estiver ATUALMENTE no Período de Teste VIP ativo (e não possuir assinatura ativa)
   if (!temAssinaturaAtiva && uData) {
@@ -503,15 +496,7 @@ const AbaAssinaturaUso = ({
         const pValor = infoP.preco;
         const pMetodo = infoP.metodo;
 
-        const temAssinaturaAtivaReal = Boolean(
-          uData?.assinaturaAtiva === true ||
-          uData?.statusAssinatura === 'ativa' ||
-          uData?.plano === 'pago' ||
-          uData?.statusPagamentoVulso === 'pago' ||
-          assinatura?.isActive === true ||
-          assinatura?.ativa === true ||
-          assinatura?.status === 'Assinatura Ativa'
-        );
+        const temAssinaturaAtivaReal = verificarAssinaturaAtiva(uData || assinatura).ativa;
 
         let logMaisRecenteDate = null;
         const docsOrdenados = Array.from(mapaLogsDocs.values()).sort((a, b) => {

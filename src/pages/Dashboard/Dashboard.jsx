@@ -5,7 +5,7 @@ import { db } from '../../firebaseConfig';
 import { collection, getDocs, query, where, doc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth, signOut } from 'firebase/auth'; 
 import AuditoriaEstoque from './AuditoriaEstoque';
-import { calcularPeriodoTeste, parseDataGenerica, obterMelhorContaPorEmail } from '../../utils/periodoTesteUtils';
+import { calcularPeriodoTeste, verificarAssinaturaAtiva, parseDataGenerica, obterMelhorContaPorEmail } from '../../utils/periodoTesteUtils';
 import { verificarLembretesAgendadosHoje } from '../../utils/notificacoesDispatchService';
 import {
   ResponsiveContainer,
@@ -326,28 +326,59 @@ const Dashboard = () => {
                     setAssinaturaAtiva(true);
                 }
 
-                if ((dadosEmpresa.statusConta === 'excluido' || dadosEmpresa.statusConta === 'suspenso') && !isImpersonating) {
-                    setStatusConta('suspenso');
-                    setLoading(false);
-                    return;
-                }
-
                 const infoTeste = calcularPeriodoTeste(dadosEmpresa);
                 setDiasTeste(infoTeste.diaAtual);
                 setTotalDiasTeste(infoTeste.totalDiasTeste || 7);
                 setDiasRestantes(infoTeste.diasRestantes);
                 setDataFimFormatada(infoTeste.dataFimFormatada);
 
-                const assinaturaAtiva = dadosEmpresa.assinaturaAtiva === true || 
-                                        dadosEmpresa.statusAssinatura === 'ativa' || 
-                                        dadosEmpresa.plano === 'pago' || 
-                                        dadosEmpresa.statusPagamentoVulso === 'pago';
+                const infoAssinatura = verificarAssinaturaAtiva(dadosEmpresa);
+                const assinaturaAtiva = infoAssinatura.ativa;
+
+                // 🔍 Cálculo da data de última atividade real da conta:
+                const datasAtividade = [
+                    parseDataGenerica(dadosEmpresa.dataPagamento),
+                    parseDataGenerica(dadosEmpresa.dataProximaCobranca),
+                    parseDataGenerica(dadosEmpresa.dataFimTeste),
+                    parseDataGenerica(dadosEmpresa.ultimoAcesso),
+                    parseDataGenerica(dadosEmpresa.dataCadastro || dadosEmpresa.criadoEm)
+                ].filter(Boolean);
+
+                const timestampMaisRecente = datasAtividade.length > 0 
+                    ? Math.max(...datasAtividade.map(d => d.getTime()))
+                    : 0;
+
+                const diasSemAtividade = timestampMaisRecente > 0
+                    ? Math.max(0, Math.round((Date.now() - timestampMaisRecente) / (1000 * 60 * 60 * 24)))
+                    : infoTeste.diasTranscorridos;
+
+                // 🛡️ Auto-correção de falso-positivo de inatividade:
+                // Se a conta estava marcada como 'suspenso' mas teve cortesia/pagamento recente (<= 180 dias),
+                // remove a suspensão indevida no Firestore e normaliza para 'bloqueado' ou 'ativo'.
+                const falsoPositivoInatividade = (dadosEmpresa.statusConta === 'suspenso' || dadosEmpresa.status === 'suspenso') 
+                    && diasSemAtividade <= 180;
+
+                if (falsoPositivoInatividade) {
+                    try {
+                        const statusCorreto = assinaturaAtiva ? 'ativo' : 'bloqueado';
+                        await updateDoc(doc(db, "usuarios", uidParaConsultar), { 
+                            statusConta: statusCorreto,
+                            status: statusCorreto
+                        });
+                        dadosEmpresa.statusConta = statusCorreto;
+                        dadosEmpresa.status = statusCorreto;
+                    } catch (eCorr) {}
+                }
+
+                if ((dadosEmpresa.statusConta === 'excluido' || (dadosEmpresa.statusConta === 'suspenso' && diasSemAtividade > 180)) && !isImpersonating) {
+                    setStatusConta('suspenso');
+                    setLoading(false);
+                    return;
+                }
 
                 if (!assinaturaAtiva && !isImpersonating) {
-                    // 🔥 BUG 2 FIX: Só suspende por inatividade se NÃO estiver em período de teste ativo.
-                    // Antes: suspensão automática após 180 dias mesmo com teste VIP estendido pelo admin.
-                    // Agora: respeita dataFimTeste — se emTeste=true, nunca suspende por diasTranscorridos.
-                    if (!infoTeste.emTeste && infoTeste.diasTranscorridos > 180) {
+                    // Só suspende por inatividade se NÃO estiver em teste e realmente estiver sem atividade há 180+ dias
+                    if (!infoTeste.emTeste && diasSemAtividade > 180) {
                         setStatusConta('suspenso');
                         try {
                             await updateDoc(doc(db, "usuarios", uidParaConsultar), { statusConta: 'suspenso' });

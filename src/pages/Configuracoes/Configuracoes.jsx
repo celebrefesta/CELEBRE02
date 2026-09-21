@@ -15,7 +15,7 @@ import AbaSeguranca from './AbaSeguranca';
 import AbaAparencia from './AbaAparencia';
 import AbaBackup from './AbaBackup';
 import AbaNotificacoes from './AbaNotificacoes';
-import { calcularPeriodoTeste, formatarDataExibicao, obterMelhorContaPorEmail } from '../../utils/periodoTesteUtils';
+import { calcularPeriodoTeste, verificarAssinaturaAtiva, formatarDataExibicao, obterMelhorContaPorEmail } from '../../utils/periodoTesteUtils';
 import { aplicarCorDestaqueGlobal } from '../../utils/themeUtils';
 
 const Configuracoes = () => {
@@ -294,8 +294,8 @@ const Configuracoes = () => {
 
             if (cData) {
                 const infoT = calcularPeriodoTeste(cData);
-                let testeAtivo = infoT.emTeste;
-                const assinaturaAtiva = cData.assinaturaAtiva || cData.statusAssinatura === 'ativa' || cData.plano === 'pago';
+                const infoAssinatura = verificarAssinaturaAtiva(cData);
+                const assinaturaAtiva = infoAssinatura.ativa;
 
                 if (!isSuperAdmin && !testeAtivo && !assinaturaAtiva) {
                     setIsContaExpirada(true);
@@ -303,7 +303,7 @@ const Configuracoes = () => {
                     setIsContaExpirada(false);
                 }
 
-                if (cData.assinaturaAtiva || cData.statusAssinatura === 'ativa' || cData.plano === 'pago') {
+                if (assinaturaAtiva) {
                     statusReal = "Assinatura Ativa"; corBg = "#f0fdf4"; corTexto = "#166534"; 
                     textoMetodo = cData.metodoPagamento || "Cartão de Crédito"; isActive = true;
                 } else if (testeAtivo) {

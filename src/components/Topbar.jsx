@@ -4,7 +4,7 @@ import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { aplicarCorDestaqueGlobal } from '../utils/themeUtils';
-import { calcularPeriodoTeste } from '../utils/periodoTesteUtils';
+import { calcularPeriodoTeste, verificarAssinaturaAtiva } from '../utils/periodoTesteUtils';
 import SininhoNotificacoes from './SininhoNotificacoes';
 import './Topbar.css';
 
@@ -116,11 +116,8 @@ const Topbar = () => {
                 if (empSnap.exists()) empresaData = empSnap.data();
               }
 
-              const assinaturaAtiva = 
-                empresaData.assinaturaAtiva === true || 
-                empresaData.statusAssinatura === 'ativa' || 
-                empresaData.plano === 'pago' || 
-                empresaData.statusPagamentoVulso === 'pago';
+              const infoAssinatura = verificarAssinaturaAtiva(empresaData);
+              const assinaturaAtiva = infoAssinatura.ativa;
 
               if (!assinaturaAtiva) {
                 const infoT = calcularPeriodoTeste(empresaData);

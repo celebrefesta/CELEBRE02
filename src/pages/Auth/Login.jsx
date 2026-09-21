@@ -15,6 +15,7 @@ import './Auth.css';
 
 import logoImage from '../../assets/LOGO_CELEBRE.png';
 import { enviarEmailBoasVindasTeste } from '../../utils/emailTrialService';
+import { parseDataGenerica } from '../../utils/periodoTesteUtils';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -64,15 +65,52 @@ const Login = () => {
         localStorage.setItem('tenantId', tenantIdDaEmpresa);
         localStorage.setItem('funcName', userData.nomeExibicao || userData.nomeCompleto || user.displayName || 'Usuário');
         localStorage.setItem('userRole', userData.role || 'owner');
+        // 🔍 Cálculo da data de última atividade real da conta:
+        const datasAtividade = [
+          parseDataGenerica(userData.dataPagamento),
+          parseDataGenerica(userData.dataProximaCobranca),
+          parseDataGenerica(userData.dataFimTeste),
+          parseDataGenerica(userData.ultimoAcesso),
+          parseDataGenerica(userData.dataCadastro || userData.criadoEm)
+        ].filter(Boolean);
+
+        const timestampMaisRecente = datasAtividade.length > 0 
+          ? Math.max(...datasAtividade.map(d => d.getTime()))
+          : 0;
+
+        const diasSemAtividade = timestampMaisRecente > 0
+          ? Math.max(0, Math.round((Date.now() - timestampMaisRecente) / (1000 * 60 * 60 * 24)))
+          : 999;
+
         if (userData.statusConta === 'suspenso' || userData.status === 'suspenso') {
-          isContaSuspensa = true;
+          if (diasSemAtividade > 180) {
+            isContaSuspensa = true;
+          } else {
+            // Falso-positivo de inatividade! Auto-corrige o banco
+            try {
+              updateDoc(doc(db, 'usuarios', user.uid), { statusConta: 'bloqueado', status: 'bloqueado' }).catch(() => {});
+            } catch (eFix) {}
+          }
         } else if (tenantIdDaEmpresa !== user.uid) {
           try {
             const tenantSnap = await getDoc(doc(db, 'usuarios', tenantIdDaEmpresa));
             if (tenantSnap.exists()) {
               const tData = tenantSnap.data();
               if (tData.statusConta === 'suspenso' || tData.status === 'suspenso') {
-                isContaSuspensa = true;
+                const tDatas = [
+                  parseDataGenerica(tData.dataPagamento),
+                  parseDataGenerica(tData.dataProximaCobranca),
+                  parseDataGenerica(tData.dataFimTeste),
+                  parseDataGenerica(tData.ultimoAcesso),
+                  parseDataGenerica(tData.dataCadastro || tData.criadoEm)
+                ].filter(Boolean);
+                const tMaisRecente = tDatas.length > 0 ? Math.max(...tDatas.map(d => d.getTime())) : 0;
+                const tDiasSemAtividade = tMaisRecente > 0
+                  ? Math.max(0, Math.round((Date.now() - tMaisRecente) / (1000 * 60 * 60 * 24)))
+                  : 999;
+                if (tDiasSemAtividade > 180) {
+                  isContaSuspensa = true;
+                }
               }
             }
           } catch (eTenant) {

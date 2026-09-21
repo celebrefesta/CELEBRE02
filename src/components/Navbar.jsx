@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { getAuth, onAuthStateChanged } from 'firebase/auth'; 
 import { doc, getDoc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore'; 
 import { db } from '../firebaseConfig';
-import { calcularPeriodoTeste } from '../utils/periodoTesteUtils';
+import { calcularPeriodoTeste, verificarAssinaturaAtiva } from '../utils/periodoTesteUtils';
 import logoCelebre from '../assets/LOGO_CELEBRE.png';
 import "./Navbar.css";
 
@@ -144,11 +144,8 @@ const Navbar = () => {
                   const userSnap = await getDoc(doc(db, "usuarios", targetUid));
                   if (userSnap.exists()) {
                       const dados = userSnap.data();
-                      const assinaturaAtiva = 
-                          dados.assinaturaAtiva === true || 
-                          dados.statusAssinatura === 'ativa' || 
-                          dados.plano === 'pago' || 
-                          dados.statusPagamentoVulso === 'pago';
+                      const infoAssinatura = verificarAssinaturaAtiva(dados);
+                      const assinaturaAtiva = infoAssinatura.ativa;
 
                       let emTeste = false;
                       if (!assinaturaAtiva) {
@@ -235,11 +232,8 @@ const Navbar = () => {
               if (userSnap.exists()) {
                   const dados = userSnap.data();
                   
-                  const assinaturaAtiva = 
-                      dados.assinaturaAtiva === true || 
-                      dados.statusAssinatura === 'ativa' || 
-                      dados.plano === 'pago' || 
-                      dados.statusPagamentoVulso === 'pago';
+                  const infoAssinatura = verificarAssinaturaAtiva(dados);
+                  const assinaturaAtiva = infoAssinatura.ativa;
 
                   // LÓGICA SIMPLES: 7 dias a partir do cadastro da empresa (Centralizado e Unificado)
                   let testeAtivo = false;
