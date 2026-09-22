@@ -16,6 +16,7 @@ import {
 import { enviarAvisoInatividadeEmail } from '../../utils/emailInatividadeService';
 import { enviarConfirmacaoReativacaoEmail } from '../../utils/emailReativacaoService';
 import AbaFaturamentoAdmin from './AbaFaturamentoAdmin';
+import AbaAuditoriaAntiChurn from './AbaAuditoriaAntiChurn';
 import './ControleGeral.css';
 
 // 🌿 Função auxiliar para renderizar SVG com cor dourada nos cards de admin
@@ -487,15 +488,29 @@ const ControleGeral = () => {
     }
   };
 
-  // 📱 CHAMAR NO WHATSAPP COM SAUDAÇÃO PERSONALIZADA
+  // 📱 CHAMAR NO WHATSAPP COM INTELIGÊNCIA ANTI-CHURN E SAUDAÇÃO PERSONALIZADA
   const handleChamarWhatsApp = (cliente) => {
     const tel = (cliente?.telefone || '').replace(/\D/g, '');
     if (!tel) {
-      alert("Este cliente ainda não tem um telefone/WhatsApp cadastrado. Preencha o campo Telefone no formulário e salve para habilitar o WhatsApp.");
+      alert("Este cliente ainda não tem um telefone/WhatsApp cadastrado.");
       return;
     }
     const nome = cliente.nomeExibicao || cliente.nomeCompleto || 'Cliente';
-    const msg = `Olá ${nome}, tudo bem? Aqui é a Camila do Suporte Celebre Festa! Estou acompanhando sua conta no sistema e gostaria de saber se precisa de alguma ajuda com seu acervo ou configurações.`;
+    const diasInativo = typeof cliente.diasSemAtividade === 'number' ? cliente.diasSemAtividade : (cliente.diasTeste || 0);
+    const isTrialVencendo = cliente.status === 'teste' && cliente.diasRestantes <= 2;
+
+    let msg = '';
+    if (isTrialVencendo) {
+      const diasTxt = cliente.diasRestantes <= 1 ? 'nas próximas horas' : `em ${cliente.diasRestantes} dias`;
+      msg = `Olá ${nome}, tudo bem? Aqui é a Camila do Suporte Celebre Festa! 🌟\n\nNotei que seu período de teste do sistema está terminando ${diasTxt}. Você conseguiu explorar o catálogo boutique, montar contratos e cadastrar seu acervo?\n\nPosso te ajudar com alguma dúvida técnica ou liberar uma condição especial para você continuar usando sem interrupções?`;
+    } else if (diasInativo >= 15) {
+      msg = `Olá ${nome}, tudo bem? Sentimos sua falta no Celebre Festa! 💎\n\nSeus dados e acervo continuam guardados em segurança. Gostaríamos de te convidar para reativar seu acesso com uma condição exclusiva de retorno.\n\nComo estão os preparativos dos seus eventos? Estamos à disposição!`;
+    } else if (diasInativo >= 7) {
+      msg = `Olá ${nome}, tudo bem? Aqui é a Camila do Suporte Celebre Festa! 🌸\n\nPercebemos que você não acessou a plataforma nos últimos dias e queríamos saber se surgiu alguma dúvida ou se gostaria de uma demonstração rápida de alguma ferramenta para facilitar sua rotina?`;
+    } else {
+      msg = `Olá ${nome}, tudo bem? Aqui é a Camila do Suporte Celebre Festa! Estou acompanhando sua conta no sistema e gostaria de saber se precisa de alguma ajuda com seu acervo ou configurações. Conte sempre conosco!`;
+    }
+
     window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
   };
 
@@ -800,6 +815,9 @@ const ControleGeral = () => {
           statusAssinatura: isSuspenso ? 'inativa' : (isAssinantePago ? (dadosTarget.statusAssinatura || 'ativa') : (infoAssinatura.expirada ? 'vencida' : 'inativa')),
           totalDiasTeste: infoTeste.totalDiasTeste || 7,
           isDuplicado,
+          diasSemAtividade,
+          timestampMaisRecente: timestampMaisRecente > 0 ? timestampMaisRecente : null,
+          ultimoAcesso: dadosTarget.ultimoAcesso || data.ultimoAcesso || null,
           dataPagamento: dadosTarget.dataPagamento || data.dataPagamento || null,
           dataProximaCobranca: dadosTarget.dataProximaCobranca || data.dataProximaCobranca || null,
           metodoPagamento: dadosTarget.metodoPagamento || data.metodoPagamento || 'PIX',
@@ -1899,9 +1917,15 @@ const ControleGeral = () => {
     }
   };
 
-  // 🔍 Filtros de Clientes
+  // 🔍 Filtros de Clientes & Radar Anti-Churn Unificado
   const totalNovos = clientes.filter(c => c.isNovo && c.status !== 'admin').length;
   const totalVencendo = clientes.filter(c => c.status === 'teste' && c.diasRestantes <= 2).length;
+
+  const totalEmRisco = clientes.filter(c => {
+    if (c.status === 'admin' || c.status === 'suspenso' || c.status === 'excluido') return false;
+    const dias = typeof c.diasSemAtividade === 'number' ? c.diasSemAtividade : (c.diasTeste || 0);
+    return dias >= 7 || c.status === 'bloqueado' || (c.status === 'teste' && c.diasRestantes <= 2);
+  }).length;
 
   const clientesFiltrados = clientes.filter(c => {
     const matchBusca = busca === '' || 
@@ -1916,9 +1940,15 @@ const ControleGeral = () => {
         ? c.isNovo
         : filtroStatus === 'vencendo' 
           ? (c.status === 'teste' && c.diasRestantes <= 2)
-          : (filtroStatus === 'suspenso' || filtroStatus === 'excluido')
-            ? (c.status === 'suspenso' || c.status === 'excluido')
-            : c.status === filtroStatus;
+          : filtroStatus === 'risco'
+            ? (c.status !== 'admin' && c.status !== 'suspenso' && c.status !== 'excluido' && (
+                (typeof c.diasSemAtividade === 'number' ? c.diasSemAtividade : (c.diasTeste || 0)) >= 7 ||
+                c.status === 'bloqueado' ||
+                (c.status === 'teste' && c.diasRestantes <= 2)
+              ))
+            : (filtroStatus === 'suspenso' || filtroStatus === 'excluido')
+              ? (c.status === 'suspenso' || c.status === 'excluido')
+              : c.status === filtroStatus;
     
     return matchBusca && matchStatus;
   });
@@ -1930,6 +1960,12 @@ const ControleGeral = () => {
   const totalBloqueados = clientes.filter(c => c.status === 'bloqueado').length;
   const totalSuspensos = clientes.filter(c => c.status === 'suspenso' || c.status === 'excluido').length;
   const totalExcluidos = totalSuspensos;
+
+  const totalRiscoCritico = clientes.filter(c => {
+    if (c.status === 'admin' || c.status === 'suspenso' || c.status === 'excluido') return false;
+    const dias = typeof c.diasSemAtividade === 'number' ? c.diasSemAtividade : (c.diasTeste || 0);
+    return dias >= 15 || c.status === 'bloqueado' || (c.status === 'teste' && c.diasRestantes <= 2);
+  }).length;
 
   const sugestoesPendentes = itensMoodboard.filter(i => i.sugeridoParaGlobal).length;
   const oficiaisTotais = itensMoodboard.filter(i => i.isGlobal).length;
@@ -1996,6 +2032,19 @@ const ControleGeral = () => {
         </button>
         <button 
           type="button"
+          className={`cg-main-tab-btn ${abaPrincipal === 'auditoria' ? 'active' : ''}`}
+          onClick={() => setAbaPrincipal('auditoria')}
+        >
+          <i className="fas fa-satellite-dish"></i>
+          <span className="cg-tab-text-full">Auditoria Global ao Vivo</span>
+          <span className="cg-tab-text-short">Auditoria Live</span>
+          <span className="cg-tab-badge green">
+            <span className="cg-tab-badge-full">🟢 AO VIVO</span>
+            <span className="cg-tab-badge-short"><i className="fas fa-bolt"></i></span>
+          </span>
+        </button>
+        <button 
+          type="button"
           className={`cg-main-tab-btn ${abaPrincipal === 'moodboard' ? 'active' : ''}`}
           onClick={() => { setAbaPrincipal('moodboard'); carregarItensMoodboard(); }}
         >
@@ -2015,6 +2064,15 @@ const ControleGeral = () => {
         <AbaFaturamentoAdmin 
           clientes={clientes} 
           onAbrirSuporteCliente={abrirVisualizadorSuporte} 
+        />
+      ) : abaPrincipal === 'auditoria' ? (
+        <AbaAuditoriaAntiChurn
+          clientes={clientes}
+          planos={planos}
+          onAbrirSuporteCliente={abrirVisualizadorSuporte}
+          entrarModoSuporte={entrarModoSuporte}
+          onProrrogarTeste={prorrogarTesteDias}
+          onAtualizarDados={carregarDados}
         />
       ) : abaPrincipal === 'moodboard' ? (
         <div className="cg-moodboard-manager">
@@ -2638,7 +2696,7 @@ const ControleGeral = () => {
                   <span className="cg-toggle-kpi-title">Indicadores Gerais da Plataforma</span>
                 ) : (
                   <span className="cg-toggle-kpi-summary">
-                    <strong>{totalClientes}</strong> empresas • <strong>{totalTeste}</strong> em teste • <strong>{totalAtivos}</strong> pagantes • <strong>{totalBloqueados}</strong> bloqueados
+                    <strong>{totalClientes}</strong> empresas • <strong>{totalEmRisco}</strong> em risco • <strong>{totalTeste}</strong> em teste • <strong>{totalAtivos}</strong> pagantes • <strong>{totalBloqueados}</strong> bloqueados
                   </span>
                 )}
               </div>
@@ -2664,6 +2722,16 @@ const ControleGeral = () => {
               </div>
             </div>
 
+            <div className="cg-kpi-card" onClick={() => setFiltroStatus('risco')}>
+              <div className="cg-kpi-icon" style={{ background: 'linear-gradient(135deg, #dc2626, #991b1b)' }}>
+                <i className="fas fa-heartbeat"></i>
+              </div>
+              <div className="cg-kpi-info">
+                <span className="cg-kpi-value" style={{ color: totalEmRisco > 0 ? '#dc2626' : '#0f172a' }}>{totalEmRisco}</span>
+                <span className="cg-kpi-label">Em Risco Churn</span>
+              </div>
+            </div>
+
             <div className="cg-kpi-card" onClick={() => setFiltroStatus('vencendo')}>
               <div className="cg-kpi-icon" style={{ background: 'linear-gradient(135deg, #ea580c, #c2410c)' }}>
                 <i className="fas fa-hourglass-half"></i>
@@ -2671,16 +2739,6 @@ const ControleGeral = () => {
               <div className="cg-kpi-info">
                 <span className="cg-kpi-value" style={{ color: totalVencendo > 0 ? '#ea580c' : '#0f172a' }}>{totalVencendo}</span>
                 <span className="cg-kpi-label">Testes Vencendo</span>
-              </div>
-            </div>
-
-            <div className="cg-kpi-card" onClick={() => setFiltroStatus('teste')}>
-              <div className="cg-kpi-icon" style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
-                <i className="fas fa-flask"></i>
-              </div>
-              <div className="cg-kpi-info">
-                <span className="cg-kpi-value">{totalTeste}</span>
-                <span className="cg-kpi-label">Em Teste</span>
               </div>
             </div>
 
@@ -2742,6 +2800,7 @@ const ControleGeral = () => {
             >
               <option value="todos">🏢 Todas as Empresas ({totalClientes})</option>
               <option value="novos">✨ Novos ({totalNovos})</option>
+              <option value="risco">🔴 Em Risco ({totalEmRisco})</option>
               <option value="vencendo">⏳ Vencendo ({totalVencendo})</option>
               <option value="teste">🧪 Em Teste ({totalTeste})</option>
               <option value="ativo">💎 Pagantes ({totalAtivos})</option>
@@ -2754,6 +2813,7 @@ const ControleGeral = () => {
               {[
                 { id: 'todos', label: 'Todos' },
                 { id: 'novos', label: `✨ Novos (${totalNovos})` },
+                { id: 'risco', label: `🔴 Em Risco (${totalEmRisco})` },
                 { id: 'vencendo', label: `⏳ Vencendo (${totalVencendo})` },
                 { id: 'teste', label: 'Em Teste' },
                 { id: 'ativo', label: 'Pagantes' },
@@ -2762,7 +2822,7 @@ const ControleGeral = () => {
               ].map(f => (
                 <button 
                   key={f.id} 
-                  className={`cg-pill ${filtroStatus === f.id ? 'active' : ''} ${f.id === 'novos' && totalNovos > 0 ? 'pill-novos' : ''} ${f.id === 'vencendo' && totalVencendo > 0 ? 'pill-vencendo' : ''}`}
+                  className={`cg-pill ${filtroStatus === f.id ? 'active' : ''} ${f.id === 'novos' && totalNovos > 0 ? 'pill-novos' : ''} ${f.id === 'risco' && totalEmRisco > 0 ? 'pill-vencendo' : ''} ${f.id === 'vencendo' && totalVencendo > 0 ? 'pill-vencendo' : ''}`}
                   onClick={() => setFiltroStatus(f.id)}
                 >
                   {f.label}
@@ -2867,7 +2927,7 @@ const ControleGeral = () => {
                             {(c.nomeExibicao || '?')[0].toUpperCase()}
                           </div>
                           <div className="cg-name-group">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
                               <strong>{c.nomeExibicao}</strong>
                               {c.isNovo && (
                                 <span className="cg-badge-novo" title={`Cliente novo! Cadastrado ${c.rotuloNovo.toLowerCase()}`}>
@@ -2882,7 +2942,8 @@ const ControleGeral = () => {
                                   borderRadius: '6px',
                                   fontSize: '0.66rem',
                                   fontWeight: '700',
-                                  padding: '1px 6px'
+                                  padding: '1px 6px',
+                                  whiteSpace: 'nowrap'
                                 }}>
                                   ⚠️ E-mail Duplicado
                                 </span>
@@ -2897,23 +2958,44 @@ const ControleGeral = () => {
                       <td className="cg-cell-email">{c.email}</td>
                       <td className="cg-cell-doc">
                         <span className="cg-doc-type">{c.tipoPessoa === 'PJ' ? 'CNPJ' : 'CPF'}</span>
-                        {c.documento || '—'}
+                        <span className="cg-doc-num">{c.documento || '—'}</span>
                       </td>
-                      <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <span>{c.dataCadastroExibida}</span>
+                      <td className="cg-cell-data">
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', whiteSpace: 'nowrap' }}>
+                          <span style={{ whiteSpace: 'nowrap' }}>{c.dataCadastroExibida}</span>
                           {c.isNovo && (
-                            <small style={{ color: '#059669', fontWeight: '800', fontSize: '0.70rem' }}>
+                            <small style={{ color: '#059669', fontWeight: '800', fontSize: '0.70rem', whiteSpace: 'nowrap' }}>
                               🟢 {c.rotuloNovo}
                             </small>
                           )}
                         </div>
                       </td>
-                      <td>
+                      <td className="cg-cell-plano">
                         <span className="cg-plano-tag">{c.nomePlano}</span>
+                        {c.status !== 'admin' && (
+                          <div style={{ marginTop: '3px', whiteSpace: 'nowrap' }}>
+                            {c.diasSemAtividade === 0 ? (
+                              <span style={{ fontSize: '10px', color: '#10b981', fontWeight: '750', whiteSpace: 'nowrap' }} title="Acessou o sistema hoje">
+                                🟢 Acesso hoje
+                              </span>
+                            ) : c.diasSemAtividade >= 15 ? (
+                              <span style={{ fontSize: '10px', color: '#dc2626', fontWeight: '800', whiteSpace: 'nowrap' }} title="Crítico: 15 dias ou mais sem uso">
+                                🔴 {c.diasSemAtividade}d sem uso
+                              </span>
+                            ) : c.diasSemAtividade >= 7 ? (
+                              <span style={{ fontSize: '10px', color: '#ea580c', fontWeight: '800', whiteSpace: 'nowrap' }} title="Alerta: 7 a 14 dias sem uso">
+                                🟠 {c.diasSemAtividade}d sem uso
+                              </span>
+                            ) : typeof c.diasSemAtividade === 'number' && c.diasSemAtividade > 0 ? (
+                              <span style={{ fontSize: '10px', color: '#64748b', whiteSpace: 'nowrap' }} title={`Última atividade há ${c.diasSemAtividade} dias`}>
+                                Há {c.diasSemAtividade}d
+                              </span>
+                            ) : null}
+                          </div>
+                        )}
                       </td>
-                      <td>{getStatusBadge(c.status)}</td>
-                      <td>
+                      <td className="cg-cell-status">{getStatusBadge(c.status)}</td>
+                      <td className="cg-cell-vigencia">
                         {c.status === 'admin' ? (
                           <span className="cg-admin-badge">
                             <i className="fas fa-shield-alt"></i> Super Admin
@@ -2929,7 +3011,7 @@ const ControleGeral = () => {
                                 }}
                               ></div>
                             </div>
-                            <small style={{ color: c.diasRestantes <= 2 ? '#ea580c' : '#64748b', fontWeight: c.diasRestantes <= 2 ? '800' : '600' }}>
+                            <small style={{ color: c.diasRestantes <= 2 ? '#ea580c' : '#64748b', fontWeight: c.diasRestantes <= 2 ? '800' : '600', whiteSpace: 'nowrap' }}>
                               {c.diasRestantes <= 0 ? '⚠️ Vencido' : `${c.diasRestantes}d restantes`}
                             </small>
                           </div>
@@ -2972,7 +3054,7 @@ const ControleGeral = () => {
                               </span>
                             </div>
                             {c.dataProximaCobranca && (
-                              <small style={{ color: '#dc2626', fontSize: '0.68rem', fontWeight: 700 }}>
+                              <small style={{ color: '#dc2626', fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
                                 <i className="fas fa-calendar-times"></i> Venceu {formatarDataExibicao(c.dataProximaCobranca)}
                               </small>
                             )}
@@ -2992,17 +3074,17 @@ const ControleGeral = () => {
                       </td>
                       <td className="cg-cell-actions">
                         {c.status !== 'admin' ? (
-                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
+                          <div className="cg-actions-group">
                             {c.telefone && (
-                              <a 
-                                href={`https://wa.me/55${c.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${c.nomeExibicao}, tudo bem? Sou da equipe Celebre! Gostaria de saber como está sendo sua experiência no sistema Celebre.`)}`}
-                                target="_blank"
-                                rel="noreferrer"
+                              <button 
+                                type="button"
+                                onClick={() => handleChamarWhatsApp(c)}
                                 className="cg-btn-whatsapp-direct"
-                                title={`Chamar no WhatsApp (${c.telefone})`}
+                                title={`Chamar no WhatsApp com mensagem contextualizada (${c.telefone})`}
+                                style={{ border: 'none', cursor: 'pointer', background: 'transparent' }}
                               >
                                 <i className="fab fa-whatsapp"></i>
-                              </a>
+                              </button>
                             )}
                             {c.isDuplicado && (
                               <button 
@@ -3123,7 +3205,18 @@ const ControleGeral = () => {
                       {c.telefone && (
                         <div className="cg-mcard-row">
                           <span className="cg-mcard-lbl"><i className="fab fa-whatsapp"></i> Zap:</span>
-                          <span className="cg-mcard-val">{c.telefone}</span>
+                          <span className="cg-mcard-val" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {c.telefone}
+                            <button
+                              type="button"
+                              onClick={() => handleChamarWhatsApp(c)}
+                              className="cg-btn-whatsapp-direct"
+                              style={{ width: '26px', height: '26px', fontSize: '12px', padding: 0, border: 'none', cursor: 'pointer', background: '#dcfce7', color: '#16a34a', borderRadius: '6px' }}
+                              title="Chamar no WhatsApp com mensagem contextualizada"
+                            >
+                              <i className="fab fa-whatsapp"></i>
+                            </button>
+                          </span>
                         </div>
                       )}
 
@@ -3138,6 +3231,11 @@ const ControleGeral = () => {
                           <div className="cg-mcard-plan-item">
                             <span className="cg-mcard-plan-lbl"><i className="fas fa-crown"></i> Plano:</span>
                             <span className="cg-plano-tag">{c.nomePlano}</span>
+                            {c.status !== 'admin' && typeof c.diasSemAtividade === 'number' && (
+                              <span style={{ fontSize: '10px', fontWeight: '750', color: c.diasSemAtividade >= 15 ? '#dc2626' : c.diasSemAtividade >= 7 ? '#ea580c' : '#10b981' }}>
+                                {c.diasSemAtividade === 0 ? '🟢 Hoje' : `${c.diasSemAtividade}d sem uso`}
+                              </span>
+                            )}
                           </div>
                           <div className="cg-mcard-plan-item" style={{ textAlign: 'right', alignItems: 'center' }}>
                             <span className="cg-mcard-plan-lbl"><i className="far fa-calendar-alt"></i> Cad:</span>

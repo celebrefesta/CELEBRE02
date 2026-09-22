@@ -275,6 +275,12 @@
   border: 1px solid rgba(16, 185, 129, 0.35);
 }
 
+.cg-tab-badge.red {
+  background: rgba(239, 68, 68, 0.18);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
 .cg-main-tab-btn:hover {
   color: var(--cg-text-main);
   background: rgba(255, 255, 255, 0.08);
@@ -2075,17 +2081,37 @@
   background: var(--cg-card-bg);
   border-radius: 14px;
   border: 1.5px solid var(--cg-card-border);
-  overflow: hidden;
+  overflow-x: auto !important;
+  overflow-y: hidden;
   box-shadow: var(--cg-card-shadow);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(197, 160, 89, 0.4) transparent;
+  -webkit-overflow-scrolling: touch;
 }
+
+.cg-table-container::-webkit-scrollbar {
+  height: 6px;
+}
+.cg-table-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cg-table-container::-webkit-scrollbar-thumb {
+  background: rgba(197, 160, 89, 0.35);
+  border-radius: 10px;
+}
+.cg-table-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(197, 160, 89, 0.65);
+}
+
 .cg-table {
   width: 100%;
+  min-width: 1240px;
   border-collapse: collapse;
   font-size: 13px;
 }
 .cg-table th {
   background: var(--cg-tabs-bg);
-  padding: 12px 16px;
+  padding: 13px 14px;
   text-align: left;
   font-size: 11px;
   font-weight: 800;
@@ -2093,12 +2119,14 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-bottom: 1.5px solid var(--cg-card-border);
+  white-space: nowrap !important;
 }
 .cg-table td {
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--cg-card-border);
   color: var(--cg-text-main);
   vertical-align: middle;
+  white-space: nowrap !important;
 }
 .cg-table tr:last-child td {
   border-bottom: none;
@@ -2134,11 +2162,13 @@
 
 .cg-cell-name {
   vertical-align: middle;
+  white-space: nowrap !important;
 }
 .cg-cell-name-inner {
   display: flex;
   align-items: center;
   gap: 12px;
+  white-space: nowrap !important;
 }
 .cg-avatar {
   width: 36px;
@@ -2157,23 +2187,29 @@
 .cg-name-group {
   display: flex;
   flex-direction: column;
+  white-space: nowrap !important;
 }
 .cg-name-group strong {
   color: var(--cg-text-main);
   font-weight: 700;
+  white-space: nowrap !important;
 }
 .cg-name-group small {
   color: var(--cg-text-light);
   font-size: 11px;
+  white-space: nowrap !important;
 }
 .cg-cell-email {
   color: #3b82f6;
   font-weight: 600;
+  white-space: nowrap !important;
 }
 .cg-cell-doc {
   font-family: monospace;
   font-size: 12px;
   color: var(--cg-text-muted);
+  white-space: nowrap !important;
+  letter-spacing: 0.2px;
 }
 .cg-doc-type {
   display: inline-block;
@@ -2185,6 +2221,45 @@
   font-weight: 800;
   margin-right: 6px;
   border: 1px solid var(--cg-card-border);
+  white-space: nowrap !important;
+  vertical-align: middle;
+}
+.cg-doc-num {
+  white-space: nowrap !important;
+  display: inline-block;
+}
+
+.cg-cell-data {
+  white-space: nowrap !important;
+}
+.cg-cell-data span,
+.cg-cell-data small {
+  white-space: nowrap !important;
+}
+
+.cg-cell-plano {
+  white-space: nowrap !important;
+}
+
+.cg-cell-status {
+  white-space: nowrap !important;
+}
+
+.cg-cell-vigencia {
+  white-space: nowrap !important;
+}
+
+.cg-cell-actions {
+  text-align: center;
+  white-space: nowrap !important;
+}
+.cg-actions-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap !important;
+  flex-wrap: nowrap !important;
 }
 
 .cg-plano-tag {
@@ -2206,6 +2281,7 @@
   font-size: 10.5px;
   font-weight: 800;
   text-transform: uppercase;
+  white-space: nowrap !important;
 }
 .badge-admin { background: #0f172a; color: #c5a059; }
 .badge-teste { background: #fef3c7; color: #d97706; }
@@ -2257,7 +2333,11 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  width: 100px;
+  width: 110px;
+  white-space: nowrap !important;
+}
+.cg-teste-info small {
+  white-space: nowrap !important;
 }
 .cg-teste-bar {
   height: 6px;
@@ -2275,7 +2355,8 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
-  min-width: 155px;
+  min-width: 160px;
+  white-space: nowrap !important;
 }
 
 .cg-pagamento-top {
@@ -2297,7 +2378,7 @@
   background: #dcfce7;
   color: #15803d;
   border: 1px solid #bbf7d0;
-  white-space: nowrap;
+  white-space: nowrap !important;
 }
 
 .cg-metodo-badge-mini {
@@ -3110,8 +3191,10 @@
     border-radius: 10px !important;
   }
 
-  /* 2. SWITCHER DE ABAS MOBILE */
+  /* 2. SWITCHER DE ABAS MOBILE (2x2 GRID SIMÉTRICO) */
   .cg-main-tabs {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
     padding: 4px !important;
     gap: 4px !important;
     margin-bottom: 12px !important;
