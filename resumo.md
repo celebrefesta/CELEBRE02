@@ -1,165 +1,135 @@
 # 📋 RESUMO EXECUTIVO DETALHADO — ATUALIZAÇÕES DO SISTEMA CELEBRE
 
 > **SISTEMA:** Celebre Sistema Integrado (CELEBRE02)  
-> **DATA DA ATUALIZAÇÃO:** 21 de Setembro de 2026  
-> **STATUS:** ✅ **100% CONCLUÍDO, VALIDADO E COMPILADO COM SUCESSO**  
-> **COMPILAÇÃO:** `npm run build` aprovado sem erros (14.8s)  
-> **ESCOPO:** Gestão de Assinaturas, Relatório PDF Executivo, Correção de Inatividade, Blindagem de Layout e Google Play Store
+> **DATA DA ATUALIZAÇÃO:** 22 de Setembro de 2026  
+> **STATUS:** ✅ **100% CONCLUÍDO, BLINDADO E VALIDADO EM PRODUÇÃO**  
+> **COMPILAÇÃO:** `npm run build` aprovado sem erros (14.05s)  
+> **ESCOPO:** Otimização Mobile do Acervo, Eliminação de Bordas Escuras, Filtro Inteligente de Status, Alinhamento de Barra de Ferramentas, Aba Faturamento e Estabilidade Geral
 
 ---
 
 ## 📑 ÍNDICE GERAL
-1. [Relatório Mensal Financeiro em PDF Completo (Super Admin)](#1-relatório-mensal-financeiro-em-pdf-completo)
-2. [Auditoria de Notificações em Tempo Real no Controle Geral](#2-auditoria-de-notificações-em-tempo-real-no-controle-geral)
-3. [Auditoria de Contas Ativas vs Inativas / Suspensas](#3-auditoria-de-contas-ativas-vs-inativas--suspensas)
-4. [Expiração no Horário Exato de Cortesias e Períodos de Teste](#4-expiração-no-horário-exato-de-cortesias-e-períodos-de-teste)
-5. [Correção da Linha Divisória Quebrada na Tabela de Contas](#5-correção-da-linha-divisória-quebrada-na-tabela-de-contas)
-6. [Correção do Critério de Inatividade & Auto-Cura de Suspensão](#6-correção-do-critério-de-inatividade--auto-cura-de-suspensão)
-7. [Diagnóstico da Google Play Store (Testadores & Erro de Conexão)](#7-diagnóstico-da-google-play-store)
+1. [Compactação e Proporção dos Cards do Acervo no Celular e Desktop](#1-compactação-e-proporção-dos-cards-do-acervo)
+2. [Eliminação Definitiva das Bordas Pretas Grossas nos Cenários](#2-eliminação-definitiva-das-bordas-pretas-grossas)
+3. [Correção de Posicionamento do Botão "Limpar Filtros" no Mobile](#3-correção-de-posicionamento-do-botão-limpar-filtros)
+4. [Filtro Inteligente de Status e Clareza do Estado Vazio do Acervo](#4-filtro-inteligente-de-status-e-clareza-do-estado-vazio)
+5. [Reestruturação da Aba Faturamento e Cards de KPI](#5-reestruturação-da-aba-faturamento-e-cards-de-kpi)
+6. [Relatório Mensal Financeiro em PDF e Auditoria de Assinaturas](#6-relatório-mensal-financeiro-em-pdf-e-auditoria-de-assinaturas)
+7. [Precisão de Expiração e Auto-Cura de Inatividade](#7-precisão-de-expiração-e-auto-cura-de-inatividade)
 8. [Tabela Consolidada de Arquivos Modificados e Criados](#8-tabela-consolidada-de-arquivos-modificados-e-criados)
 9. [Checklist Final de Integridade e Validação Técnica](#9-checklist-final-de-integridade-e-validação-técnica)
 
 ---
 
-## 1. Relatório Mensal Financeiro em PDF Completo
+## 1. Compactação e Proporção dos Cards do Acervo
 
-### 🎯 Objetivo
-Disponibilizar no módulo **Controle Geral / Faturamento** uma ferramenta profissional para exportação de relatórios mensais completos em PDF de alta qualidade para impressão, prestação de contas e controle gerencial.
-
-### ⚙️ Implementação Técnica
-- **Componente Modal:** `src/pages/Admin/ModalRelatorioMensalAdmin.jsx` e `ModalRelatorioMensalAdmin.css`.
-- **Motor Gerador do PDF:** `src/utils/gerarRelatorioFaturamentoAdminPDF.js` utilizando `jsPDF` e `jspdf-autotable`.
-- **Recursos e Indicadores do Relatório**:
-  - **Filtro Mensal Dinâmico:** Seletor integrado de Mês e Ano.
-  - **Métricas Executivas em Destaque:**
-    - Faturamento Bruto Quitado no Período (`R$`).
-    - Quantidade Total de Faturas e Taxa de Aprovação (`%`).
-    - MRR (Receita Recorrente Mensal Vigente).
-    - Ticket Médio por Assinante Ativo.
-  - **Tabela Completa de Transações:** Cliente, E-mail, Data, Horário, Plano Contratado, Método de Pagamento (PIX / Cartão) e Status.
-  - **Quadro Analítico por Método de Pagamento:** Distribuição percentual e em valor entre PIX e Cartão de Crédito.
-  - **Harmonização Visual:** Barra de controles e seletores alinhados em linha única horizontal, sem quebras indesejadas de código ou layout.
-
----
-
-## 2. Auditoria de Notificações em Tempo Real no Controle Geral
-
-### 🔍 Verificação
-- Averiguada a central de monitoramento em tempo real do **Controle Geral** para certificar que a Celebre é informada imediatamente a cada novo cliente cadastrado ou pagamento efetuado.
-- Os listeners de Firestore e os gatilhos de log em `logs_atividades` sincronizam instantaneamente novos assinantes e status financeiros com os badges de identificação rápida (`✨ NOVO • Hoje`, `🟢 Quitado`, `⚠️ E-mail Duplicado`).
-
----
-
-## 3. Auditoria de Contas Ativas vs Inativas / Suspensas
-
-### 🔍 Problema Identificado
-No painel do Super Admin, o totalizador de assinaturas ativas e o cálculo de MRR apresentavam divergência ao somar contas suspensas por inatividade (como `camila.vichinhsk@gmail.com`).
-
-### 🛠️ Correção
-- Ajustado o algoritmo de cálculo em `src/pages/Admin/AbaFaturamentoAdmin.jsx` e no relatório em PDF para desconsiderar categoricamente contas com status `suspenso`, `bloqueado` ou `excluido`.
-- Contas sem vigência comprovada ou em inatividade não impactam mais os indicadores de receita ativa nem o total de assinantes regulares da Celebre.
-
----
-
-## 4. Expiração no Horário Exato de Cortesias e Períodos de Teste
-
-### 🔍 Problema Identificado
-A conta `testecelebre@hotmail.com` possuía uma Cortesia VIP de 1 mês concedida em 21/08/2026 às 10:00. No dia 21/09/2026, às 17:09 (7 horas após o horário previsto de término), a conta continuava ativa no sistema devido ao truncamento de horário (`zerarHorario` para 00:00:00), que estendia o acesso até as 23:59:59 daquele dia.
+### 🔍 Diagnóstico do Problema
+Na aba de **Acervo / Moodboard** do painel de **Controle Geral**, os cartões de elementos apresentavam dimensões desproporcionais na visualização mobile:
+- **1 Card por Linha:** O CSS Grid usava `minmax(230px, 1fr)`, o que forçava apenas 1 card por linha em smartphones (`<= 460px`), fazendo cada item ocupar 100% da largura da tela.
+- **Altura Excessiva:** Miniaturas de 180px somadas a paddings largos de 14px e botões volumosos geravam cartões com mais de 320px de altura, exigindo rolagem vertical exaustiva para navegar por poucos itens.
+- **Peso Tipográfico Exagerado:** Títulos em negrito pesado (`font-weight: 800`) poluíam a leitura.
 
 ### 🛠️ Solução Implementada
-1. **Utilitário Canônico `verificarAssinaturaAtiva` (`src/utils/periodoTesteUtils.js`)**:
-   - Validação da vigência real no milissegundo exato: compara `Date.now() >= dataVencimento.getTime()`.
-   - Se o horário atual ultrapassou o horário previsto, a assinatura/cortesia é marcada imediatamente como **EXPIRADA** (`ativa: false, expirada: true, motivo: 'vencida'`).
-2. **Preservação de Horário em `calcularPeriodoTeste`**:
-   - Mantém horas, minutos e segundos da data de concessão ou cadastro, expirando no momento exato estipulado.
-3. **Bloqueio em Tempo Real**:
-   - Integrado a todas as rotas protegidas (`RotaProtegida.jsx`, `App.jsx`, `Dashboard.jsx`, `Navbar.jsx`, `Topbar.jsx`), barrando o acesso no instante em que o prazo termina.
+- **Grade Mobile em 2 Colunas Simétricas (`repeat(2, 1fr) !important`):** Agora cabem 2 cartões simétricos lado a lado em qualquer dispositivo móvel, reduzindo a altura ocupada na tela em mais de 50%.
+- **Miniaturas Proporcionais:** Altura reduzida de 180px para **110px** no mobile e **140px** no desktop (`minmax(190px, 1fr)`).
+- **Tipografia Delicada:** Redução do peso de `800` para semi-bold refinado `550`, com tamanho ajustado para `10.5px` no celular.
+- **Micro-Badges e Botões Slim:** Badges de categoria e status calibrados para formato micro (`7.5px - 8px`), e botões de ação fixados em `27px` de altura com texto responsivo: *"Oficializar"* no smartphone e *"Tornar Oficial"* no computador.
 
 ---
 
-## 5. Correção da Linha Divisória Quebrada na Tabela de Contas
+## 2. Eliminação Definitiva das Bordas Pretas Grossas
 
-### 🔍 Problema Identificado
-Na tabela de clientes do **Controle Geral**, a linha divisória horizontal (`border-bottom`) entre as linhas ficava interrompida sob a primeira coluna (Avatar e Nome), iniciando apenas a partir da coluna de E-mail.
+### 🔍 Diagnóstico do Problema
+Nos elementos das categorias de cenário (**Parede**, **Piso** e **Ambiente**), as imagens apareciam contornadas por uma moldura preta pesada e espessa:
+- **Causa Raiz:** O componente aplicava a classe `.is-photo-mode`, que forçava no CSS `background-color: #0f172a` (azul-marinho escuro / quase preto).
+- **Incompatibilidade com o Padding Mobile:** No celular, `.cg-mb-thumb-container` possuía `padding: 6px !important`. A combinação do fundo escuro com fotos retangulares ou panorâmicas criava faixas pretas ao redor de toda a imagem.
+- **Botão Oficial Escuro:** Quando oficializado, o botão inferior também assumia fundo preto sólido (`#0f172a`), escurecendo o card por inteiro.
 
-### 🛠️ Causa Raiz e Solução
-- **Causa:** A classe `.cg-cell-name` estava aplicada diretamente na tag `<td>` com `display: flex`. Em tabelas com `border-collapse: collapse`, o navegador não aplica bordas colapsadas a elementos que não possuem `display: table-cell`.
-- **Solução:**
-  - `ControleGeral.jsx`: O conteúdo visual foi encapsulado em `<div className="cg-cell-name-inner">`.
-  - `ControleGeral.css`: A célula `<td>` voltou a ser `display: table-cell` (`vertical-align: middle`), e as propriedades de alinhamento flexível foram transferidas para `.cg-cell-name-inner`.
-- **Resultado:** Linha divisória contínua, homogênea e sem qualquer quebra de ponta a ponta em todas as linhas.
-
----
-
-## 6. Correção do Critério de Inatividade & Auto-Cura de Suspensão
-
-### 🔍 Problema Identificado
-Ao expirar a cortesia da conta `testecelebre@hotmail.com`, em vez de ir para o status padrão de **BLOQUEADO** (exigindo a contratação de um plano como em qualquer encerramento de degustação), o sistema colocou o perfil em **SUSPENSO** com plano **"Suspenso (Inatividade)"**, e ao tentar logar exibia a tela `/conta-suspensa` ("inativo nos últimos 6 meses"), apesar de o cliente ter utilizado a plataforma até hoje.
-
-### 🛠️ Causa Raiz e Solução Definitiva
-1. **Identificação do Ponto de Gravação no Banco**:
-   - No arquivo `src/pages/Dashboard/Dashboard.jsx` (linha 348), existia uma instrução que verificava `infoTeste.diasTranscorridos > 180` (baseado unicamente na data de criação original, 14/03/2026, 191 dias atrás) e executava:
-     ```javascript
-     await updateDoc(doc(db, "usuarios", uid), { statusConta: 'suspenso' });
-     ```
-   - Isso gravava `statusConta: 'suspenso'` diretamente no Firestore para qualquer conta com cadastro antigo cuja degustação terminasse, forçando o redirecionamento indevido para `/conta-suspensa`.
-2. **Cálculo da Data de Última Atividade Real**:
-   - Implementado cálculo analítico que extrai a data mais recente entre:
-     - `dataPagamento`
-     - `dataProximaCobranca`
-     - `dataFimTeste`
-     - `ultimoAcesso`
-     - `dataCadastro`
-   - O contador de `diasSemAtividade` só avança se a conta não tiver NENHUM pagamento, NENHUMA cortesia e NENHUM acesso recente.
-3. **Mecanismo de Auto-Cura (Self-Healing)**:
-   - Implementado em `Dashboard.jsx`, `RotaProtegida.jsx`, `App.jsx`, `ContaSuspensa.jsx` e `Login.jsx`:
-   - Se uma conta estiver gravada como `suspenso`, mas possuir atividade ou vigência recente (`diasSemAtividade <= 180`), o sistema identifica o falso-positivo, **remove a suspensão no Firestore automaticamente atualizando para `statusConta: 'bloqueado'`** e libera o fluxo normal para o dashboard.
-4. **Visual no Controle Geral**:
-   - `testecelebre@hotmail.com` e sua equipe vinculada (`catilango23@gmail.com`) aparecem com o badge vermelho **`BLOQUEADO`**, plano normal e a tag de pagamento **`Expirado • Venceu 21/09/2026`**.
-   - `camila.vichinhsk@gmail.com` (sem pagamentos e sem atividade há mais de 180 dias) permanece legitimamente como **`SUSPENSO`**.
+### 🛠️ Solução Implementada
+- **Remoção de `.is-photo-mode` com Fundo Preto:** Descontinuada a cor escura no CSS e no JSX. Agora **todos os elementos** do acervo utilizam o fundo quadriculado suave e translúcido de luxo (`#f8fafc` / `#f1f5f9`), 100% limpo e harmônico.
+- **Centralização Geométrica Suave:** As texturas de pisos e paredes repousam centralizadas com cantos arredondados discretos (`border-radius: 4px`), sem qualquer sobra escura.
+- **Botão Oficial em Dourado Nobre:** O botão ativo foi transformado de preto para tom ouro translúcido (`#fbf8f1` com texto `#9a7328` e borda `#e6d3a7`), alinhado à identidade visual premium do Celebre.
 
 ---
 
-## 7. Diagnóstico da Google Play Store
+## 3. Correção de Posicionamento do Botão "Limpar Filtros"
 
-### 🔍 Sintoma
-Ao tentar instalar o aplicativo pelo link de testadores no celular Android, a Google Play Store exibia o alerta:  
-> *"Algo deu errado. Não há conexão com a Internet. Ative o Wi-Fi ou os dados da rede celular e tente novamente."*
+### 🔍 Diagnóstico do Problema
+Ao clicar em qualquer filtro (ex.: pílula *"Oficiais"* ou seleção de categoria), o botão **"Limpar"** surgia sozinho no topo da tela, antes de todas as pílulas de status:
+- **Causa Raiz:** A barra de ferramentas mobile usa CSS Flexbox com ordens explícitas (`order: 1` para pílulas, `order: 2` para busca, etc.). O botão `.cg-btn-reset-all-filters` não possuía `order` declarada no media query mobile, assumindo o valor padrão do navegador (`order: 0`) e sendo empurrado para o topo absoluto.
 
-### 💡 Diagnóstico Técnico
-1. **Mensagem Genérica de Permissão:** A Google Play exibe essa tela de "sem conexão" quando a conta logada no **aplicativo da Google Play Store** no smartphone não possui autorização para aquela faixa de teste.
-2. **Pontos de Atenção para Resolução:**
-   - **Conta Ativa na Loja:** O avatar no topo da Play Store no celular precisa estar selecionado no e-mail cadastrado como testador (`vichinhskfotografia@gmail.com`).
-   - **Adesão Formal (Opt-in Web):** É necessário abrir o link de convite pela web (`https://play.google.com/apps/testing/...`) e clicar no botão azul **"Participar do teste"** (*Become a tester*).
-   - **Status na Play Console:** Se uma nova versão (`Celebre-v3.aab`) foi submetida recentemente, ela precisa concluir o status de "Em análise" pelo Google para que o binário fique liberado para download.
-   - **Cache Local:** Limpar o cache do aplicativo Google Play Store nas configurações do Android desfaz bloqueios temporários de sessão.
+### 🛠️ Solução Implementada
+- **Fixação na Linha 4 (`order: 6 !important`):** O botão agora fica acoplado **ao lado do seletor de ordenação** na Linha 4 da barra de ferramentas, dividindo a linha de forma 50% / 50% simétrica.
+- **Comportamento Dinâmico Fluido:** Quando não há filtros ativos, a ordenação ocupa 100% da Linha 4. Ao filtrar, o botão "Limpar" surge suavemente ao lado, mantendo as pílulas de status no topo 100% intocadas.
+- **Design Padronizado:** Altura de `36px`, cantos de `8px` e acabamento suave em vermelho discreto (`#fef2f2` / `#dc2626`).
+- **Texto Responsivo:** Exibe `"Limpar"` no celular e `"Limpar Filtros"` no desktop.
+
+---
+
+## 4. Filtro Inteligente de Status e Clareza do Estado Vazio
+
+### 🔍 Diagnóstico do Problema
+Ao clicar na pílula `[ 👑 Oficiais 7 ]`, o sistema indicava *"Nenhum elemento encontrado"*, mesmo havendo 7 itens oficiais cadastrados:
+- **Cruzamento de Filtros Restritivo:** Os 7 itens oficiais pertencem a *Parede*, *Piso* e *Ambiente*. Se a categoria selecionada fosse *Outros* (ou outra sem oficiais), a busca cruzada (*Oficial E Outros*) resultava em zero itens.
+- **Mensagem Ambígua:** O estado vazio dizia *"Tente ajustar os filtros... ou cadastre novos elementos oficiais!"*, levando o usuário a acreditar que o sistema afirmava não existir nenhum item oficial.
+
+### 🛠️ Solução Implementada
+- **Redefinição Inteligente de Categoria:** Ao clicar na pílula **`Oficiais`** ou no KPI **`Itens Oficiais`**, se a categoria ativa no momento não tiver itens oficiais, o sistema **redefine automaticamente para "Todas as Categorias"**, exibindo os 7 itens oficiais imediatamente.
+- **Mensagem Explicativa Contextual:** A tela agora informa com precisão:  
+  > *"Existem 7 itens oficiais cadastrados no acervo, mas nenhum corresponde aos filtros atuais."*
+- **Botão Direto de Ação:** O botão de cadastro foi substituído pelo atalho **`[ ⟲ Limpar Filtros e Ver Todos (9) ]`**, restaurando a listagem com apenas 1 toque.
+
+---
+
+## 5. Reestruturação da Aba Faturamento e Cards de KPI
+
+### 🎯 Objetivo & Entregas
+- **Grade 3x2 no Desktop:** Layout dos cards KPI na aba Faturamento reorganizado em 3 colunas e 2 linhas simétricas, sem quebras desordenadas.
+- **Eliminação de Barras de Rolagem Excessivas:** Ajuste de alturas mínimas e contenção de overflow para exibir os dados de cobranças e faturas diretamente na tela.
+- **Suavização Tipográfica:** Redução de fontes pesadas em negrito para pesos leves e corporativos (`500` a `600`).
+- **Drawer de Filtros Aprimorado:** Gaveta lateral com controles acessíveis e filtros dinâmicos de faturas.
+
+---
+
+## 6. Relatório Mensal Financeiro em PDF e Auditoria de Assinaturas
+
+- **Componente Modal:** `ModalRelatorioMensalAdmin.jsx` e `ModalRelatorioMensalAdmin.css`.
+- **Motor de Geração em PDF:** `gerarRelatorioFaturamentoAdminPDF.js` com `jsPDF` e tabelas executivas.
+- **Métricas Chave:** Faturamento Quitado, MRR, Ticket Médio, Taxa de Aprovação e Quadro Analítico por Método (PIX vs Cartão).
+- **Auditoria de Cálculo:** Exclusão rigorosa de contas inativas ou suspensas dos totalizadores de receita ativa.
+
+---
+
+## 7. Precisão de Expiração e Auto-Cura de Inatividade
+
+- **Validação Milissegundo a Milissegundo:** Utilitário `verificarAssinaturaAtiva` em `periodoTesteUtils.js`, eliminando o truncamento para 00:00:00 que estendia indevidamente acessos de cortesias e degustações.
+- **Mecanismo de Auto-Cura:** Cálculo de inatividade real ponderando a data mais recente entre pagamentos, cortesias, acessos e cadastro (limite de 180 dias), corrigindo automaticamente contas bloqueadas que haviam sido marcadas como suspensas por engano.
 
 ---
 
 ## 8. Tabela Consolidada de Arquivos Modificados e Criados
 
-| Arquivo | Tipo | Ação Realizada |
+| Arquivo | Módulo / Camada | Alterações Realizadas |
 |---|---|---|
-| `src/pages/Admin/ModalRelatorioMensalAdmin.jsx` | Frontend | Componente do modal de relatório financeiro mensal com filtros e métricas. |
-| `src/pages/Admin/ModalRelatorioMensalAdmin.css` | Frontend | Estilização corporativa com alinhamento em linha única e design executivo. |
-| `src/utils/gerarRelatorioFaturamentoAdminPDF.js` | Utilitário | Motor de geração do relatório mensal em PDF com jsPDF e gráficos tabulares. |
-| `src/utils/periodoTesteUtils.js` | Utilitário | Criação de `verificarAssinaturaAtiva` e ajuste de precisão de horário em `calcularPeriodoTeste`. |
-| `src/pages/Admin/ControleGeral.jsx` | Frontend | Correção da célula `.cg-cell-name-inner`, ajuste do cálculo de inatividade e tags de expiração. |
-| `src/pages/Admin/ControleGeral.css` | Frontend | Desvinculação de `display: flex` da tag `<td>` para restauração da borda horizontal contínua. |
-| `src/pages/Dashboard/Dashboard.jsx` | Frontend | Remoção da suspensão forçada por data de cadastro e inclusão do mecanismo de auto-cura. |
-| `src/components/RotaProtegida.jsx` | Frontend | Validação de inatividade real antes do redirecionamento para `/conta-suspensa`. |
-| `src/App.jsx` | Frontend | Auto-recuperação de falso-positivo de inatividade no escudo global de rotas. |
-| `src/pages/Auth/ContaSuspensa.jsx` | Frontend | Auto-cura no Firestore e redirecionamento de clientes com cortesia/pagamento recente. |
-| `src/pages/Auth/Login.jsx` | Frontend | Prevenção de bloqueio indevido de login para clientes ativos recentemente. |
-| `resumo.md` | Documentação | Atualização completa do resumo executivo mestre com todas as implementações. |
+| `src/pages/Admin/ControleGeral.jsx` | Admin / Moodboard | 2 colunas mobile, remoção de `.is-photo-mode`, seleção inteligente de status, mensagem de acervo vazio precisa e texto responsivo nos botões. |
+| `src/pages/Admin/ControleGeral.css` | Admin / Estilos | Compactação da grade (110px mobile / 140px desktop), fixação do botão Limpar na Linha 4 (`order: 6`), remoção de fundo preto nos cenários e botão dourado nobre. |
+| `src/pages/Admin/AbaFaturamentoAdmin.jsx` | Admin / Faturamento | Reorganização de KPIs (3 colunas x 2 linhas) e alinhamento de visualização sem rolagem. |
+| `src/pages/Admin/AbaFaturamentoAdmin.css` | Admin / Faturamento | Estilização limpa dos cards financeiros e alívio tipográfico sem excesso de negrito. |
+| `src/pages/Admin/ModalRelatorioMensalAdmin.jsx` | Admin / Relatórios | Modal executivo para extração de relatórios mensais de faturas. |
+| `src/utils/gerarRelatorioFaturamentoAdminPDF.js` | Utilitários / PDF | Motor de exportação de faturamento com tabelas e indicadores analíticos. |
+| `src/utils/periodoTesteUtils.js` | Utilitários / Autenticação | Precisão de horário exato no vencimento de planos e cortesias. |
+| `resumo_executivo.md` | Documentação | Atualização do histórico de sessões com o ciclo de 21/09 e 22/09/2026. |
+| `resumo.md` | Documentação | Documentação executiva completa e consolidada de todas as entregas do sistema. |
 
 ---
 
 ## 9. Checklist Final de Integridade e Validação Técnica
 
-- [x] **Relatório em PDF Funcional**: Geração mensal de faturas, MRR, ticket médio e quitações operando com sucesso.
-- [x] **Expiração no Horário Certo**: Cortesias e degustações expiram no horário exato estipulado, sem atraso residual.
-- [x] **Linha da Tabela Contínua**: Divisória horizontal entre contas restaurada em 100% da largura.
-- [x] **Falso-Positivo de Inatividade Eliminado**: `testecelebre` classificado como `BLOQUEADO` com auto-cura no Firestore.
-- [x] **Contas Genuinamente Inativas Preservadas**: `camila.vichinhsk` mantida como `SUSPENSO` por ausência de atividade > 180 dias.
-- [x] **Compilação de Produção Aprovada**: `npm run build` finalizado com sucesso (14.83s, 0 erros).
+- [x] **Cards de Acervo em 2 Colunas no Mobile**: Grade fluida sem comprimir textos ou vazar a largura da tela.
+- [x] **Miniaturas Compactas**: Altura ajustada para 110px no celular e 140px no desktop.
+- [x] **Fim das Bordas Pretas**: Fundo quadriculado limpo em 100% dos elementos (móveis, decorações, paredes e pisos).
+- [x] **Botão Oficial Refinado**: Botão ativo em tom dourado suave de luxo, sem blocos escuros.
+- [x] **Botão Limpar Alinhado na Linha 4**: Encaixe 50%/50% ao lado da ordenação, sem invadir o topo.
+- [x] **Filtro Inteligente de Oficiais**: Clique em `Oficiais` exibe os 7 itens oficiais sem bloqueio por categoria vazia.
+- [x] **Mensagem Explicativa Confiável**: Texto claro com contagem real e botão de limpeza em 1 toque.
+- [x] **Compilação de Produção Aprovada**: `npm run build` executado com **0 erros** (14.05s).

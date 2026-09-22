@@ -3,7 +3,7 @@
 > **Plataforma SaaS Multi-Tenant Especializada em Gestão de Locação de Acervo, Decoração e Pegue & Monte**  
 > *Documento Executivo e Técnico Definitivo cobrindo Arquitetura, Módulos, Segurança, Workflows Operacionais, Blindagem de UI/UX e Histórico de Evolução.*  
 > **Tecnologias**: React 19 / 18 + Vite 7 · Firebase Firestore & Auth · Mercado Pago SDK · Vanilla CSS Luxury Design System (`#c5a059`, Glassmorphism, Dark/Light Mode)  
-> **Data de Referência**: 11 de Setembro / 2026  
+> **Data de Referência**: 22 de Setembro / 2026  
 
 ---
 
@@ -325,6 +325,42 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 
 ## 📅 9. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
 
+### 🗓️ Sessão: 22/09/2026 — 08h30 às 10h15 (BRT)
+- ✅ **🖼️ Compactação dos Cards de Acervo do Moodboard no Controle Geral (`ControleGeral.jsx`, `ControleGeral.css`)**:
+  - **Mobile em 2 Colunas Simétricas (`repeat(2, 1fr)`)**: Substituído o layout vertical de 1 card por linha que consumia 100% da tela por uma grade equilibrada de 2 colunas com `gap: 8px`.
+  - **Redução Proporcional da Miniatura**: Altura reduzida de 180px para **110px** no mobile e **140px** no desktop (`minmax(190px, 1fr)`).
+  - **Suavização Tipográfica**: Redução de peso excessivo (`font-weight: 800` para `550`) e calibragem de tamanho do título para `10.5px` no mobile.
+  - **Micro-Badges e Botões Slim (27px)**: Badges de status e categoria reduzidos para formato micro (`7.5px - 8px`) e botões de ação compactos com texto responsivo (*"Oficializar"* no mobile e *"Tornar Oficial"* no desktop).
+- ✅ **🚫 Eliminação de "Bordas Pretas Grossas" nos Cenários (`ControleGeral.jsx`, `ControleGeral.css`)**:
+  - **Identificação da Causa Raiz**: Remoção da classe `.is-photo-mode` que injetava `background-color: #0f172a` escuro por trás de fotos de Parede, Piso e Ambiente.
+  - **Padronização Visual Completa**: Todos os elementos agora compartilham o mesmo fundo quadriculado translúcido claro de luxo (`#f8fafc` / `#f1f5f9`), sem faixas escuras.
+  - **Botão Oficial Refinado**: Substituído o fundo preto sólido (`#0f172a`) do botão de itens oficiais por um acabamento ouro nobre translúcido (`#fbf8f1` com borda dourada `#e6d3a7` e texto `#9a7328`).
+- ✅ **📐 Correção de Ordem do Botão "Limpar Filtros" no Mobile (`ControleGeral.jsx`, `ControleGeral.css`)**:
+  - **Correção de Flex Order**: O botão de limpeza não possuía `order` no media query mobile e subia para `order: 0` acima das pílulas de status.
+  - **Alinhamento na Linha 4 (`order: 6`)**: Botão acoplado ao lado do seletor de ordenação em proporção simétrica 50%/50%, com altura padronizada de 36px, cantos de 8px e tom suave `#fef2f2`.
+- ✅ **🧠 Seleção Inteligente de Status & Clareza de Acervo Vazio (`ControleGeral.jsx`)**:
+  - **Resolução de Conflito de Filtros**: Ao tocar em `[ 👑 Oficiais ]` ou no card de KPI, o sistema detecta se a categoria ativa possui itens oficiais; se não possuir, redefine automaticamente a categoria para *"Todas as Categorias"*, garantindo que os 7 itens oficiais apareçam instantaneamente.
+  - **Mensagem Explicativa de Estado Vazio**: Substituição da mensagem confusa por um diagnóstico exato: *"Existem X itens oficiais cadastrados no acervo, mas nenhum corresponde aos filtros atuais."*, acompanhado do botão direto `[ ⟲ Limpar Filtros e Ver Todos ]`.
+- ✅ **📊 Otimização Visual da Aba Faturamento & KPI Cards (`AbaFaturamentoAdmin.jsx`, `AbaFaturamentoAdmin.css`)**:
+  - Layout dos cards KPI reorganizados em grade compacta de 3 colunas e 2 linhas.
+  - Eliminação de barras de rolagem excessivas e refinamento do drawer de filtros.
+  - Suavização de tipografia em negrito para acabamento executivo suave.
+- ✅ **🛠️ Auditoria de Build de Produção**:
+  - `npm run build` executado com sucesso e **zero erros** (`built in 14.05s - 14.48s`).
+
+### 🗓️ Sessão: 21/09/2026 — 09h00 às 18h30 (BRT)
+- ✅ **📄 Relatório Mensal Financeiro em PDF Completo (`ModalRelatorioMensalAdmin.jsx`, `gerarRelatorioFaturamentoAdminPDF.js`)**:
+  - Exportação executiva com métricas de Faturamento Quitado, MRR, Ticket Médio, Taxa de Aprovação e Tabela Analítica de Transações.
+- ✅ **⏱️ Expiração no Horário Exato de Cortesias e Períodos de Teste (`periodoTesteUtils.js`)**:
+  - Validação milissegundo a milissegundo (`Date.now() >= dataVencimento.getTime()`), eliminando o atraso por truncamento de horário (`zerarHorario`).
+- ✅ **🩹 Correção da Linha Divisória da Tabela de Clientes (`ControleGeral.jsx`, `ControleGeral.css`)**:
+  - Desvinculação de `display: flex` da tag `<td>` para `.cg-cell-name-inner`, restaurando a borda contínua de ponta a ponta.
+- ✅ **🛡️ Correção do Critério de Inatividade & Mecanismo de Auto-Cura de Suspensão (`Dashboard.jsx`, `ContaSuspensa.jsx`, `App.jsx`)**:
+  - Cálculo de inatividade baseado na data mais recente entre pagamentos, cortesias, acessos e cadastro (limite real de 180 dias).
+  - Auto-recuperação de contas bloqueadas indevidamente como suspensas.
+- ✅ **🛠️ Auditoria de Build de Produção**:
+  - `npm run build` executado com sucesso e **zero erros** (`built in 14.83s`).
+
 ### 🗓️ Sessão: 11/09/2026 — 16h30 às 18h00 (BRT)
 - ✅ **📐 Repaginação da Matriz de Disponibilidade & Sincronia de Altura com Locações (`Disponibilidade.jsx`, `Disponibilidade.css`)**:
   - **Transição de Telas Sem Saltos Visuais**: Equalização milimétrica de paddings com `Locacoes.css` (`12px 10px 80px 10px` mobile e `28px 36px` desktop) e botões superiores com `height: 42px !important;` e `font-size: 0.80rem !important;`.
@@ -626,5 +662,5 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 
 ---
 
-> **⏱️ Última atualização:** 09/09/2026 — 14h35 (BRT)  
+> **⏱️ Última atualização:** 22/09/2026 — 10h20 (BRT)  
 > **✍️ Consolidação e Fusão Executiva por:** Antigravity AI — Workspace CELEBRE02  
