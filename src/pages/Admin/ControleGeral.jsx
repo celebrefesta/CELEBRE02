@@ -98,9 +98,9 @@ const PALETA_CORES_MOODBOARD = [
 ];
 
 const STATUS_MOODBOARD_FILTROS = [
-  { id: 'todos', label: 'Todos os Itens', icon: 'fas fa-border-all' },
-  { id: 'globais', label: '👑 Oficiais Globais', icon: 'fas fa-crown' },
-  { id: 'sugestoes', label: '⭐ Sugestões de Clientes', icon: 'fas fa-star' }
+  { id: 'todos', label: 'Todos os Itens', shortLabel: 'Todos', icon: 'fas fa-border-all' },
+  { id: 'globais', label: 'Oficiais Globais', shortLabel: 'Oficiais', icon: 'fas fa-crown' },
+  { id: 'sugestoes', label: 'Sugestões de Clientes', shortLabel: 'Sugestões', icon: 'fas fa-star' }
 ];
 
 export const CATEGORIAS_MOODBOARD_PADRAO = [
@@ -1874,6 +1874,31 @@ const ControleGeral = () => {
     });
   }, [itensMoodboard, buscaMoodboard, filtroStatusMoodboard, filtroCatMoodboard, filtroSubtipoMoodboard, filtroCorMoodboard, ordenacaoMoodboard]);
 
+  const handleLimparTodosFiltrosMoodboard = () => {
+    setBuscaMoodboard('');
+    setFiltroStatusMoodboard('todos');
+    setFiltroCatMoodboard('todas');
+    setFiltroSubtipoMoodboard('todos');
+    setFiltroCorMoodboard('todas');
+  };
+
+  const handleSelecionarStatusMoodboard = (statusId) => {
+    setFiltroStatusMoodboard(statusId);
+    if (statusId === 'globais') {
+      const temOficialNaCat = itensMoodboard.some(i => i.isGlobal && (filtroCatMoodboard === 'todas' || i.categoria === filtroCatMoodboard));
+      if (!temOficialNaCat) {
+        setFiltroCatMoodboard('todas');
+        setFiltroSubtipoMoodboard('todos');
+      }
+    } else if (statusId === 'sugestoes') {
+      const temSugestaoNaCat = itensMoodboard.some(i => i.sugeridoParaGlobal && (filtroCatMoodboard === 'todas' || i.categoria === filtroCatMoodboard));
+      if (!temSugestaoNaCat) {
+        setFiltroCatMoodboard('todas');
+        setFiltroSubtipoMoodboard('todos');
+      }
+    }
+  };
+
   // 🔍 Filtros de Clientes
   const totalNovos = clientes.filter(c => c.isNovo && c.status !== 'admin').length;
   const totalVencendo = clientes.filter(c => c.status === 'teste' && c.diasRestantes <= 2).length;
@@ -1995,36 +2020,17 @@ const ControleGeral = () => {
         <div className="cg-moodboard-manager">
           
           {/* 🌟 NAVEGADOR DE SUB-MÓDULOS DO MOODBOARD */}
-          <div className="cg-moodboard-subtabs-nav" style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+          {/* 🌟 NAVEGADOR DE SUB-MÓDULOS DO MOODBOARD */}
+          <div className="cg-moodboard-subtabs-nav">
             <button
               type="button"
               className={`cg-subtab-pill ${subAbaMoodboard === 'cenarios' ? 'active' : ''}`}
               onClick={() => setSubAbaMoodboard('cenarios')}
-              style={{
-                padding: '10px 20px',
-                borderRadius: '10px',
-                border: subAbaMoodboard === 'cenarios' ? '2px solid #c5a059' : '1px solid #e2e8f0',
-                background: subAbaMoodboard === 'cenarios' ? 'linear-gradient(135deg, #1e293b, #0f172a)' : '#ffffff',
-                color: subAbaMoodboard === 'cenarios' ? '#c5a059' : '#475569',
-                fontWeight: '700',
-                fontSize: '13px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: subAbaMoodboard === 'cenarios' ? '0 4px 12px rgba(197, 160, 89, 0.2)' : 'none',
-                transition: 'all 0.2s ease'
-              }}
             >
-              <i className="fas fa-layer-group"></i> 🖼️ Acervo de Cenários & Peças PNG
-              <span style={{
-                background: subAbaMoodboard === 'cenarios' ? 'rgba(197, 160, 89, 0.2)' : '#f1f5f9',
-                color: subAbaMoodboard === 'cenarios' ? '#c5a059' : '#64748b',
-                padding: '2px 8px',
-                borderRadius: '12px',
-                fontSize: '11px',
-                fontWeight: 'bold'
-              }}>
+              <i className="fas fa-layer-group"></i>
+              <span className="cg-subtab-text-full">Acervo de Cenários & Peças PNG</span>
+              <span className="cg-subtab-text-short">Cenários & Peças</span>
+              <span className="cg-subtab-badge">
                 {itensMoodboard.length}
               </span>
             </button>
@@ -2033,31 +2039,11 @@ const ControleGeral = () => {
               type="button"
               className={`cg-subtab-pill ${subAbaMoodboard === 'ornamentos' ? 'active' : ''}`}
               onClick={() => setSubAbaMoodboard('ornamentos')}
-              style={{
-                padding: '10px 20px',
-                borderRadius: '10px',
-                border: subAbaMoodboard === 'ornamentos' ? '2px solid #c5a059' : '1px solid #e2e8f0',
-                background: subAbaMoodboard === 'ornamentos' ? 'linear-gradient(135deg, #1e293b, #0f172a)' : '#ffffff',
-                color: subAbaMoodboard === 'ornamentos' ? '#c5a059' : '#475569',
-                fontWeight: '700',
-                fontSize: '13px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: subAbaMoodboard === 'ornamentos' ? '0 4px 12px rgba(197, 160, 89, 0.2)' : 'none',
-                transition: 'all 0.2s ease'
-              }}
             >
-              <i className="fas fa-crown"></i> 🌿 Ícones & Apliques Vetoriais (Letreiros)
-              <span style={{
-                background: subAbaMoodboard === 'ornamentos' ? 'rgba(197, 160, 89, 0.2)' : '#f1f5f9',
-                color: subAbaMoodboard === 'ornamentos' ? '#c5a059' : '#64748b',
-                padding: '2px 8px',
-                borderRadius: '12px',
-                fontSize: '11px',
-                fontWeight: 'bold'
-              }}>
+              <i className="fas fa-crown"></i>
+              <span className="cg-subtab-text-full">Ícones & Apliques Vetoriais</span>
+              <span className="cg-subtab-text-short">Ícones & Apliques</span>
+              <span className="cg-subtab-badge">
                 {Object.keys(ORNAMENTOS_FESTA).length + Object.keys(ornamentosCustom).length}
               </span>
             </button>
@@ -2121,12 +2107,7 @@ const ControleGeral = () => {
               </div>
 
               {/* GRID DE CARDS DE ÍCONES */}
-              <div className="cg-ornaments-grid" style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                gap: '16px',
-                marginTop: '16px'
-              }}>
+              <div className="cg-ornaments-grid">
                 {Object.entries({ ...ORNAMENTOS_FESTA, ...ornamentosCustom })
                   .filter(([key, orn]) => {
                     if (!buscaOrnamento) return true;
@@ -2135,50 +2116,14 @@ const ControleGeral = () => {
                   .map(([key, orn]) => {
                     const isCustom = !!ornamentosCustom[key];
                     return (
-                      <div
-                        key={key}
-                        className="cg-ornament-admin-card"
-                        style={{
-                          background: '#ffffff',
-                          borderRadius: '12px',
-                          border: '1px solid #e2e8f0',
-                          padding: '16px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          position: 'relative',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
+                      <div key={key} className="cg-ornament-admin-card">
                         {/* BADGE DE TIPO */}
-                        <span style={{
-                          position: 'absolute',
-                          top: '10px',
-                          left: '10px',
-                          fontSize: '10px',
-                          fontWeight: 'bold',
-                          padding: '2px 6px',
-                          borderRadius: '6px',
-                          background: isCustom ? '#fef3c7' : '#f1f5f9',
-                          color: isCustom ? '#b45309' : '#64748b'
-                        }}>
-                          {isCustom ? '⭐ Personalizado' : '🔒 Nativo'}
+                        <span className={`cg-ornament-badge ${isCustom ? 'custom' : 'native'}`}>
+                          {isCustom ? '⭐ Custom' : '🔒 Nativo'}
                         </span>
 
                         {/* PREVIEW DO VETOR DOURADO */}
-                        <div style={{
-                          width: '100px',
-                          height: '100px',
-                          marginTop: '20px',
-                          marginBottom: '12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          background: '#f8fafc',
-                          borderRadius: '10px',
-                          padding: '10px'
-                        }}>
+                        <div className="cg-ornament-preview-box">
                           <svg
                             width="100%"
                             height="100%"
@@ -2252,47 +2197,47 @@ const ControleGeral = () => {
               <div className="cg-mb-stats-row">
                 <div 
                   className={`cg-mb-stat-box ${filtroStatusMoodboard === 'globais' ? 'active-filter' : ''}`} 
-                  onClick={() => setFiltroStatusMoodboard(filtroStatusMoodboard === 'globais' ? 'todos' : 'globais')}
+                  onClick={() => handleSelecionarStatusMoodboard(filtroStatusMoodboard === 'globais' ? 'todos' : 'globais')}
                 >
                   <div className="cg-mb-stat-icon gold"><i className="fas fa-crown"></i></div>
                   <div className="cg-mb-stat-info">
                     <span className="cg-mb-stat-val">{oficiaisTotais}</span>
-                    <span className="cg-mb-stat-lbl">Itens Oficiais Globais</span>
+                    <span className="cg-mb-stat-lbl">Itens Oficiais</span>
                   </div>
                 </div>
 
-            <div 
-              className={`cg-mb-stat-box ${sugestoesPendentes > 0 ? 'highlight-alert' : ''} ${filtroStatusMoodboard === 'sugestoes' ? 'active-filter' : ''}`}
-              onClick={() => setFiltroStatusMoodboard(filtroStatusMoodboard === 'sugestoes' ? 'todos' : 'sugestoes')}
-            >
-              <div className="cg-mb-stat-icon orange"><i className="fas fa-star"></i></div>
-              <div className="cg-mb-stat-info">
-                <span className="cg-mb-stat-val">{sugestoesPendentes}</span>
-                <span className="cg-mb-stat-lbl">Sugestões de Decoradoras</span>
-              </div>
-              {sugestoesPendentes > 0 && <span className="cg-badge-pulse">Revisar</span>}
-            </div>
+                <div 
+                  className={`cg-mb-stat-box ${sugestoesPendentes > 0 ? 'highlight-alert' : ''} ${filtroStatusMoodboard === 'sugestoes' ? 'active-filter' : ''}`}
+                  onClick={() => handleSelecionarStatusMoodboard(filtroStatusMoodboard === 'sugestoes' ? 'todos' : 'sugestoes')}
+                >
+                  <div className="cg-mb-stat-icon orange"><i className="fas fa-star"></i></div>
+                  <div className="cg-mb-stat-info">
+                    <span className="cg-mb-stat-val">{sugestoesPendentes}</span>
+                    <span className="cg-mb-stat-lbl">Sugestões</span>
+                  </div>
+                  {sugestoesPendentes > 0 && <span className="cg-badge-pulse">Revisar</span>}
+                </div>
 
-            <div 
-              className={`cg-mb-stat-box ${filtroStatusMoodboard === 'todos' && filtroCatMoodboard === 'todas' ? 'active-filter' : ''}`} 
-              onClick={() => { setFiltroStatusMoodboard('todos'); setFiltroCatMoodboard('todas'); setFiltroSubtipoMoodboard('todos'); }}
-            >
-              <div className="cg-mb-stat-icon blue"><i className="fas fa-layer-group"></i></div>
-              <div className="cg-mb-stat-info">
-                <span className="cg-mb-stat-val">{itensMoodboard.length}</span>
-                <span className="cg-mb-stat-lbl">Total no Acervo</span>
-              </div>
-            </div>
+                <div 
+                  className={`cg-mb-stat-box ${filtroStatusMoodboard === 'todos' && filtroCatMoodboard === 'todas' ? 'active-filter' : ''}`} 
+                  onClick={handleLimparTodosFiltrosMoodboard}
+                >
+                  <div className="cg-mb-stat-icon blue"><i className="fas fa-layer-group"></i></div>
+                  <div className="cg-mb-stat-info">
+                    <span className="cg-mb-stat-val">{itensMoodboard.length}</span>
+                    <span className="cg-mb-stat-lbl">Total Acervo</span>
+                  </div>
+                </div>
 
-            <div className="cg-mb-stat-action">
-              <button className="cg-btn-manage-categories" onClick={() => setModalCategoriasAberto(true)} title="Gerenciar categorias de elementos do Moodboard">
-                <i className="fas fa-tags"></i> Gerenciar Categorias ({categoriasMoodboard.length})
-              </button>
-              <button className="cg-btn-add-global-primary" onClick={() => setModalNovoItemAberto(true)}>
-                <i className="fas fa-plus-circle"></i> + Cadastrar Novo Item Oficial
-              </button>
-            </div>
-          </div>
+                <div className="cg-mb-stat-action">
+                  <button className="cg-btn-manage-categories" onClick={() => setModalCategoriasAberto(true)} title="Gerenciar categorias de elementos do Moodboard">
+                    <i className="fas fa-tags"></i> Gerenciar Categorias ({categoriasMoodboard.length})
+                  </button>
+                  <button className="cg-btn-add-global-primary" onClick={() => setModalNovoItemAberto(true)}>
+                    <i className="fas fa-plus-circle"></i> + Cadastrar Novo Item Oficial
+                  </button>
+                </div>
+              </div>
 
           {/* 🔔 BANNER DE MODERAÇÃO DE SUGESTÕES (QUANDO HOUVER PENDÊNCIAS) */}
           {sugestoesPendentes > 0 && filtroStatusMoodboard !== 'sugestoes' && (
@@ -2324,10 +2269,11 @@ const ControleGeral = () => {
                   <button
                     key={st.id}
                     className={`cg-status-pill ${filtroStatusMoodboard === st.id ? 'active' : ''} ${st.id === 'sugestoes' && count > 0 ? 'pulse' : ''}`}
-                    onClick={() => setFiltroStatusMoodboard(st.id)}
+                    onClick={() => handleSelecionarStatusMoodboard(st.id)}
                   >
                     <i className={st.icon}></i>
-                    <span>{st.label}</span>
+                    <span className="cg-pill-text-full">{st.label}</span>
+                    <span className="cg-pill-text-short">{st.shortLabel || st.label}</span>
                     <span className="cg-pill-count">{count}</span>
                   </button>
                 );
@@ -2451,15 +2397,12 @@ const ControleGeral = () => {
             {(buscaMoodboard || filtroStatusMoodboard !== 'todos' || filtroCatMoodboard !== 'todas' || filtroSubtipoMoodboard !== 'todos' || filtroCorMoodboard !== 'todas') && (
               <button 
                 className="cg-btn-reset-all-filters"
-                onClick={() => {
-                  setBuscaMoodboard('');
-                  setFiltroStatusMoodboard('todos');
-                  setFiltroCatMoodboard('todas');
-                  setFiltroSubtipoMoodboard('todos');
-                  setFiltroCorMoodboard('todas');
-                }}
+                onClick={handleLimparTodosFiltrosMoodboard}
+                title="Limpar todos os filtros aplicados"
               >
-                <i className="fas fa-undo"></i> Limpar
+                <i className="fas fa-undo"></i>
+                <span className="cg-btn-text-full">Limpar Filtros</span>
+                <span className="cg-btn-text-short">Limpar</span>
               </button>
             )}
           </div>
@@ -2536,21 +2479,39 @@ const ControleGeral = () => {
             </div>
           ) : itensMoodboardFiltrados.length === 0 ? (
             <div className="cg-empty-mb">
-              <i className="fas fa-layer-group"></i>
+              <i className="fas fa-filter"></i>
               <h4>Nenhum elemento encontrado</h4>
-              <p>Tente ajustar os filtros de categoria, status ou busca, ou cadastre novos elementos oficiais!</p>
-              <button className="cg-btn-add-global-primary" onClick={() => setModalNovoItemAberto(true)}>
-                <i className="fas fa-plus-circle"></i> + Cadastrar Novo Elemento
-              </button>
+              <p>
+                {itensMoodboard.length === 0 ? (
+                  'Seu acervo ainda está vazio. Comece cadastrando os primeiros elementos oficiais da biblioteca!'
+                ) : filtroStatusMoodboard === 'globais' ? (
+                  `Existem ${oficiaisTotais} itens oficiais cadastrados no acervo, mas nenhum corresponde aos filtros atuais.`
+                ) : filtroStatusMoodboard === 'sugestoes' ? (
+                  'Não há sugestões de decoradoras pendentes para os filtros atuais.'
+                ) : (
+                  'Nenhum elemento corresponde aos filtros selecionados no momento.'
+                )}
+              </p>
+              {itensMoodboard.length > 0 ? (
+                <button 
+                  className="cg-btn-reset-all-filters" 
+                  onClick={handleLimparTodosFiltrosMoodboard}
+                  style={{ height: '38px', padding: '0 16px', fontSize: '12px' }}
+                >
+                  <i className="fas fa-undo"></i> Limpar Filtros e Ver Todos ({itensMoodboard.length})
+                </button>
+              ) : (
+                <button className="cg-btn-add-global-primary" onClick={() => setModalNovoItemAberto(true)}>
+                  <i className="fas fa-plus-circle"></i> + Cadastrar Novo Elemento
+                </button>
+              )}
             </div>
           ) : (
             <div className="cg-mb-grid">
               {itensMoodboardFiltrados.map((item) => {
-                const isBgOrPhoto = item.categoria === 'Parede' || item.categoria === 'Piso' || item.categoria === 'Ambiente';
-
                 return (
                   <div key={item.id} className={`cg-mb-card ${item.isGlobal ? 'is-global' : ''} ${item.sugeridoParaGlobal ? 'is-suggested' : ''}`}>
-                    <div className={`cg-mb-thumb-container ${isBgOrPhoto ? 'is-photo-mode' : ''}`}>
+                    <div className="cg-mb-thumb-container">
                       <img src={item.imagemUrl} alt={item.nome} />
                       <span className="cg-mb-cat-badge">{item.categoria}</span>
                       
@@ -2623,7 +2584,15 @@ const ControleGeral = () => {
                             onClick={() => handleAlternarGlobal(item)}
                             title={item.isGlobal ? 'Elemento ativo para todos os clientes. Clique para desativar.' : 'Clique para tornar oficial global'}
                           >
-                            {item.isGlobal ? <><i className="fas fa-check-circle"></i> Oficial</> : <><i className="fas fa-star"></i> Tornar Oficial</>}
+                            {item.isGlobal ? (
+                              <><i className="fas fa-check-circle"></i> Oficial</>
+                            ) : (
+                              <>
+                                <i className="fas fa-star"></i>
+                                <span className="cg-btn-text-full">Tornar Oficial</span>
+                                <span className="cg-btn-text-short">Oficializar</span>
+                              </>
+                            )}
                           </button>
 
                           <button 
@@ -3153,7 +3122,7 @@ const ControleGeral = () => {
 
                       {c.telefone && (
                         <div className="cg-mcard-row">
-                          <span className="cg-mcard-lbl"><i className="fab fa-whatsapp"></i> Telefone / Zap:</span>
+                          <span className="cg-mcard-lbl"><i className="fab fa-whatsapp"></i> Zap:</span>
                           <span className="cg-mcard-val">{c.telefone}</span>
                         </div>
                       )}
@@ -3170,8 +3139,8 @@ const ControleGeral = () => {
                             <span className="cg-mcard-plan-lbl"><i className="fas fa-crown"></i> Plano:</span>
                             <span className="cg-plano-tag">{c.nomePlano}</span>
                           </div>
-                          <div className="cg-mcard-plan-item" style={{ textAlign: 'right', alignItems: 'flex-end' }}>
-                            <span className="cg-mcard-plan-lbl"><i className="far fa-calendar-alt"></i> Cadastro:</span>
+                          <div className="cg-mcard-plan-item" style={{ textAlign: 'right', alignItems: 'center' }}>
+                            <span className="cg-mcard-plan-lbl"><i className="far fa-calendar-alt"></i> Cad:</span>
                             <span className="cg-mcard-date-val">
                               {c.dataCadastroExibida}
                               {c.isNovo && <span className="cg-mcard-tag-novo">{c.rotuloNovo}</span>}
@@ -4354,7 +4323,7 @@ const ControleGeral = () => {
                   {novoItemForm.imagemUrl && (
                     <div className="cg-preview-box" style={{ flex: '0 0 160px', margin: 0 }}>
                       <span className="cg-preview-label">Pré-visualização:</span>
-                      <div className={`cg-preview-checkerboard ${novoItemForm.categoria === 'Parede' || novoItemForm.categoria === 'Piso' || novoItemForm.categoria === 'Ambiente' ? 'is-photo-mode' : ''}`} style={{ height: '110px' }}>
+                      <div className="cg-preview-checkerboard" style={{ height: '110px' }}>
                         <img src={novoItemForm.imagemUrl} alt="Preview" style={{ maxHeight: '100px' }} />
                       </div>
                     </div>

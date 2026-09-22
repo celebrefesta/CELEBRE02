@@ -30,6 +30,7 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
   const [faturaReciboModal, setFaturaReciboModal] = useState(null);
   const [modalRelatorioPDF, setModalRelatorioPDF] = useState(false);
   const [mostrarJsonBruto, setMostrarJsonBruto] = useState(false);
+  const [gavetaFiltrosAberta, setGavetaFiltrosAberta] = useState(false);
 
   // 🔄 CARREGAR LOGS FINANCEIROS E CONSOLIDAR COM A BASE DE CLIENTES
   const carregarDadosFinanceiros = async () => {
@@ -453,10 +454,22 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
     document.body.removeChild(link);
   };
 
+  // 🏷️ LISTA CONSOLIDADA DE FILTROS DE STATUS (Compatível com Desktop e Gaveta Mobile)
+  const listaFiltrosStatus = [
+    { id: 'todos', label: 'Todos', icon: 'fas fa-layer-group', count: faturas.length, cor: 'todos' },
+    { id: 'concluido', label: 'Quitados', icon: 'fas fa-check-circle', count: metricas.totalConcluidos, cor: 'green' },
+    { id: 'tentativa', label: 'Tentativas', icon: 'fas fa-hourglass-start', count: metricas.totalTentativas, cor: 'orange' },
+    { id: 'falha', label: 'Recusados / Falhas', icon: 'fas fa-times-circle', count: metricas.totalFalhas, cor: 'red' },
+    { id: 'mudanca', label: 'Mudanças de Plano', icon: 'fas fa-sync-alt', count: metricas.totalMudancas, cor: 'purple' },
+    ...(metricas.totalCortesias > 0 ? [{ id: 'cortesia', label: 'VIP / Cortesia', icon: 'fas fa-award', count: metricas.totalCortesias, cor: 'blue' }] : [])
+  ];
+
+  const filtroAtivoObj = listaFiltrosStatus.find(f => f.id === filtroStatus) || listaFiltrosStatus[0];
+
   return (
     <div className="cg-faturamento-container fade-in">
       
-      {/* 🌟 BARRA SUPERIOR DE KPI EXECUTIVO (Desktop: 6 Colunas em 1 Linha / Mobile: 2 Colunas Simétricas) */}
+      {/* 🌟 BARRA SUPERIOR DE KPI EXECUTIVO (3 Colunas x 2 Linhas: 3 Cards na mesma linha) */}
       <div className="cg-fat-kpi-grid">
         
         {/* CARD 1: RECEITA TOTAL QUITADA */}
@@ -645,52 +658,80 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
         {/* LINHA 2: PÍLULAS DE STATUS + SELETORES DE MÉTODO E PERÍODO */}
         <div className="cg-fat-filters-row">
           
-          {/* Pílulas de Status */}
-          <div className="cg-fat-status-pills">
-            <button 
-              type="button" 
-              className={`cg-fat-pill ${filtroStatus === 'todos' ? 'active' : ''}`}
-              onClick={() => setFiltroStatus('todos')}
-            >
-              Todos ({faturas.length})
-            </button>
-            <button 
-              type="button" 
-              className={`cg-fat-pill green ${filtroStatus === 'concluido' ? 'active' : ''}`}
-              onClick={() => setFiltroStatus('concluido')}
-            >
-              <i className="fas fa-check-circle"></i> Quitados ({metricas.totalConcluidos})
-            </button>
-            <button 
-              type="button" 
-              className={`cg-fat-pill orange ${filtroStatus === 'tentativa' ? 'active' : ''}`}
-              onClick={() => setFiltroStatus('tentativa')}
-              style={{ borderColor: filtroStatus === 'tentativa' ? '#f59e0b' : undefined }}
-            >
-              <i className="fas fa-hourglass-start"></i> Tentativas ({metricas.totalTentativas})
-            </button>
-            <button 
-              type="button" 
-              className={`cg-fat-pill red ${filtroStatus === 'falha' ? 'active' : ''}`}
-              onClick={() => setFiltroStatus('falha')}
-            >
-              <i className="fas fa-times-circle"></i> Recusados / Falhas ({metricas.totalFalhas})
-            </button>
-            <button 
-              type="button" 
-              className={`cg-fat-pill purple ${filtroStatus === 'mudanca' ? 'active' : ''}`}
-              onClick={() => setFiltroStatus('mudanca')}
-            >
-              <i className="fas fa-sync-alt"></i> Mudanças de Plano ({metricas.totalMudancas})
-            </button>
-            {metricas.totalCortesias > 0 && (
+          {/* Pílulas de Status (Visíveis no Desktop > 900px) */}
+          <div className="cg-fat-status-pills desktop-pills-only">
+            {listaFiltrosStatus.map(f => (
               <button 
+                key={f.id}
                 type="button" 
-                className={`cg-fat-pill blue ${filtroStatus === 'cortesia' ? 'active' : ''}`}
-                onClick={() => setFiltroStatus('cortesia')}
+                className={`cg-fat-pill ${f.cor} ${filtroStatus === f.id ? 'active' : ''}`}
+                onClick={() => setFiltroStatus(f.id)}
+                style={f.id === 'tentativa' ? { borderColor: filtroStatus === 'tentativa' ? '#f59e0b' : undefined } : undefined}
               >
-                <i className="fas fa-award"></i> VIP / Cortesia ({metricas.totalCortesias})
+                {f.id !== 'todos' && <i className={f.icon}></i>}
+                <span>{f.label} ({f.count})</span>
               </button>
+            ))}
+          </div>
+
+          {/* 📱 GAVETA DE FILTROS INLINE NO PRÓPRIO LOCAL (EXCLUSIVO MOBILE <= 900px) */}
+          <div className="cg-fat-mobile-accordion-box">
+            <button
+              type="button"
+              className={`cg-fat-btn-trigger-gaveta ${gavetaFiltrosAberta ? 'aberta' : ''}`}
+              onClick={() => setGavetaFiltrosAberta(prev => !prev)}
+              aria-expanded={gavetaFiltrosAberta}
+            >
+              <div className="trigger-gaveta-left">
+                <span className={`trigger-icon-circle type-${filtroAtivoObj.cor}`}>
+                  <i className={filtroAtivoObj.icon}></i>
+                </span>
+                <div className="trigger-text-inline">
+                  <span className="trigger-subtitle">Status:</span>
+                  <strong className="trigger-current-name">{filtroAtivoObj.label}</strong>
+                </div>
+              </div>
+              <div className="trigger-gaveta-right">
+                <span className={`trigger-count-badge ${filtroAtivoObj.count > 0 ? 'has-items' : ''}`}>
+                  {filtroAtivoObj.count}
+                </span>
+                <span className={`trigger-chevron ${gavetaFiltrosAberta ? 'girar' : ''}`}>
+                  <i className="fas fa-chevron-down"></i>
+                </span>
+              </div>
+            </button>
+
+            {/* 📂 CONTEÚDO EXPANSÍVEL DA GAVETA (Com Todos em 100% e demais em 2 colunas simétricas) */}
+            {gavetaFiltrosAberta && (
+              <div className="cg-fat-inline-gaveta-panel fade-in">
+                <div className="cg-fat-inline-gaveta-grid">
+                  {listaFiltrosStatus.map(f => {
+                    const isAtivo = filtroStatus === f.id;
+                    const isTodos = f.id === 'todos';
+                    return (
+                      <button
+                        key={f.id}
+                        type="button"
+                        className={`cg-fat-gaveta-filter-btn type-${f.cor} ${isTodos ? 'btn-span-full' : ''} ${isAtivo ? 'ativo' : ''}`}
+                        onClick={() => {
+                          setFiltroStatus(f.id);
+                          setGavetaFiltrosAberta(false);
+                        }}
+                      >
+                        <div className="gaveta-btn-left">
+                          <span className={`inline-btn-icon type-${f.cor}`}>
+                            <i className={f.icon}></i>
+                          </span>
+                          <span className="inline-btn-label">
+                            {isTodos ? 'Todos os Registros' : f.label}
+                          </span>
+                        </div>
+                        <span className="inline-btn-badge">{f.count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
 
@@ -752,71 +793,202 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
             )}
           </div>
         ) : (
-          <div className="cg-fat-table-responsive">
-            <table className="cg-fat-table">
-              <thead>
-                <tr>
-                  <th>Fatura / Cód</th>
-                  <th>Empresa / Assinante</th>
-                  <th>Data & Horário</th>
-                  <th>Evento / Descrição</th>
-                  <th>Método</th>
-                  <th>Valor</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: 'right' }}>Ações Super Admin</th>
-                </tr>
-              </thead>
-              <tbody>
-                {faturasFiltradas.map((fat) => {
-                  const isConcluido = fat.status === 'concluido';
-                  const isFalha = fat.status === 'falha';
-                  const isMudanca = fat.status === 'mudanca';
+          <>
+            {/* 🖥️ TABELA DESKTOP (> 900px): AUDITORIA COMPLETA */}
+            <div className="cg-fat-table-responsive desktop-table-only">
+              <table className="cg-fat-table">
+                <thead>
+                  <tr>
+                    <th>Fatura / Cód</th>
+                    <th>Empresa / Assinante</th>
+                    <th>Data & Horário</th>
+                    <th>Evento / Descrição</th>
+                    <th>Método</th>
+                    <th>Valor</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'right' }}>Ações Super Admin</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {faturasFiltradas.map((fat) => {
+                    const isConcluido = fat.status === 'concluido';
+                    const isFalha = fat.status === 'falha';
+                    const isMudanca = fat.status === 'mudanca';
 
-                  return (
-                    <tr key={fat.id} className={`linha-fat ${fat.status}`}>
-                      
-                      {/* CÓDIGO DA FATURA */}
-                      <td className="fat-col-codigo">
-                        <span className="fat-code-badge">{fat.codigo}</span>
-                      </td>
+                    return (
+                      <tr key={fat.id} className={`linha-fat ${fat.status}`}>
+                        
+                        {/* CÓDIGO DA FATURA */}
+                        <td className="fat-col-codigo">
+                          <span className="fat-code-badge">{fat.codigo}</span>
+                        </td>
 
-                      {/* EMPRESA & CLIENTE */}
-                      <td className="fat-col-empresa">
-                        <div className="fat-empresa-info">
-                          <strong className="fat-empresa-nome" title={fat.empresaNome}>
-                            {fat.empresaNome}
-                          </strong>
-                          <span className="fat-empresa-email" title={fat.email}>
-                            {fat.email}
+                        {/* EMPRESA & CLIENTE */}
+                        <td className="fat-col-empresa">
+                          <div className="fat-empresa-info">
+                            <strong className="fat-empresa-nome" title={fat.empresaNome}>
+                              {fat.empresaNome}
+                            </strong>
+                            <span className="fat-empresa-email" title={fat.email}>
+                              {fat.email}
+                            </span>
+                            {fat.telefone && (
+                              <span className="fat-empresa-tel">
+                                <i className="fab fa-whatsapp"></i> {fat.telefone}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* DATA & HORA */}
+                        <td className="fat-col-data">
+                          <div className="fat-data-box">
+                            <span className="fat-data-dia">{fat.dataFormatada}</span>
+                            <span className="fat-data-hora">{fat.horaFormatada}</span>
+                          </div>
+                        </td>
+
+                        {/* DESCRIÇÃO / AÇÃO */}
+                        <td className="fat-col-desc">
+                          <div className="fat-desc-box">
+                            <strong className="fat-desc-acao">{fat.acao}</strong>
+                            <p className="fat-desc-detalhe" title={fat.detalhes}>
+                              {fat.detalhes}
+                            </p>
+                          </div>
+                        </td>
+
+                        {/* MÉTODO */}
+                        <td className="fat-col-metodo">
+                          <span className={`fat-metodo-pill ${fat.metodo.toLowerCase().includes('pix') ? 'pix' : fat.metodo.toLowerCase().includes('boleto') ? 'boleto' : (fat.status === 'cortesia' || fat.metodo.toLowerCase().includes('cortesia')) ? 'cortesia' : fat.metodo.toLowerCase().includes('pendente') ? 'pendente' : 'cartao'}`}>
+                            {fat.metodo.toLowerCase().includes('pix') ? (
+                              <><i className="fas fa-qrcode"></i> PIX</>
+                            ) : fat.metodo.toLowerCase().includes('boleto') ? (
+                              <><i className="fas fa-barcode"></i> Boleto</>
+                            ) : (fat.status === 'cortesia' || fat.metodo.toLowerCase().includes('cortesia')) ? (
+                              <><i className="fas fa-award"></i> Cortesia</>
+                            ) : fat.metodo.toLowerCase().includes('pendente') ? (
+                              <><i className="fas fa-clock"></i> Pendente</>
+                            ) : (
+                              <><i className="fas fa-credit-card"></i> Cartão</>
+                            )}
                           </span>
-                          {fat.telefone && (
-                            <span className="fat-empresa-tel">
-                              <i className="fab fa-whatsapp"></i> {fat.telefone}
+                        </td>
+
+                        {/* VALOR */}
+                        <td className="fat-col-valor">
+                          <span className={`fat-valor-tag ${isConcluido ? 'pago' : isFalha ? 'recusado' : fat.status === 'tentativa' ? 'tentativa' : 'neutro'}`}>
+                            {isConcluido && '+ '}
+                            {isFalha && '✕ '}
+                            {fat.status === 'cortesia' ? 'R$ 0,00' : `R$ ${formatarMoeda(fat.valor)}`}
+                          </span>
+                        </td>
+
+                        {/* STATUS */}
+                        <td className="fat-col-status">
+                          {isConcluido && (
+                            <span className="fat-status-badge success">
+                              <i className="fas fa-check-circle"></i> Quitado
                             </span>
                           )}
-                        </div>
-                      </td>
+                          {fat.status === 'tentativa' && (
+                            <span className="fat-status-badge warning" style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' }}>
+                              <i className="fas fa-hourglass-start"></i> Tentativa (Não Quitado)
+                            </span>
+                          )}
+                          {fat.status === 'cortesia' && (
+                            <span className="fat-status-badge info" style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                              <i className="fas fa-award"></i> Cortesia VIP
+                            </span>
+                          )}
+                          {isFalha && (
+                            <span className="fat-status-badge danger">
+                              <i className="fas fa-times-circle"></i> Recusado
+                            </span>
+                          )}
+                          {isMudanca && (
+                            <span className="fat-status-badge info">
+                              <i className="fas fa-sync-alt"></i> Alteração
+                            </span>
+                          )}
+                          {fat.status === 'pendente' && (
+                            <span className="fat-status-badge warning">
+                              <i className="fas fa-clock"></i> Pendente
+                            </span>
+                          )}
+                        </td>
 
-                      {/* DATA & HORA */}
-                      <td className="fat-col-data">
-                        <div className="fat-data-box">
-                          <span className="fat-data-dia">{fat.dataFormatada}</span>
-                          <span className="fat-data-hora">{fat.horaFormatada}</span>
-                        </div>
-                      </td>
+                        {/* AÇÕES */}
+                        <td className="fat-col-acoes" style={{ textAlign: 'right' }}>
+                          <div className="fat-acoes-group">
+                            
+                            {/* Ver / Imprimir Recibo Oficial - Somente para pagamentos quitados ou cortesias */}
+                            {isConcluido || fat.status === 'cortesia' ? (
+                              <button 
+                                type="button" 
+                                className="fat-btn-icon print"
+                                onClick={() => abrirReciboModal(fat)}
+                                title="Visualizar Comprovante Oficial Celebre"
+                              >
+                                <i className="fas fa-print"></i>
+                              </button>
+                            ) : (
+                              <button 
+                                type="button" 
+                                className="fat-btn-icon print disabled"
+                                disabled
+                                style={{ opacity: 0.35, cursor: 'not-allowed' }}
+                                title="Recibo indisponível: cobrança não quitada"
+                              >
+                                <i className="fas fa-print"></i>
+                              </button>
+                            )}
 
-                      {/* DESCRIÇÃO / AÇÃO */}
-                      <td className="fat-col-desc">
-                        <div className="fat-desc-box">
-                          <strong className="fat-desc-acao">{fat.acao}</strong>
-                          <p className="fat-desc-detalhe" title={fat.detalhes}>
-                            {fat.detalhes}
-                          </p>
-                        </div>
-                      </td>
+                            {/* Ver Detalhes Técnicos */}
+                            <button 
+                              type="button" 
+                              className="fat-btn-icon details"
+                              onClick={() => setItemDetalhesModal(fat)}
+                              title="Auditar Detalhes do Registro"
+                            >
+                              <i className="fas fa-info-circle"></i>
+                            </button>
 
-                      {/* MÉTODO */}
-                      <td className="fat-col-metodo">
+                            {/* Abrir Suporte da Empresa */}
+                            {fat.clienteObj && onAbrirSuporteCliente && (
+                              <button 
+                                type="button" 
+                                className="fat-btn-icon support"
+                                onClick={() => onAbrirSuporteCliente(fat.clienteObj)}
+                                title="Abrir Central de Suporte desta Empresa"
+                              >
+                                <i className="fas fa-user-shield"></i>
+                              </button>
+                            )}
+
+                          </div>
+                        </td>
+
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 📱 CARDS MOBILE ULTRA-REFRESH (<= 900px): ZERO BARRA DE ROLAGEM, 100% VISÍVEL */}
+            <div className="cg-fat-mobile-cards-list">
+              {faturasFiltradas.map((fat) => {
+                const isConcluido = fat.status === 'concluido';
+                const isFalha = fat.status === 'falha';
+                const isMudanca = fat.status === 'mudanca';
+
+                return (
+                  <div key={fat.id} className={`cg-fat-mobile-card ${fat.status}`}>
+                    {/* Linha 1: Código + Método e Valor + Status */}
+                    <div className="cg-fat-mcard-top">
+                      <div className="cg-fat-mcard-top-left">
+                        <span className="fat-code-badge">{fat.codigo}</span>
                         <span className={`fat-metodo-pill ${fat.metodo.toLowerCase().includes('pix') ? 'pix' : fat.metodo.toLowerCase().includes('boleto') ? 'boleto' : (fat.status === 'cortesia' || fat.metodo.toLowerCase().includes('cortesia')) ? 'cortesia' : fat.metodo.toLowerCase().includes('pendente') ? 'pendente' : 'cartao'}`}>
                           {fat.metodo.toLowerCase().includes('pix') ? (
                             <><i className="fas fa-qrcode"></i> PIX</>
@@ -830,19 +1002,13 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
                             <><i className="fas fa-credit-card"></i> Cartão</>
                           )}
                         </span>
-                      </td>
-
-                      {/* VALOR */}
-                      <td className="fat-col-valor">
+                      </div>
+                      <div className="cg-fat-mcard-top-right">
                         <span className={`fat-valor-tag ${isConcluido ? 'pago' : isFalha ? 'recusado' : fat.status === 'tentativa' ? 'tentativa' : 'neutro'}`}>
                           {isConcluido && '+ '}
                           {isFalha && '✕ '}
                           {fat.status === 'cortesia' ? 'R$ 0,00' : `R$ ${formatarMoeda(fat.valor)}`}
                         </span>
-                      </td>
-
-                      {/* STATUS */}
-                      <td className="fat-col-status">
                         {isConcluido && (
                           <span className="fat-status-badge success">
                             <i className="fas fa-check-circle"></i> Quitado
@@ -850,7 +1016,7 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
                         )}
                         {fat.status === 'tentativa' && (
                           <span className="fat-status-badge warning" style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' }}>
-                            <i className="fas fa-hourglass-start"></i> Tentativa (Não Quitado)
+                            <i className="fas fa-hourglass-start"></i> Tentativa
                           </span>
                         )}
                         {fat.status === 'cortesia' && (
@@ -873,65 +1039,78 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
                             <i className="fas fa-clock"></i> Pendente
                           </span>
                         )}
-                      </td>
+                      </div>
+                    </div>
 
-                      {/* AÇÕES */}
-                      <td className="fat-col-acoes" style={{ textAlign: 'right' }}>
-                        <div className="fat-acoes-group">
-                          
-                          {/* Ver / Imprimir Recibo Oficial - Somente para pagamentos quitados ou cortesias */}
-                          {isConcluido || fat.status === 'cortesia' ? (
-                            <button 
-                              type="button" 
-                              className="fat-btn-icon print"
-                              onClick={() => abrirReciboModal(fat)}
-                              title="Visualizar Comprovante Oficial Celebre"
-                            >
-                              <i className="fas fa-print"></i>
-                            </button>
-                          ) : (
-                            <button 
-                              type="button" 
-                              className="fat-btn-icon print disabled"
-                              disabled
-                              style={{ opacity: 0.35, cursor: 'not-allowed' }}
-                              title="Recibo indisponível: cobrança não quitada"
-                            >
-                              <i className="fas fa-print"></i>
-                            </button>
-                          )}
+                    {/* Linha 2: Empresa & Contatos */}
+                    <div className="cg-fat-mcard-empresa">
+                      <strong className="fat-empresa-nome">{fat.empresaNome}</strong>
+                      <div className="cg-fat-mcard-contato-row">
+                        <span className="fat-empresa-email">
+                          <i className="fas fa-envelope"></i> {fat.email}
+                        </span>
+                        {fat.telefone && (
+                          <span className="fat-empresa-tel">
+                            <i className="fab fa-whatsapp"></i> {fat.telefone}
+                          </span>
+                        )}
+                      </div>
+                    </div>
 
-                          {/* Ver Detalhes Técnicos */}
-                          <button 
-                            type="button" 
-                            className="fat-btn-icon details"
-                            onClick={() => setItemDetalhesModal(fat)}
-                            title="Auditar Detalhes do Registro"
-                          >
-                            <i className="fas fa-info-circle"></i>
-                          </button>
+                    {/* Linha 3: Evento / Descrição & Data/Horário */}
+                    <div className="cg-fat-mcard-desc-box">
+                      <div className="cg-fat-mcard-desc-header">
+                        <strong className="fat-desc-acao">{fat.acao}</strong>
+                        <span className="cg-fat-mcard-datetime">
+                          <i className="far fa-calendar-alt"></i> {fat.dataFormatada} <small>{fat.horaFormatada}</small>
+                        </span>
+                      </div>
+                      {fat.detalhes && (
+                        <p className="fat-desc-detalhe">{fat.detalhes}</p>
+                      )}
+                    </div>
 
-                          {/* Abrir Suporte da Empresa */}
-                          {fat.clienteObj && onAbrirSuporteCliente && (
-                            <button 
-                              type="button" 
-                              className="fat-btn-icon support"
-                              onClick={() => onAbrirSuporteCliente(fat.clienteObj)}
-                              title="Abrir Central de Suporte desta Empresa"
-                            >
-                              <i className="fas fa-user-shield"></i>
-                            </button>
-                          )}
+                    {/* Linha 4: Ações Super Admin */}
+                    <div className="cg-fat-mcard-actions">
+                      {isConcluido || fat.status === 'cortesia' ? (
+                        <button 
+                          type="button" 
+                          className="cg-fat-mcard-btn-action print"
+                          onClick={() => abrirReciboModal(fat)}
+                          title="Visualizar Comprovante Oficial Celebre"
+                        >
+                          <i className="fas fa-print"></i>
+                          <span>Recibo</span>
+                        </button>
+                      ) : null}
 
-                        </div>
-                      </td>
+                      <button 
+                        type="button" 
+                        className="cg-fat-mcard-btn-action details"
+                        onClick={() => setItemDetalhesModal(fat)}
+                        title="Auditar Detalhes do Registro"
+                      >
+                        <i className="fas fa-info-circle"></i>
+                        <span>Detalhes</span>
+                      </button>
 
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      {fat.clienteObj && onAbrirSuporteCliente && (
+                        <button 
+                          type="button" 
+                          className="cg-fat-mcard-btn-action support"
+                          onClick={() => onAbrirSuporteCliente(fat.clienteObj)}
+                          title="Abrir Central de Suporte desta Empresa"
+                        >
+                          <i className="fas fa-user-shield"></i>
+                          <span>Suporte</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
 
         {/* RODAPÉ INFORMATIVO DA TABELA */}
@@ -1008,60 +1187,60 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
               <div className="modal-info-grid">
                 
                 {/* 1. Empresa / Assinante */}
-                <div className="modal-info-item">
+                <div className="modal-info-item item-empresa">
                   <div className="modal-info-item-head">
                     <i className="fas fa-building info-head-icon"></i>
                     <label>Empresa / Assinante</label>
                   </div>
-                  <strong className="info-main-val">{itemDetalhesModal.empresaNome}</strong>
+                  <span className="info-main-val">{itemDetalhesModal.empresaNome}</span>
                   <span className="info-sub-val"><i className="fas fa-envelope"></i> {itemDetalhesModal.email}</span>
                   {itemDetalhesModal.telefone && (
-                    <span className="info-sub-val"><i className="fas fa-phone-alt"></i> {itemDetalhesModal.telefone}</span>
+                    <span className="info-sub-val"><i className="fab fa-whatsapp"></i> {itemDetalhesModal.telefone}</span>
                   )}
                 </div>
 
                 {/* 2. Valor & Faturamento */}
-                <div className="modal-info-item">
+                <div className="modal-info-item item-valor">
                   <div className="modal-info-item-head">
                     <i className="fas fa-wallet info-head-icon"></i>
                     <label>Valor da Fatura</label>
                   </div>
-                  <strong className={`info-main-val valor-destaque ${
+                  <span className={`info-main-val valor-destaque ${
                     itemDetalhesModal.status === 'concluido' ? 'green-text' : 
                     itemDetalhesModal.status === 'cortesia' ? 'blue-text' : 'red-text'
                   }`}>
                     R$ {formatarMoeda(itemDetalhesModal.status === 'cortesia' ? 0 : itemDetalhesModal.valor)}
-                  </strong>
+                  </span>
                   <span className="info-sub-val">
                     {itemDetalhesModal.status === 'cortesia' ? 'Licença Isenta de Cobrança' : `Ciclo ${itemDetalhesModal.cicloNome || 'Mensal'}`}
                   </span>
                 </div>
 
                 {/* 3. Forma de Processamento */}
-                <div className="modal-info-item">
+                <div className="modal-info-item item-metodo">
                   <div className="modal-info-item-head">
                     <i className="fas fa-credit-card info-head-icon"></i>
                     <label>Canal & Meio de Pagamento</label>
                   </div>
-                  <strong className="info-main-val">
+                  <span className="info-main-val">
                     <span className={`fat-metodo-badge ${String(itemDetalhesModal.metodo || '').toLowerCase().includes('pix') ? 'pix' : 'cartao'}`}>
                       {itemDetalhesModal.metodo}
                     </span>
-                  </strong>
+                  </span>
                   <span className="info-sub-val">
                     {itemDetalhesModal.status === 'cortesia' ? 'Chancela Administrativa Super Admin' : 'Gateway Mercado Pago'}
                   </span>
                 </div>
 
                 {/* 4. Data e Hora */}
-                <div className="modal-info-item">
+                <div className="modal-info-item item-data">
                   <div className="modal-info-item-head">
                     <i className="fas fa-calendar-alt info-head-icon"></i>
                     <label>Data & Hora do Registro</label>
                   </div>
-                  <strong className="info-main-val">
+                  <span className="info-main-val">
                     {itemDetalhesModal.dataFormatada} às {itemDetalhesModal.horaFormatada}
-                  </strong>
+                  </span>
                   <span className="info-sub-val">
                     Período: {itemDetalhesModal.periodo || 'Ciclo Corrente'}
                   </span>
@@ -1074,7 +1253,7 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
                 <div className="tech-audit-header">
                   <div className="tech-audit-title">
                     <i className="fas fa-fingerprint"></i>
-                    <span>Rastreabilidade Técnica da Operação</span>
+                    <span>Rastreabilidade técnica da operação</span>
                   </div>
                   {itemDetalhesModal.rawLog && (
                     <button 
@@ -1147,7 +1326,9 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
                       onAbrirSuporteCliente(cli);
                     }}
                   >
-                    <i className="fas fa-user-shield"></i> Ver Perfil do Cliente
+                    <i className="fas fa-user-shield"></i>
+                    <span className="btn-text-desktop">Ver Perfil do Cliente</span>
+                    <span className="btn-text-mobile">Ver Perfil</span>
                   </button>
                 )}
 
@@ -1161,7 +1342,9 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
                       abrirReciboModal(f);
                     }}
                   >
-                    <i className="fas fa-receipt"></i> Ver Comprovante Oficial
+                    <i className="fas fa-receipt"></i>
+                    <span className="btn-text-desktop">Ver Comprovante Oficial</span>
+                    <span className="btn-text-mobile">Comprovante</span>
                   </button>
                 ) : (
                   <div 
