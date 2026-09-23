@@ -907,3 +907,390 @@
 [data-theme^='dark'] .minha-vitrine-container .alerta-texto-box p {
   color: #fde68a;
 }
+
+/* ── 14. NOVOS RECURSOS: ABAS DE NAVEGAÇÃO SUPERIOR ── */
+.minha-vitrine-container .vitrine-nav-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 24px 0;
+  border-bottom: 2px solid var(--borda, #e2e8f0);
+  padding-bottom: 4px;
+}
+
+.minha-vitrine-container .vitrine-nav-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--texto-secundario, #64748b);
+  font-size: 0.92rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 8px 8px 0 0;
+  margin-bottom: -6px;
+}
+
+.minha-vitrine-container .vitrine-nav-tab:hover {
+  color: #c5a059;
+  background: rgba(197, 160, 89, 0.05);
+}
+
+.minha-vitrine-container .vitrine-nav-tab.active {
+  color: #c5a059;
+  border-bottom-color: #c5a059;
+  background: rgba(197, 160, 89, 0.08);
+}
+
+.minha-vitrine-container .tab-counter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--borda, #cbd5e1);
+  color: var(--texto-principal, #0f172a);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.minha-vitrine-container .vitrine-nav-tab.active .tab-counter-badge {
+  background: #c5a059;
+  color: #ffffff;
+}
+
+/* ── 15. ATALHOS & TAGS INTELIGENTES DO WHATSAPP ── */
+.minha-vitrine-container .tags-helper-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: var(--fundo-principal, #f8fafc);
+  border: 1px solid var(--borda, #e2e8f0);
+  border-radius: 10px;
+}
+
+.minha-vitrine-container .tags-helper-title {
+  font-size: 0.76rem;
+  font-weight: 750;
+  color: var(--texto-secundario, #64748b);
+}
+
+.minha-vitrine-container .tag-pill-btn {
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: var(--fundo-card, #ffffff);
+  border: 1px solid var(--borda, #cbd5e1);
+  color: #c5a059;
+  font-size: 0.74rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.minha-vitrine-container .tag-pill-btn:hover {
+  background: #c5a059;
+  color: #ffffff;
+  border-color: #c5a059;
+  transform: translateY(-1px);
+}
+
+.minha-vitrine-container .btn-restaurar-tpl {
+  margin-left: auto;
+  padding: 3px 9px;
+  background: transparent;
+  border: none;
+  color: var(--texto-secundario, #64748b);
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.minha-vitrine-container .btn-restaurar-tpl:hover {
+  color: #ef4444;
+}
+
+/* Sugestões rápidas de sinal / caução */
+.minha-vitrine-container .sugestoes-sinal-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.minha-vitrine-container .sugestao-pill-btn {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(197, 160, 89, 0.08);
+  border: 1px solid rgba(197, 160, 89, 0.25);
+  color: #c5a059;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.minha-vitrine-container .sugestao-pill-btn:hover {
+  background: #c5a059;
+  color: #ffffff;
+}
+
+/* ── 16. GESTOR DE ACERVO, VISIBILIDADE & DESTAQUES ── */
+.minha-vitrine-container .acervo-top-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  background: var(--fundo-card, #ffffff);
+  border: 1px solid var(--borda, #e2e8f0);
+  border-radius: 16px;
+}
+
+.minha-vitrine-container .acervo-search-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 260px;
+  position: relative;
+}
+
+.minha-vitrine-container .acervo-search-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--texto-secundario, #94a3b8);
+}
+
+.minha-vitrine-container .acervo-search-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 14px 0 38px;
+  border-radius: 10px;
+  border: 1.5px solid var(--borda, #cbd5e1);
+  background: var(--fundo-principal, #f8fafc);
+  color: var(--texto-principal, #0f172a);
+  font-size: 0.86rem;
+  box-sizing: border-box;
+}
+
+.minha-vitrine-container .acervo-search-input:focus {
+  outline: none;
+  border-color: #c5a059;
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.18);
+}
+
+.minha-vitrine-container .acervo-status-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.minha-vitrine-container .acervo-tab-chip {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1.5px solid var(--borda, #cbd5e1);
+  background: var(--fundo-card, #ffffff);
+  color: var(--texto-secundario, #64748b);
+  font-size: 0.78rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.minha-vitrine-container .acervo-tab-chip.active {
+  background: #c5a059;
+  color: #ffffff;
+  border-color: #c5a059;
+}
+
+.minha-vitrine-container .acervo-grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.minha-vitrine-container .acervo-card-manage {
+  background: var(--fundo-card, #ffffff);
+  border: 1.5px solid var(--borda, #e2e8f0);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.minha-vitrine-container .acervo-card-manage:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+  border-color: #c5a059;
+}
+
+.minha-vitrine-container .acervo-card-manage.oculto {
+  opacity: 0.72;
+  background: rgba(148, 163, 184, 0.06);
+}
+
+.minha-vitrine-container .acervo-card-main-info {
+  display: flex;
+  gap: 12px;
+}
+
+.minha-vitrine-container .acervo-card-thumb-wrap {
+  width: 62px;
+  height: 62px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--fundo-principal, #f1f5f9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--borda, #e2e8f0);
+}
+
+.minha-vitrine-container .acervo-card-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.minha-vitrine-container .acervo-card-no-thumb {
+  font-size: 1.4rem;
+  color: var(--texto-secundario, #94a3b8);
+}
+
+.minha-vitrine-container .acervo-card-texts {
+  flex: 1;
+  min-width: 0;
+}
+
+.minha-vitrine-container .acervo-card-name {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--texto-principal, #0f172a);
+  margin: 0 0 4px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.minha-vitrine-container .acervo-card-cat-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--texto-secundario, #64748b);
+  font-size: 0.70rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.minha-vitrine-container .acervo-card-price {
+  font-size: 0.84rem;
+  font-weight: 850;
+  color: #c5a059;
+}
+
+.minha-vitrine-container .acervo-card-actions-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--borda, #f1f5f9);
+}
+
+.minha-vitrine-container .btn-action-visivel,
+.minha-vitrine-container .btn-action-destaque {
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 0.74rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.minha-vitrine-container .btn-action-visivel.visivel {
+  background: rgba(5, 150, 105, 0.12);
+  color: #059669;
+  border-color: rgba(5, 150, 105, 0.3);
+}
+
+.minha-vitrine-container .btn-action-visivel.oculto {
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--texto-secundario, #64748b);
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+.minha-vitrine-container .btn-action-destaque.destaque-ativo {
+  background: rgba(197, 160, 89, 0.16);
+  color: #b45309;
+  border-color: #c5a059;
+}
+
+.minha-vitrine-container .btn-action-destaque.destaque-inativo {
+  background: var(--fundo-principal, #f8fafc);
+  color: var(--texto-secundario, #94a3b8);
+  border-color: var(--borda, #cbd5e1);
+}
+
+.minha-vitrine-container .btn-action-visivel:hover,
+.minha-vitrine-container .btn-action-destaque:hover {
+  transform: translateY(-1px);
+}
+
+/* Dark mode dos novos blocos */
+[data-theme^='dark'] .minha-vitrine-container .vitrine-nav-tabs-bar {
+  border-bottom-color: #27272a;
+}
+[data-theme^='dark'] .minha-vitrine-container .tags-helper-bar {
+  background: #090d16;
+  border-color: #27272a;
+}
+[data-theme^='dark'] .minha-vitrine-container .tag-pill-btn {
+  background: #18181b;
+  border-color: #3f3f46;
+}
+[data-theme^='dark'] .minha-vitrine-container .acervo-top-controls,
+[data-theme^='dark'] .minha-vitrine-container .acervo-card-manage {
+  background: #18181b;
+  border-color: #27272a;
+}
+[data-theme^='dark'] .minha-vitrine-container .acervo-search-input {
+  background: #090d16;
+  border-color: #27272a;
+  color: #f4f4f5;
+}
+[data-theme^='dark'] .minha-vitrine-container .acervo-tab-chip {
+  background: #18181b;
+  border-color: #3f3f46;
+  color: #a1a1aa;
+}
+[data-theme^='dark'] .minha-vitrine-container .acervo-card-name {
+  color: #f4f4f5;
+}
+[data-theme^='dark'] .minha-vitrine-container .acervo-card-thumb-wrap {
+  background: #090d16;
+  border-color: #27272a;
+}

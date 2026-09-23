@@ -2837,3 +2837,75 @@
     font-size: 0.78rem;
   }
 }
+
+/* ==========================================================================
+   ✨ 15. ESTILOS DAS NOVAS CONFIGURAÇÕES DA VITRINE (CELEBRE LUXURY)
+   ========================================================================== */
+.catalogo-luxury-page .meta-badge-city {
+  background: rgba(37, 99, 235, 0.22);
+  color: #93c5fd;
+  border: 1px solid rgba(147, 197, 253, 0.4);
+  padding: 2px 10px;
+  border-radius: var(--cat-radius-full);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.2px;
+}
+
+.catalogo-luxury-page .badge-destaque-gold {
+  background: linear-gradient(135deg, #c5a059 0%, #dfba73 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(197, 160, 89, 0.4) !important;
+  font-weight: 800 !important;
+}
+
+.catalogo-luxury-page .cat-price-sob-consulta {
+  font-size: 0.82rem !important;
+  font-weight: 800 !important;
+  color: var(--cat-gold) !important;
+  background: var(--cat-gold-soft);
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--cat-gold-glow);
+  display: inline-block;
+}
+
+.catalogo-luxury-page .cart-caucao-notice {
+  margin: 12px 0 6px 0;
+  padding: 10px 14px;
+  background: rgba(197, 160, 89, 0.1);
+  border: 1.5px solid rgba(197, 160, 89, 0.3);
+  border-radius: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: #b45309;
+}
+
+.catalogo-luxury-page .cart-caucao-notice .caucao-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.catalogo-luxury-page .cart-caucao-notice strong {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #92400e;
+  margin-bottom: 2px;
+}
+
+.catalogo-luxury-page .cart-cidades-notice {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: #1e40af;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

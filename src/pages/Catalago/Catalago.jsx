@@ -67,7 +67,11 @@ const Catalogo = () => {
     msgPadraoWhats: '',
     corMarca: localStorage.getItem('corMarcaCatalogo') || '#c5a059',
     catalogoAtivo: true,
-    msgManutencao: ''
+    msgManutencao: '',
+    ocultarPrecos: false,
+    avisoSinalCaucao: '',
+    regioesAtendidas: '',
+    tituloDestaques: 'Destaques da Vitrine'
   });
 
   const [loading, setLoading] = useState(true);
@@ -77,6 +81,7 @@ const Catalogo = () => {
   const [filtroModalidade, setFiltroModalidade] = useState('Todas');
   const [filtroCategoria, setFiltroCategoria] = useState('Todas');
   const [filtroTema, setFiltroTema] = useState('Todos');
+  const [filtroDestaques, setFiltroDestaques] = useState(false);
   const [busca, setBusca] = useState('');
   const [dataEventoFiltro, setDataEventoFiltro] = useState('');
   const [ordenacao, setOrdenacao] = useState('destaques');
@@ -166,7 +171,11 @@ const Catalogo = () => {
             descricao: d.descricaoCatalogo || 'Vitrine Oficial de Locação & Cenografia',
             corMarca: d.corMarcaCatalogo || d.accentColor || '#c5a059',
             catalogoAtivo: d.catalogoAtivo !== false,
-            msgManutencao: d.msgManutencaoCatalogo || 'Estamos atualizando nosso acervo de peças e temas. Fale conosco no WhatsApp para atendimento!'
+            msgManutencao: d.msgManutencaoCatalogo || 'Estamos atualizando nosso acervo de peças e temas. Fale conosco no WhatsApp para atendimento!',
+            ocultarPrecos: Boolean(d.ocultarPrecos),
+            avisoSinalCaucao: d.avisoSinalCaucao || '',
+            regioesAtendidas: d.regioesAtendidas || '',
+            tituloDestaques: d.tituloDestaques || 'Destaques da Vitrine'
           });
         }
 
@@ -213,7 +222,12 @@ const Catalogo = () => {
         }
 
         const itens = Array.from(mapEstoque.values())
-          .filter(i => i.status !== 'inativo' && !( (i.status === 'manutencao' || i.status === 'reparo') && !i.dataPrevisaoRetorno ));
+          .filter(i => {
+            if (i.status === 'inativo') return false;
+            if ((i.status === 'manutencao' || i.status === 'reparo') && !i.dataPrevisaoRetorno) return false;
+            if (i.visivelCatalogo === false || i.configuracao?.visivelCatalogo === false) return false;
+            return true;
+          });
         setEstoque(itens);
 
         const listaLoc = Array.from(mapLoc.values())
@@ -228,7 +242,7 @@ const Catalogo = () => {
     };
     inicializar();
 
-    // 📡 ESCUTADOR EM TEMPO REAL DAS CONFIGURAÇÕES DA VITRINE (COR DA MARCA, STATUS, LOGO)
+    // 📡 ESCUTADOR EM TEMPO REAL DAS CONFIGURAÇÕES DA VITRINE (COR DA MARCA, STATUS, LOGO, PREÇOS, REGRAS)
     const unsubDoc = onSnapshot(doc(db, "configuracoes_empresa", tenantId), (docSnap) => {
       if (docSnap.exists()) {
         const d = docSnap.data();
@@ -244,11 +258,15 @@ const Catalogo = () => {
           capa: d.bannerUrl || d.capaUrl || prev.capa,
           pixelFacebook: d.pixelFacebook || d.pixel || prev.pixelFacebook,
           googleAnalyticsId: d.googleAnalyticsId || prev.googleAnalyticsId,
-          msgPadraoWhats: d.msgPadraoWhats || prev.msgPadraoWhats,
+          msgPadraoWhats: d.msgPadraoWhats !== undefined ? d.msgPadraoWhats : prev.msgPadraoWhats,
           descricao: d.descricaoCatalogo || prev.descricao,
           corMarca: cor,
           catalogoAtivo: d.catalogoAtivo !== false,
-          msgManutencao: d.msgManutencaoCatalogo || prev.msgManutencao
+          msgManutencao: d.msgManutencaoCatalogo || prev.msgManutencao,
+          ocultarPrecos: Boolean(d.ocultarPrecos),
+          avisoSinalCaucao: d.avisoSinalCaucao || '',
+          regioesAtendidas: d.regioesAtendidas || '',
+          tituloDestaques: d.tituloDestaques || prev.tituloDestaques || 'Destaques da Vitrine'
         }));
       }
     }, (err) => console.warn("Erro no listener em tempo real da empresa:", err));
@@ -614,8 +632,17 @@ const Catalogo = () => {
     if (!whats) return alert("Por favor, preencha o seu WhatsApp.");
 
     const total = calcularTotal();
-    const resumoItens = carrinho.map(i => `• ${i.qtd || 1}x *${i.nome}* - R$ ${(Number(i.financeiro?.valorAluguel || 0) * (i.qtd || 1)).toFixed(2)}`).join('\n');
+    const ocultarPreco = Boolean(empresa.ocultarPrecos);
+    const resumoItens = carrinho.map(i => {
+      const precoUnit = Number(i.financeiro?.valorAluguel || 0);
+      const sub = precoUnit * (i.qtd || 1);
+      return ocultarPreco 
+        ? `• ${i.qtd || 1}x *${i.nome}*`
+        : `• ${i.qtd || 1}x *${i.nome}* - R$ ${sub.toFixed(2)}`;
+    }).join('\n');
     const economiaTotal = calcularTotalEconomia();
+    const totalFormatado = ocultarPreco ? 'Sob Consulta' : `R$ ${total.toFixed(2)}`;
+    const condicoesSinal = empresa.avisoSinalCaucao ? `\n🛡️ *Condição de Reserva:* ${empresa.avisoSinalCaucao}\n` : '';
 
     try {
       await addDoc(collection(db, "locacoes"), {
@@ -653,19 +680,34 @@ const Catalogo = () => {
 
       const whatsDestino = empresa.whats ? empresa.whats.replace(/\D/g, '') : "5519999999999";
       
-      let texto = `🌟 *SOLICITAÇÃO DE ORÇAMENTO - ${empresa.nome.toUpperCase()}* 🌟\n\n`;
-      texto += `👤 *Cliente:* ${nome}\n`;
-      texto += `📱 *WhatsApp:* ${whats}\n`;
-      texto += `📅 *Data da Festa:* ${dataFesta.split('-').reverse().join('/')}\n`;
-      texto += `\n🛍️ *Peças Selecionadas (${carrinho.length}):*\n${resumoItens}\n\n`;
-      texto += `💰 *Valor Total Estimado:* R$ ${total.toFixed(2)}\n`;
-      if (economiaTotal > 0) {
-        texto += `🎁 *Economia em Pacotes:* R$ ${economiaTotal.toFixed(2)}\n`;
+      let texto = '';
+      if (empresa.msgPadraoWhats && (empresa.msgPadraoWhats.includes('{itens}') || empresa.msgPadraoWhats.includes('{cliente}'))) {
+        texto = empresa.msgPadraoWhats
+          .replace(/{empresa}/gi, empresa.nome.toUpperCase())
+          .replace(/{cliente}/gi, nome)
+          .replace(/{whatsapp}/gi, whats)
+          .replace(/{data}/gi, dataFesta ? dataFesta.split('-').reverse().join('/') : '')
+          .replace(/{itens}/gi, resumoItens)
+          .replace(/{total}/gi, totalFormatado)
+          .replace(/{condicoes}/gi, condicoesSinal);
+      } else {
+        texto = `🌟 *SOLICITAÇÃO DE ORÇAMENTO - ${empresa.nome.toUpperCase()}* 🌟\n\n`;
+        texto += `👤 *Cliente:* ${nome}\n`;
+        texto += `📱 *WhatsApp:* ${whats}\n`;
+        texto += `📅 *Data da Festa:* ${dataFesta ? dataFesta.split('-').reverse().join('/') : 'A definir'}\n`;
+        texto += `\n🛍️ *Peças Selecionadas (${carrinho.length}):*\n${resumoItens}\n\n`;
+        texto += `💰 *Valor Total Estimado:* ${totalFormatado}\n`;
+        if (!ocultarPreco && economiaTotal > 0) {
+          texto += `🎁 *Economia em Pacotes:* R$ ${economiaTotal.toFixed(2)}\n`;
+        }
+        if (condicoesSinal) {
+          texto += condicoesSinal;
+        }
+        const msgFechamento = empresa.msgPadraoWhats 
+          ? empresa.msgPadraoWhats 
+          : 'Olá! Vi essas peças no catálogo online e gostaria de verificar a disponibilidade para minha festa nesta data e fechar a locação! ✨';
+        texto += `\n${msgFechamento}`;
       }
-      const msgFechamento = empresa.msgPadraoWhats 
-        ? empresa.msgPadraoWhats 
-        : 'Olá! Vi essas peças no catálogo online e gostaria de verificar a disponibilidade para minha festa nesta data e fechar a locação! ✨';
-      texto += `\n${msgFechamento}`;
 
       window.open(`https://wa.me/${whatsDestino}?text=${encodeURIComponent(texto)}`, '_blank');
       setCartDrawerAberto(false);
@@ -676,9 +718,17 @@ const Catalogo = () => {
     }
   };
 
+  // Quantidade de Destaques
+  const qtdDestaques = useMemo(() => {
+    return estoque.filter(i => Boolean(i.destaqueCatalogo || i.configuracao?.destaqueCatalogo)).length;
+  }, [estoque]);
+
   // 🔍 4. FILTRAGEM E ORDENAÇÃO INTELIGENTE DOS PRODUTOS
   const itensFiltrados = useMemo(() => {
     let resultado = estoque.filter(item => {
+      // Destaques da Vitrine
+      if (filtroDestaques && !Boolean(item.destaqueCatalogo || item.configuracao?.destaqueCatalogo)) return false;
+
       // Favoritos
       if (verApenasFavoritos && !favoritos.includes(item.id)) return false;
 
@@ -718,7 +768,15 @@ const Catalogo = () => {
     });
 
     // 🔀 Ordenação
-    if (ordenacao === 'preco-asc') {
+    if (ordenacao === 'destaques') {
+      resultado.sort((a, b) => {
+        const destA = Boolean(a.destaqueCatalogo || a.configuracao?.destaqueCatalogo);
+        const destB = Boolean(b.destaqueCatalogo || b.configuracao?.destaqueCatalogo);
+        if (destA && !destB) return -1;
+        if (!destA && destB) return 1;
+        return 0;
+      });
+    } else if (ordenacao === 'preco-asc') {
       resultado.sort((a, b) => Number(a.financeiro?.valorAluguel || 0) - Number(b.financeiro?.valorAluguel || 0));
     } else if (ordenacao === 'preco-desc') {
       resultado.sort((a, b) => Number(b.financeiro?.valorAluguel || 0) - Number(a.financeiro?.valorAluguel || 0));
@@ -729,13 +787,14 @@ const Catalogo = () => {
     }
 
     return resultado;
-  }, [estoque, busca, filtroModalidade, filtroCategoria, filtroTema, ordenacao, verApenasFavoritos, favoritos]);
+  }, [estoque, busca, filtroModalidade, filtroCategoria, filtroTema, filtroDestaques, ordenacao, verApenasFavoritos, favoritos]);
 
   // Compartilhar Peça
   const compartilharPeca = (item) => {
     const whatsDestino = empresa.whats ? empresa.whats.replace(/\D/g, '') : '';
     const link = window.location.href;
-    const msg = `Olha essa peça linda que encontrei na ${empresa.nome}:\n*${item.nome}* por apenas R$ ${Number(item.financeiro?.valorAluguel || 0).toFixed(2)}\n\nVeja no catálogo: ${link}`;
+    const msgPreco = empresa.ocultarPrecos ? 'Sob consulta' : `apenas R$ ${Number(item.financeiro?.valorAluguel || 0).toFixed(2)}`;
+    const msg = `Olha essa peça linda que encontrei na ${empresa.nome}:\n*${item.nome}* (${msgPreco})\n\nVeja no catálogo: ${link}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
@@ -744,14 +803,17 @@ const Catalogo = () => {
       setFiltroCategoria(valor);
       setFiltroTema('Todos');
       setFiltroModalidade('Todas');
+      setFiltroDestaques(false);
     } else if (tipo === 'tema') {
       setFiltroTema(valor);
       setFiltroCategoria('Todas');
       setFiltroModalidade('Todas');
+      setFiltroDestaques(false);
     } else if (tipo === 'modalidade') {
       setFiltroModalidade(valor);
       setFiltroCategoria('Todas');
       setFiltroTema('Todos');
+      setFiltroDestaques(false);
     }
     setMenuMobileAberto(false);
   };
@@ -760,6 +822,7 @@ const Catalogo = () => {
     setFiltroCategoria('Todas');
     setFiltroModalidade('Todas');
     setFiltroTema('Todos');
+    setFiltroDestaques(false);
     setBusca('');
     setVerApenasFavoritos(false);
     setOrdenacao('destaques');
@@ -1079,6 +1142,11 @@ const Catalogo = () => {
               <span className="meta-icon">📸</span> @{empresa.insta.replace('@', '')}
             </a>
           )}
+          {empresa.regioesAtendidas && (
+            <span className="meta-item meta-badge-city" title="Regiões atendidas para entrega ou retirada">
+              <span className="meta-icon">🚚</span> Atendemos: <strong>{empresa.regioesAtendidas}</strong>
+            </span>
+          )}
           <span className="meta-item meta-badge-trust">
             <span className="meta-icon">✨</span> Peças 100% Higienizadas
           </span>
@@ -1106,9 +1174,10 @@ const Catalogo = () => {
             <h3 className="sidebar-title">Coleção</h3>
             <ul className="sidebar-list">
               <li
-                className={filtroCategoria === 'Todas' && filtroTema === 'Todos' && filtroModalidade === 'Todas' && !verApenasFavoritos ? 'active destak' : 'destak'}
+                className={filtroCategoria === 'Todas' && filtroTema === 'Todos' && filtroModalidade === 'Todas' && !filtroDestaques && !verApenasFavoritos ? 'active destak' : 'destak'}
                 onClick={() => {
                   setVerApenasFavoritos(false);
+                  setFiltroDestaques(false);
                   selecionarFiltro('categoria', 'Todas');
                 }}
               >
@@ -1116,11 +1185,29 @@ const Catalogo = () => {
                 <span className="sidebar-count">{estoque.length}</span>
               </li>
 
+              {qtdDestaques > 0 && (
+                <li
+                  className={filtroDestaques && !verApenasFavoritos ? 'active destak' : 'destak'}
+                  onClick={() => {
+                    setVerApenasFavoritos(false);
+                    setFiltroDestaques(!filtroDestaques);
+                    setFiltroCategoria('Todas');
+                    setFiltroTema('Todos');
+                    setFiltroModalidade('Todas');
+                    setMenuMobileAberto(false);
+                  }}
+                >
+                  <span>⭐ {empresa.tituloDestaques || 'Destaques'}</span>
+                  <span className="sidebar-count">{qtdDestaques}</span>
+                </li>
+              )}
+
               {qtdPegueMonte > 0 && (
                 <li
                   className={filtroModalidade === 'Pegue e Monte' && !verApenasFavoritos ? 'active' : ''}
                   onClick={() => {
                     setVerApenasFavoritos(false);
+                    setFiltroDestaques(false);
                     selecionarFiltro('modalidade', 'Pegue e Monte');
                   }}
                 >
@@ -1134,6 +1221,7 @@ const Catalogo = () => {
                   className={filtroModalidade === 'Decoração Completa' && !verApenasFavoritos ? 'active' : ''}
                   onClick={() => {
                     setVerApenasFavoritos(false);
+                    setFiltroDestaques(false);
                     selecionarFiltro('modalidade', 'Decoração Completa');
                   }}
                 >
@@ -1375,6 +1463,9 @@ const Catalogo = () => {
 
                       {/* Badges Flutuantes */}
                       <div className="product-badges-corner">
+                        {Boolean(item.destaqueCatalogo || item.configuracao?.destaqueCatalogo) && (
+                          <span className="badge-luxury badge-destaque-gold">⭐ Destaque</span>
+                        )}
                         {isDecoracao && (
                           <span className="badge-luxury badge-decor">✨ Kit Completo</span>
                         )}
@@ -1409,7 +1500,11 @@ const Catalogo = () => {
                       <div className="product-card-pricing-row">
                         <div className="pricing-box">
                           <span className="price-label">Locação • Diária</span>
-                          <div className="cat-price">R$ {preco.toFixed(2)}</div>
+                          {empresa.ocultarPrecos ? (
+                            <div className="cat-price cat-price-sob-consulta">Sob Consulta</div>
+                          ) : (
+                            <div className="cat-price">R$ {preco.toFixed(2)}</div>
+                          )}
                         </div>
 
                         {/* Botão Adicionar ao Carrinho */}
@@ -1575,7 +1670,11 @@ const Catalogo = () => {
                             <h4 className="cart-item-name">{item.nome}</h4>
                             
                             <div className="cart-item-meta-row">
-                              <span className="cart-item-unit-price">R$ {precoUnit.toFixed(2)} / un</span>
+                              {empresa.ocultarPrecos ? (
+                                <span className="cart-item-unit-price cat-price-sob-consulta">Sob Consulta</span>
+                              ) : (
+                                <span className="cart-item-unit-price">R$ {precoUnit.toFixed(2)} / un</span>
+                              )}
                               {disp.checado && (
                                 <span className={`cart-item-disp-badge badge-disp-${disp.status}`}>
                                   {disp.label}
@@ -1590,7 +1689,11 @@ const Catalogo = () => {
                                 <button type="button" onClick={() => alterarQtd(item.id, 1)}>+</button>
                               </div>
 
-                              <span className="cart-item-subtotal">R$ {subtotalItem.toFixed(2)}</span>
+                              {empresa.ocultarPrecos ? (
+                                <span className="cart-item-subtotal" style={{ color: '#c5a059', fontWeight: 800, fontSize: '0.84rem' }}>Sob Consulta</span>
+                              ) : (
+                                <span className="cart-item-subtotal">R$ {subtotalItem.toFixed(2)}</span>
+                              )}
 
                               <button 
                                 type="button" 
@@ -1609,22 +1712,49 @@ const Catalogo = () => {
 
                   {/* Resumo Financeiro */}
                   <div className="cart-summary-box">
-                    <div className="summary-row">
-                      <span>Subtotal das Peças:</span>
-                      <strong>R$ {calcularTotal().toFixed(2)}</strong>
-                    </div>
+                    {empresa.ocultarPrecos ? (
+                      <div className="summary-row total-row">
+                        <span>Valor do Orçamento:</span>
+                        <strong className="total-highlight">Sob Consulta</strong>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="summary-row">
+                          <span>Subtotal das Peças:</span>
+                          <strong>R$ {calcularTotal().toFixed(2)}</strong>
+                        </div>
 
-                    {calcularTotalEconomia() > 0 && (
-                      <div className="summary-row discount-row">
-                        <span>🎁 Economia em Pacotes:</span>
-                        <strong className="discount-text">- R$ {calcularTotalEconomia().toFixed(2)}</strong>
+                        {calcularTotalEconomia() > 0 && (
+                          <div className="summary-row discount-row">
+                            <span>🎁 Economia em Pacotes:</span>
+                            <strong className="discount-text">- R$ {calcularTotalEconomia().toFixed(2)}</strong>
+                          </div>
+                        )}
+
+                        <div className="summary-row total-row">
+                          <span>Total Estimado:</span>
+                          <strong className="total-highlight">R$ {calcularTotal().toFixed(2)}</strong>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Aviso de Sinal / Caução */}
+                    {empresa.avisoSinalCaucao && (
+                      <div className="cart-caucao-notice">
+                        <span className="caucao-icon">🛡️</span>
+                        <div>
+                          <strong>Condição de Reserva:</strong>
+                          <span>{empresa.avisoSinalCaucao}</span>
+                        </div>
                       </div>
                     )}
 
-                    <div className="summary-row total-row">
-                      <span>Total Estimado:</span>
-                      <strong className="total-highlight">R$ {calcularTotal().toFixed(2)}</strong>
-                    </div>
+                    {/* Aviso de Cidades / Regiões Atendidas */}
+                    {empresa.regioesAtendidas && (
+                      <div className="cart-cidades-notice">
+                        <span>🚚 <strong>Regiões Atendidas:</strong> {empresa.regioesAtendidas}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Alternador de Fluxo */}
@@ -1867,7 +1997,12 @@ const Catalogo = () => {
 
                 {/* Ancoragem de Preço ou Economia de Kit */}
                 <div className="modal-pricing-section">
-                  {(() => {
+                  {empresa.ocultarPrecos ? (
+                    <div className="simple-pricing-box">
+                      <span className="simple-price-label">Valor da Locação:</span>
+                      <strong className="simple-price-val cat-price-sob-consulta" style={{ fontSize: '0.95rem' }}>Sob Consulta</strong>
+                    </div>
+                  ) : (() => {
                     const { precoAtual, precoSomaAvulso, desconto, isVantajoso } = calcularAncoragemKit(produtoDetalhe);
 
                     if (isVantajoso) {
@@ -1936,7 +2071,11 @@ const Catalogo = () => {
               <strong className="floating-cart-title">
                 {carrinho.reduce((a, b) => a + (b.qtd || 1), 0)} {carrinho.reduce((a, b) => a + (b.qtd || 1), 0) === 1 ? 'peça selecionada' : 'peças selecionadas'}
               </strong>
-              <small className="floating-cart-sub">Subtotal Estimado: R$ {calcularTotal().toFixed(2)}</small>
+              {empresa.ocultarPrecos ? (
+                <small className="floating-cart-sub">Orçamento Sob Medida</small>
+              ) : (
+                <small className="floating-cart-sub">Subtotal Estimado: R$ {calcularTotal().toFixed(2)}</small>
+              )}
             </div>
           </div>
 
