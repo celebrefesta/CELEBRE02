@@ -69,6 +69,7 @@ const Relatorios = lazy(() => import('./pages/Relatorios/Relatorios'));
 const Configuracoes = lazy(() => import('./pages/Configuracoes/Configuracoes'));
 const Moodboard = lazy(() => import('./pages/Moodboard/Moodboard'));
 const Catalogo = lazy(() => import('./pages/Catalago/Catalago')); 
+const PainelMinhaVitrine = lazy(() => import('./pages/Catalago/PainelMinhaVitrine'));
 const Notificacoes = lazy(() => import('./pages/Notificacoes/Notificacoes'));
 
 const Usuarios = lazy(() => import('./Usuarios/Usuarios')); 
@@ -800,6 +801,7 @@ const AppContent = () => {
             {/* 📊 GESTÃO */}
             <Route path="/relatorios" element={<RotaPrivada><TravaSeguranca modulo="Relatorios" recursoExigido="Relatórios"><Relatorios /></TravaSeguranca></RotaPrivada>} />
             <Route path="/moodboard" element={<RotaPrivada><TravaSeguranca modulo="Moodboard" recursoExigido="Moodboard"><Moodboard /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/minha-vitrine" element={<RotaPrivada><TravaSeguranca modulo="Catalogo" recursoExigido="Catalago Digital"><PainelMinhaVitrine /></TravaSeguranca></RotaPrivada>} />
             <Route path="/configuracoes" element={<RotaPrivada><TravaSeguranca modulo="Configuracoes"><Configuracoes /></TravaSeguranca></RotaPrivada>} />
             <Route path="/perfil" element={<Navigate to="/configuracoes" replace />} />
             <Route path="/notificacoes" element={<RotaPrivada><TravaSeguranca modulo="Notificacoes"><Notificacoes /></TravaSeguranca></RotaPrivada>} /> 

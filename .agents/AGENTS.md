@@ -62,6 +62,7 @@
   - `🔒 Logística / Kanban Galpão` (`Logistica.css`)
   - `🔒 Relatórios` (`Relatorios.css`, `PedidosTab.css`, `EstoqueTab.css`, `ClientesTab.css`, `FinanceiroTab.css`)
   - `🔒 Catálogo Boutique de Luxo & Auto-Cadastro` (`Catalago.css`, `AutoCadastro.css`)
+  - `🔒 Gerenciar Planos Master` (`AdminPlanos.css`, `AdminPlanos.jsx`)
   - `🔒 Sistema Global de Cards KPI` (1 linha desktop / 2 colunas mobile)
   - `🔒 Motor Global de Cores Dinâmicas da Marca` (`src/utils/themeUtils.js` e `design-lock.css`)
 
@@ -107,6 +108,39 @@
   - Botão secundário (`← LOCAÇÕES`), barra de toggle e chips calibrados sob o Charcoal Luxury (`#18181b`, `#3f3f46`, `#f4f4f5`), sem nenhum fundo branco vazando.
 - **BLOQUEIO DE ALTERAÇÃO INDEVIDA**:
   - Os arquivos `Disponibilidade.css`, `Disponibilidade.jsx` e seu bloco em `design-lock.css` estão **BLINDADOS E CONGELADOS**. Nenhuma alteração pode ser realizada sem autorização expressa do usuário.
+
+## 11. 🔒 Blindagem Específica de Gerenciar Planos Master (`AdminPlanos.css`, `AdminPlanos.jsx`, `design-lock.css`)
+- **Layout Desktop (`> 768px`)**:
+  - Grid de cards de planos em **3 Colunas** (`grid-template-columns: repeat(3, 1fr) !important;`) ocupando 100% da largura.
+  - Tipografia de preços com alinhamento na linha de base (`align-items: flex-end; margin-bottom: 7px;`).
+  - Tabela comparativa completa com rolagem horizontal livre.
+  - O editor por abas mobile permanece obrigatoriamente oculto (`.admin-mobile-tabs-container { display: none !important; }`).
+- **Layout Mobile (`<= 768px`) — Seletor por Abas 100% de Largura**:
+  - A tabela horizontal e colunas estáticas ficam **estritamente ocultas** (`.admin-matrix-table-scroll { display: none !important; }`).
+  - O seletor de abas por plano é exibido obrigatoriamente (`.admin-mobile-tabs-container { display: block !important; }`).
+  - Pílulas de seleção no topo (`.admin-mobile-plan-pills`) para alternar instantaneamente entre Básico, Premium e Pro.
+  - Todas as categorias e recursos ocupam 100% da largura da tela sem cortes ou reticências (`word-break: break-word`).
+  - Botões de ação (`+ Nova Funcionalidade` e `Salvar Alterações`) acoplados na base.
+- **BLOQUEIO DE ALTERAÇÃO INDEVIDA**:
+  - Os arquivos `AdminPlanos.css`, `AdminPlanos.jsx` e seu bloco em `design-lock.css` estão **BLINDADOS E CONGELADOS**. Nenhuma alteração de layout, proporção ou responsividade pode ser feita sem instrução expressa do usuário.
+
+## 12. 🔒 Blindagem Específica de Nova Locação — Atalhos de Datas (`NovaLocacao.css`, `design-lock.css`)
+- **Atalhos Rápidos de Datas no Desktop (`> 900px`)**:
+  - A barra `.grupo-botoes-atalhos-datas` **DEVE MANTER OBRIGATORIAMENTE OS 5 BOTÕES EM 1 SÓ LINHA HORIZONTAL (`grid-template-columns: repeat(5, minmax(0, 1fr)) !important;`)**.
+  - **NUNCA** permitir que o 5º botão dobre para a 2ª linha sozinho no desktop.
+- **Atalhos Rápidos de Datas no Mobile (`<= 680px`)**:
+  - Layout simétrico em 2 colunas (`repeat(2, 1fr)`), com o 5º botão ocupando a largura total centralizado (`grid-column: 1 / -1 !important;`).
+
+## 13. 🔒 Blindagem Específica de Compras — Barra de Filtros (`Compras.css`, `Compras.jsx`, `design-lock.css`)
+- **Desktop (`> 900px`)**:
+  - A barra `.table-filter-bar` e o trio de seletores `.compras-filter-trio-row` **DEVEM PERMANECER EM 1 SÓ LINHA HORIZONTAL (`flex-wrap: nowrap !important;`)** com Busca elástica (`flex: 1`), Tipo, Status, Ordenação e Limpar Filtros lado a lado.
+- **Mobile (`<= 900px`) — Layout Simétrico em 2 Colunas**:
+  - Linha 1: Campo de Busca 100% de largura.
+  - Linha 2 (Par 1): `Tipo: Todos` + `Status: Todos` (2 colunas simétricas).
+  - Linha 3 (Par 2): `Mais Recentes` + `Limpar Filtros` (2 colunas simétricas).
+  - **PROIBIDO**: Deixar qualquer botão de ordenação ou filtro isolado ocupando uma linha inteira sozinho.
+
+
 
 
 

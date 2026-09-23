@@ -2754,3 +2754,86 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+/* 👑 BARRA DE PRÉVIA ADMINISTRATIVA DO CATÁLOGO */
+.cat-admin-preview-bar {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 99999;
+  background: #090d16;
+  border-bottom: 2px solid #c5a059;
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.cat-admin-preview-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cat-admin-preview-badge {
+  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(197, 160, 89, 0.3);
+}
+
+.cat-admin-preview-text {
+  color: #e2e8f0;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.btn-cat-voltar-sistema {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1.5px solid #cbd5e1;
+  padding: 8px 18px;
+  border-radius: 12px;
+  font-weight: 750;
+  font-size: 0.82rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-cat-voltar-sistema:hover {
+  background: #f8fafc;
+  border-color: #c5a059;
+  color: #c5a059;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .cat-admin-preview-bar {
+    padding: 8px 12px;
+  }
+  .cat-admin-preview-text {
+    display: none;
+  }
+  .btn-cat-voltar-sistema {
+    padding: 6px 14px;
+    font-size: 0.78rem;
+  }
+}

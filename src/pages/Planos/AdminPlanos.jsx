@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, doc, updateDoc, addDoc, deleteDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import Navbar from '../../components/Navbar';
 import './AdminPlanos.css';
 
 const AdminPlanos = () => {
@@ -11,6 +10,7 @@ const AdminPlanos = () => {
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [recursos, setRecursos] = useState([]);
+  const [planoAtivoMobileIdx, setPlanoAtivoMobileIdx] = useState(0);
   const navigate = useNavigate();
 
   const auth = getAuth();
@@ -104,6 +104,12 @@ const AdminPlanos = () => {
 
       setRecursos(Array.from(recursosEncontrados));
       setPlanos(planosCarregados);
+      const destaqueIdx = planosCarregados.findIndex(p => String(p.destaque) === "true");
+      if (destaqueIdx !== -1) {
+        setPlanoAtivoMobileIdx(destaqueIdx);
+      } else if (planosCarregados.length > 0) {
+        setPlanoAtivoMobileIdx(0);
+      }
     } catch (error) {
       console.error("Erro ao carregar matriz de planos:", error);
     } finally {
@@ -292,10 +298,7 @@ const AdminPlanos = () => {
   }
 
   return (
-    <>
-      <Navbar />
-
-      <div className="admin-planos-wrapper com-sidebar">
+    <div className="admin-planos-wrapper">
         
         {/* HERO SECTION DE EDIÇÃO */}
         <header className="admin-planos-hero">
@@ -305,15 +308,15 @@ const AdminPlanos = () => {
               <span>Painel Master</span>
             </button>
 
+            <div className="admin-hero-badge">
+              <i className="fas fa-crown"></i>
+              <span>PAINEL MASTER • EDITOR DE PLANOS</span>
+            </div>
+
             <button onClick={() => navigate('/planos')} className="btn-ver-publico">
               <i className="fas fa-external-link-alt"></i>
-              <span>Ver Página Pública</span>
+              <span>Ver Vitrine Pública</span>
             </button>
-          </div>
-
-          <div className="admin-hero-badge">
-            <i className="fas fa-tools"></i>
-            <span>PAINEL MASTER • EDITOR DE PLANOS & ASSINATURAS</span>
           </div>
 
           <h1 className="admin-hero-title">
@@ -321,40 +324,50 @@ const AdminPlanos = () => {
           </h1>
           
           <p className="admin-hero-subtitle">
-            Edite os nomes, valores, limites e funcionalidades dos planos. As alterações são sincronizadas em tempo real com a página de planos e com o checkout de pagamento.
+            Edite os nomes, valores, limites e recursos dos planos. As alterações são sincronizadas em tempo real com a vitrine pública e o checkout.
           </p>
 
           <div className="admin-hero-actions">
             <button className="btn-action-add" onClick={adicionarPlano}>
-              <i className="fas fa-plus-circle"></i> + Novo Plano
+              <i className="fas fa-plus"></i>
+              <span>+ Novo Plano</span>
             </button>
             <button className="btn-action-add-rec" onClick={adicionarRecurso}>
-              <i className="fas fa-list-ul"></i> + Nova Funcionalidade
+              <i className="fas fa-layer-group"></i>
+              <span>+ Nova Funcionalidade</span>
             </button>
             <button className="btn-action-save" onClick={salvarTudo} disabled={salvando}>
-              <i className={`fas ${salvando ? 'fa-spinner fa-spin' : 'fa-save'}`}></i>
-              <span>{salvando ? 'A Salvar...' : 'SALVAR MATRIZ NA NUVEM'}</span>
+              <i className={`fas ${salvando ? 'fa-spinner fa-spin' : 'fa-cloud-upload-alt'}`}></i>
+              <span>{salvando ? 'Salvando...' : 'SALVAR MATRIZ NA NUVEM'}</span>
             </button>
           </div>
         </header>
 
-        {/* CARDS EM DESTAQUE EDITÁVEIS (MESMO LAYOUT DE PLANOS.JSX) */}
+        {/* CARDS EM DESTAQUE EDITÁVEIS (PADRÃO LUXURY PLANOS) */}
         <div className="admin-cards-grid">
           {planos.map(p => {
             const isDestaque = String(p.destaque) === "true";
+            const numBeneficios = Array.isArray(p.beneficios) ? p.beneficios.length : 0;
 
             return (
               <div 
                 key={p.id} 
                 className={`admin-card ${isDestaque ? 'is-destaque' : ''}`}
               >
+                {isDestaque && (
+                  <div className="admin-card-ribbon">
+                    <i className="fas fa-star"></i> MAIS ESCOLHIDO
+                  </div>
+                )}
+
                 {/* BARRA SUPERIOR DE CONTROLE DO PLANO */}
                 <div className="admin-card-top-control">
                   <div className="pos-badge">
-                    <span>ORDEM:</span>
+                    <span className="ctrl-tag-label">ORDEM:</span>
                     <select 
                       value={p.ordem} 
                       onChange={(e) => mudarOrdem(p.id, Number(e.target.value))}
+                      title="Posição de exibição do plano"
                     >
                       {planos.map((_, i) => (
                         <option key={i + 1} value={i + 1}>{i + 1}º</option>
@@ -363,12 +376,11 @@ const AdminPlanos = () => {
                   </div>
 
                   <div className="destaque-selector">
-                    <label>
-                      <i className="fas fa-star" style={{ color: isDestaque ? '#c5a059' : '#94a3b8' }}></i>
-                    </label>
+                    <i className="fas fa-star" style={{ color: isDestaque ? '#c5a059' : '#cbd5e1' }}></i>
                     <select 
                       value={String(p.destaque)} 
                       onChange={(e) => updateLocalPlano(p.id, 'destaque', e.target.value === 'true')}
+                      title="Destacar como plano mais escolhido"
                     >
                       <option value="false">Padrão</option>
                       <option value="true">Destaque</option>
@@ -384,41 +396,44 @@ const AdminPlanos = () => {
                   </button>
                 </div>
 
-                {isDestaque && (
-                  <div className="admin-card-ribbon">
-                    <i className="fas fa-star"></i> MAIS ESCOLHIDO
-                  </div>
-                )}
-
-                {/* TÍTULO EDITÁVEL */}
+                {/* TÍTULO EDITÁVEL LIMPO */}
                 <div className="admin-card-header">
                   <span className="admin-card-tipo">
                     {isDestaque ? 'Custo-Benefício VIP' : 'Assinatura Mensal'}
                   </span>
-                  <input 
-                    className="admin-input-nome"
-                    value={p.nome} 
-                    onChange={(e) => updateLocalPlano(p.id, 'nome', e.target.value)}
-                    placeholder="Nome do Plano"
-                  />
+                  <div className="admin-input-nome-wrapper">
+                    <input 
+                      className="admin-input-nome"
+                      value={p.nome} 
+                      onChange={(e) => updateLocalPlano(p.id, 'nome', e.target.value)}
+                      placeholder="Nome do Plano"
+                      title="Clique para editar o nome"
+                    />
+                  </div>
                 </div>
 
-                {/* PREÇO EDITÁVEL */}
+                {/* PREÇO EDITÁVEL LIMPO */}
                 <div className="admin-card-preco-box">
                   <span className="moeda">R$</span>
                   <input 
                     className="admin-input-preco"
+                    style={{ width: `${Math.max(5, String(p.preco || '').length) * 26 + 6}px` }}
                     value={p.preco} 
                     onChange={(e) => updateLocalPlano(p.id, 'preco', e.target.value)}
                     placeholder="0,00"
+                    title="Clique para alterar o valor mensal"
                   />
                   <span className="periodo">/mês</span>
                 </div>
 
-                {/* BADGE DE VÍNCULO */}
-                <div className="admin-card-badge-status">
-                  <i className="fas fa-check-circle"></i>
-                  <span>Ativo • Vinculado ao Mercado Pago</span>
+                {/* FAIXA DE METADADOS ELEGANTE */}
+                <div className="admin-card-footer-strip">
+                  <span className="admin-card-features-tag">
+                    <i className="fas fa-check"></i> {numBeneficios} recursos
+                  </span>
+                  <span className="admin-card-status-tag">
+                    <i className="fas fa-circle"></i> Mercado Pago
+                  </span>
                 </div>
               </div>
             );
@@ -428,13 +443,19 @@ const AdminPlanos = () => {
         {/* MATRIZ COMPARATIVA DETALHADA E EDITÁVEL */}
         <div className="admin-matrix-container">
           <div className="admin-matrix-header-info">
-            <div>
+            <div className="admin-matrix-header-text">
               <h3><i className="fas fa-sliders-h"></i> Editor de Recursos e Limites por Categoria</h3>
               <p>Clique sobre os nomes para editar. Alterne os ícones para habilitar/desabilitar permissões.</p>
             </div>
-            <button className="btn-add-func-inline" onClick={adicionarRecurso}>
-              + Nova Funcionalidade
-            </button>
+            <div className="admin-matrix-header-actions">
+              <button className="btn-add-func-inline" onClick={adicionarRecurso}>
+                <i className="fas fa-plus"></i> + Nova Funcionalidade
+              </button>
+              <button className="btn-action-save-table" onClick={salvarTudo} disabled={salvando}>
+                <i className={`fas ${salvando ? 'fa-spinner fa-spin' : 'fa-cloud-upload-alt'}`}></i>
+                <span>{salvando ? 'Salvando...' : 'Salvar Alterações'}</span>
+              </button>
+            </div>
           </div>
 
           <div className="admin-matrix-table-scroll">
@@ -442,12 +463,18 @@ const AdminPlanos = () => {
               <thead>
                 <tr>
                   <th className="th-recursos-admin">
-                    Funcionalidades por Categoria
+                    <div className="th-recursos-title-box">
+                      <span>Funcionalidades por Categoria</span>
+                      <span className="th-recursos-total-badge">{recursos.length} itens</span>
+                    </div>
                   </th>
                   {planos.map(p => (
                     <th key={p.id} className={`th-plano-admin ${String(p.destaque) === "true" ? 'is-destaque' : ''}`}>
-                      {String(p.destaque) === "true" && <span className="tag-destaque-admin">MAIS ESCOLHIDO</span>}
+                      {String(p.destaque) === "true" && <span className="tag-destaque-admin">★ MAIS ESCOLHIDO</span>}
                       <h4>{p.nome}</h4>
+                      <div className="th-preco-mini-admin">
+                        <span>R$</span> <strong>{p.preco}</strong><span>/mês</span>
+                      </div>
                     </th>
                   ))}
                 </tr>
@@ -496,6 +523,7 @@ const AdminPlanos = () => {
                                     className="input-limite-admin"
                                     placeholder="Ilimitado"
                                     value={valorLimite}
+                                    title={valorLimite || "Ilimitado"}
                                     onChange={(e) => atualizarLimite(p.id, rec, e.target.value)}
                                   />
                                 </td>
@@ -530,29 +558,135 @@ const AdminPlanos = () => {
               </tbody>
             </table>
           </div>
-        </div>
 
-        {/* BARRA FLUTUANTE DE SALVAMENTO */}
-        <div className="admin-bottom-bar">
-          <div className="bottom-bar-content">
-            <div className="bottom-bar-text">
-              <i className="fas fa-cloud-upload-alt"></i>
-              <span>Todas as alterações salvas aqui serão refletidas instantaneamente na página de planos e no checkout.</span>
+          {/* ============================================================== */}
+          {/* 📱 SELETOR POR ABAS EXCLUSIVO PARA O CELULAR (100% LARGURA)   */}
+          {/* ============================================================== */}
+          <div className="admin-mobile-tabs-container">
+            {/* Pílulas de Navegação dos Planos */}
+            <div className="admin-mobile-plan-pills">
+              {planos.map((p, idx) => {
+                const isSelected = planoAtivoMobileIdx === idx;
+                const isDestaque = String(p.destaque) === "true";
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={`admin-mobile-plan-pill ${isSelected ? 'active' : ''} ${isDestaque ? 'is-destaque' : ''}`}
+                    onClick={() => setPlanoAtivoMobileIdx(idx)}
+                  >
+                    {isDestaque && <span className="pill-star">★</span>}
+                    <span className="pill-name">{p.nome}</span>
+                    <span className="pill-price">R$ {p.preco}</span>
+                  </button>
+                );
+              })}
             </div>
-            <div className="bottom-bar-buttons">
-              <button className="btn-bottom-add" onClick={adicionarPlano}>
-                + Novo Plano
-              </button>
-              <button className="btn-bottom-save" onClick={salvarTudo} disabled={salvando}>
-                <i className={`fas ${salvando ? 'fa-spinner fa-spin' : 'fa-save'}`}></i>
-                <span>{salvando ? 'A Salvar...' : 'SALVAR MATRIZ NA NUVEM'}</span>
-              </button>
-            </div>
+
+            {/* Conteúdo do Plano Ativo */}
+            {planos[planoAtivoMobileIdx] && (() => {
+              const planoAtual = planos[planoAtivoMobileIdx];
+              return (
+                <div className="admin-mobile-plan-panel">
+                  {/* Cartão de Resumo do Plano Selecionado */}
+                  <div className="admin-mobile-plan-banner">
+                    <div className="banner-left">
+                      <span className="banner-subtitle">Editando Recursos de:</span>
+                      <h4 className="banner-title">{planoAtual.nome}</h4>
+                    </div>
+                    <div className="banner-right">
+                      <span className="banner-currency">R$</span>
+                      <strong className="banner-price">{planoAtual.preco}</strong>
+                      <span className="banner-period">/mês</span>
+                    </div>
+                  </div>
+
+                  {/* Categorias e Recursos em 100% da Largura da Tela */}
+                  <div className="admin-mobile-categories-stack">
+                    {categoriasOrganizadas.map((cat, catIdx) => (
+                      <div key={catIdx} className="admin-mobile-cat-block">
+                        <div className="admin-mobile-cat-banner">
+                          <span>{cat.categoria}</span>
+                        </div>
+
+                        <div className="admin-mobile-features-group">
+                          {cat.itens.map((rec, itemIdx) => {
+                            const numerico = isRecursoNumerico(rec);
+                            const temBeneficio = Array.isArray(planoAtual.beneficios) && planoAtual.beneficios.includes(rec);
+                            const valorLimite = planoAtual.limites?.[rec] || '';
+
+                            return (
+                              <div key={`${catIdx}-${itemIdx}`} className={`admin-mobile-feature-card ${temBeneficio ? 'is-active-item' : ''}`}>
+                                <div className="mobile-feature-header-row">
+                                  <input 
+                                    className="mobile-feature-name-field"
+                                    defaultValue={rec}
+                                    onBlur={(e) => atualizarNomeRecurso(rec, e.target.value)}
+                                    placeholder="Nome do Recurso"
+                                  />
+                                  <button 
+                                    type="button"
+                                    className="btn-delete-feature-mobile" 
+                                    title="Remover recurso"
+                                    onClick={() => deletarRecurso(rec)}
+                                  >
+                                    <i className="fas fa-trash-alt"></i>
+                                  </button>
+                                </div>
+
+                                <div className="mobile-feature-body-row">
+                                  {numerico ? (
+                                    <div className="mobile-limit-input-group">
+                                      <span className="mobile-limit-tag">Limite:</span>
+                                      <input 
+                                        type="text" 
+                                        className="mobile-limit-text-input"
+                                        placeholder="Ex: Ilimitado, 1.000, 3 modelos..."
+                                        value={valorLimite}
+                                        title={valorLimite || "Ilimitado"}
+                                        onChange={(e) => atualizarLimite(planoAtual.id, rec, e.target.value)}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <button 
+                                      type="button"
+                                      className={`mobile-switch-button ${temBeneficio ? 'status-enabled' : 'status-disabled'}`}
+                                      onClick={() => toggleBeneficio(planoAtual.id, rec)}
+                                    >
+                                      <span className="switch-dot">
+                                        <i className={`fas ${temBeneficio ? 'fa-check' : 'fa-times'}`}></i>
+                                      </span>
+                                      <span className="switch-text">
+                                        {temBeneficio ? 'Incluso no Plano' : 'Não Incluso'}
+                                      </span>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Ações Rápidas no Rodapé Mobile */}
+                  <div className="admin-mobile-actions-dock">
+                    <button type="button" className="btn-add-feature-dock" onClick={adicionarRecurso}>
+                      <i className="fas fa-plus"></i> Nova Funcionalidade
+                    </button>
+                    <button type="button" className="btn-save-dock" onClick={salvarTudo} disabled={salvando}>
+                      <i className={`fas ${salvando ? 'fa-spinner fa-spin' : 'fa-cloud-upload-alt'}`}></i>
+                      <span>{salvando ? 'Salvando...' : 'Salvar Alterações'}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
 
       </div>
-    </>
   );
 };
 

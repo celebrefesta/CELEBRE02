@@ -110,7 +110,7 @@ const Catalogo = () => {
         if (docSnap.exists()) {
           const d = docSnap.data();
           setEmpresa({
-            nome: d.nomeEmpresa || d.nome || 'CELEBRE FESTAS',
+            nome: d.tituloCatalogo || d.nomeEmpresa || d.nome || 'CELEBRE FESTAS',
             logo: d.logoUrl || d.logo || d.logotipo || '',
             whats: d.whatsapp || d.telefone || '',
             endereco: d.endereco || '',
@@ -118,7 +118,11 @@ const Catalogo = () => {
             capa: d.bannerUrl || d.capaUrl || '',
             pixelFacebook: d.pixelFacebook || d.pixel || '',
             googleAnalyticsId: d.googleAnalyticsId || '',
-            msgPadraoWhats: d.msgPadraoWhats || '' 
+            msgPadraoWhats: d.msgPadraoWhats || '',
+            descricao: d.descricaoCatalogo || 'Vitrine Oficial de Locação & Cenografia',
+            corMarca: d.corMarcaCatalogo || d.accentColor || '#c5a059',
+            catalogoAtivo: d.catalogoAtivo !== false,
+            msgManutencao: d.msgManutencaoCatalogo || 'Estamos atualizando nosso acervo de peças e temas. Fale conosco no WhatsApp para atendimento!'
           });
         }
 
@@ -674,8 +678,94 @@ const Catalogo = () => {
     );
   }
 
+  // ⏸️ TELA DE VITRINE PAUSADA / EM MANUTENÇÃO (SOMENTE PARA VISITANTES EXTERNOS)
+  if (empresa.catalogoAtivo === false && !usuarioLogado) {
+    return (
+      <div className="loja-invalida-screen catalogo-manutencao-screen" style={{ '--cat-gold': empresa.corMarca || '#c5a059' }}>
+        <div className="loja-invalida-card" style={{ maxWidth: '520px', padding: '42px 28px' }}>
+          {empresa.logo ? (
+            <img src={empresa.logo} alt={empresa.nome} style={{ height: '70px', objectFit: 'contain', marginBottom: '18px' }} />
+          ) : (
+            <span className="loja-invalida-icon" style={{ fontSize: '2.8rem' }}>⏳</span>
+          )}
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '8px' }}>{empresa.nome}</h2>
+          <div style={{ marginBottom: '16px' }}>
+            <span style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 14px', 
+              background: 'rgba(234, 179, 8, 0.15)', 
+              color: '#eab308', 
+              borderRadius: '999px', 
+              fontSize: '0.78rem', 
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}>
+              <i className="fas fa-pause-circle"></i> Vitrine em Atualização
+            </span>
+          </div>
+          <p style={{ color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '24px' }}>
+            {empresa.msgManutencao || 'Estamos atualizando nosso acervo de peças e temas para melhor lhe atender! Fale diretamente conosco pelo WhatsApp.'}
+          </p>
+          {empresa.whats && (
+            <a 
+              href={`https://wa.me/55${empresa.whats.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${empresa.nome}! Gostaria de informações sobre locação e acervo.`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-voltar-home"
+              style={{ background: '#25D366', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textDecoration: 'none', border: 'none' }}
+            >
+              <i className="fab fa-whatsapp"></i>
+              Falar no WhatsApp
+            </a>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="catalogo-luxury-page">
+    <div className="catalogo-luxury-page" style={{ '--cat-gold': empresa.corMarca || '#c5a059' }}>
+
+      {/* 👑 BARRA DE PRÉVIA ADMINISTRATIVA (VISÍVEL SOMENTE PARA A EQUIPE/ADMINISTRADORA LOGADA) */}
+      {usuarioLogado && (
+        <div className="cat-admin-preview-bar">
+          <div className="cat-admin-preview-info">
+            <span className="cat-admin-preview-badge">
+              <i className="fas fa-eye"></i> MODO PRÉVIA
+            </span>
+            {empresa.catalogoAtivo === false && (
+              <span style={{ 
+                background: '#ef4444', 
+                color: '#fff', 
+                padding: '3px 8px', 
+                borderRadius: '6px', 
+                fontSize: '0.72rem', 
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}>
+                <i className="fas fa-pause-circle"></i> Vitrine Pausada para Clientes
+              </span>
+            )}
+            <span className="cat-admin-preview-text">
+              Você está visualizando seu Catálogo Online como seus clientes veem.
+            </span>
+          </div>
+          <button 
+            type="button" 
+            className="btn-cat-voltar-sistema"
+            onClick={() => navigate('/minha-vitrine')}
+            title="Voltar ao Painel da Minha Vitrine"
+          >
+            <i className="fas fa-arrow-left"></i>
+            <span>Voltar ao Sistema</span>
+          </button>
+        </div>
+      )}
 
       {/* 🌟 1. HERO HEADER BOUTIQUE DE LUXO */}
       <header 
@@ -693,7 +783,7 @@ const Catalogo = () => {
             )}
             <div className="cat-brand-info">
               <h1 className="cat-brand-title">{empresa.nome}</h1>
-              <span className="cat-brand-tagline">✨ Vitrine Oficial de Locação & Cenografia</span>
+              <span className="cat-brand-tagline">{empresa.descricao || '✨ Vitrine Oficial de Locação & Cenografia'}</span>
             </div>
           </div>
 

@@ -442,7 +442,7 @@ const Navbar = () => {
             <ItemMenuProtegido to="/contratos" icon="fas fa-file-contract" label="Contratos" recurso="Gestão de Contratos" />
             <ItemMenuProtegido to="/moodboard" icon="fas fa-palette" label="Moodboard" recurso="Moodboard- Projeto Digital" />
             <ItemMenuProtegido 
-                to={usuarioLogado ? `/catalogo/${localStorage.getItem('tenantId') || usuarioLogado?.uid}` : "/catalogo"} 
+                to="/minha-vitrine" 
                 icon="fas fa-store" 
                 label="Catálogo" 
                 recurso="Catalago Digital" 

@@ -1,0 +1,909 @@
+/* ==========================================================================
+   👑 PAINEL MINHA VITRINE ONLINE — CELEBRE LUXURY SAAS
+   Isolamento Total: Estilos escopados estritamente em .minha-vitrine-container
+   ========================================================================== */
+
+.minha-vitrine-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 24px 32px 80px 32px;
+  box-sizing: border-box;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  color: var(--texto-principal, #0f172a);
+}
+
+/* ── 1. CABEÇALHO EXECUTIVO ── */
+.minha-vitrine-container .vitrine-hero-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.minha-vitrine-container .vitrine-header-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.minha-vitrine-container .btn-voltar-dash {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--fundo-card, #ffffff);
+  border: 1px solid var(--borda, #cbd5e1);
+  color: var(--texto-principal, #0f172a);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.minha-vitrine-container .btn-voltar-dash:hover {
+  background: var(--fundo-hover, #f8fafc);
+  border-color: #c5a059;
+  color: #c5a059;
+  transform: translateX(-2px);
+}
+
+.minha-vitrine-container .vitrine-title-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.minha-vitrine-container .vitrine-main-title {
+  font-size: 1.55rem;
+  font-weight: 850;
+  color: var(--texto-principal, #0f172a);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.minha-vitrine-container .badge-vitrine-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.74rem;
+  font-weight: 750;
+  letter-spacing: 0.2px;
+}
+
+.minha-vitrine-container .badge-vitrine-status.online {
+  background: rgba(5, 150, 105, 0.12);
+  color: #059669;
+  border: 1px solid rgba(5, 150, 105, 0.25);
+}
+
+.minha-vitrine-container .badge-vitrine-status.paused {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.minha-vitrine-container .pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: currentColor;
+  box-shadow: 0 0 0 rgba(5, 150, 105, 0.4);
+  animation: pulse-dot-anim 1.8s infinite;
+}
+
+@keyframes pulse-dot-anim {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(5, 150, 105, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(5, 150, 105, 0); }
+}
+
+.minha-vitrine-container .vitrine-main-subtitle {
+  font-size: 0.86rem;
+  color: var(--texto-secundario, #64748b);
+  margin: 4px 0 0 0;
+}
+
+.minha-vitrine-container .vitrine-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.minha-vitrine-container .btn-ver-vitrine {
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 12px;
+  font-weight: 750;
+  font-size: 0.82rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  background: var(--fundo-card, #ffffff);
+  border: 1.5px solid var(--borda, #cbd5e1);
+  color: var(--texto-principal, #0f172a);
+  transition: all 0.2s ease;
+}
+
+.minha-vitrine-container .btn-ver-vitrine:hover {
+  border-color: #c5a059;
+  color: #c5a059;
+  transform: translateY(-1px);
+}
+
+.minha-vitrine-container .btn-salvar-vitrine {
+  height: 42px;
+  padding: 0 22px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 0.84rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  border: none;
+  background: linear-gradient(135deg, var(--dourado, #c5a059) 0%, var(--gold-dark, #a4803c) 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(197, 160, 89, 0.35);
+  transition: all 0.2s ease;
+}
+
+.minha-vitrine-container .btn-salvar-vitrine:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.minha-vitrine-container .btn-salvar-vitrine:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* ── 2. CARDS DE KPI (REGRAS 1 E 2 DO AGENTS.MD) ── */
+@media (min-width: 901px) {
+  .minha-vitrine-container .vitrine-kpis-grid {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 14px !important;
+    margin-bottom: 22px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .minha-vitrine-container .vitrine-kpis-grid .stat-card-pro {
+    flex: 1 1 0px !important;
+    min-width: 0 !important;
+    width: auto !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .minha-vitrine-container .vitrine-kpis-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    margin-bottom: 18px !important;
+  }
+}
+
+.minha-vitrine-container .stat-card-pro {
+  background: var(--fundo-card, #ffffff);
+  border: 1px solid var(--borda, #e2e8f0);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+  box-sizing: border-box;
+}
+
+.minha-vitrine-container .stat-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+.minha-vitrine-container .stat-info-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.minha-vitrine-container .stat-title {
+  font-size: 0.68rem;
+  font-weight: 750;
+  color: var(--texto-secundario, #64748b);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.minha-vitrine-container .stat-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 2px 0;
+}
+
+.minha-vitrine-container .stat-num {
+  font-size: 1.35rem;
+  font-weight: 850;
+  color: var(--texto-principal, #0f172a);
+  line-height: 1.2;
+}
+
+.minha-vitrine-container .stat-unit {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--texto-secundario, #94a3b8);
+}
+
+.minha-vitrine-container .stat-sub {
+  font-size: 0.70rem;
+  font-weight: 650;
+}
+
+.minha-vitrine-container .stat-sub.positive { color: #059669; }
+.minha-vitrine-container .stat-sub.warning { color: #d97706; }
+.minha-vitrine-container .stat-sub.neutral { color: #64748b; }
+
+/* ── 3. ALERTA PROATIVO ── */
+.minha-vitrine-container .vitrine-alerta-proativo {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.06);
+}
+
+.minha-vitrine-container .alerta-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #fef3c7;
+  color: #d97706;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.minha-vitrine-container .alerta-texto-box {
+  flex: 1;
+}
+
+.minha-vitrine-container .alerta-texto-box strong {
+  display: block;
+  font-size: 0.85rem;
+  color: #92400e;
+}
+
+.minha-vitrine-container .alerta-texto-box p {
+  margin: 2px 0 0 0;
+  font-size: 0.78rem;
+  color: #b45309;
+}
+
+.minha-vitrine-container .btn-alerta-acao {
+  background: #f59e0b;
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-weight: 750;
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.minha-vitrine-container .btn-alerta-acao:hover {
+  background: #d97706;
+  transform: translateY(-1px);
+}
+
+/* ── 4. GRID DE BLOCOS DE CONTEÚDO ── */
+.minha-vitrine-container .vitrine-content-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.minha-vitrine-container .vitrine-card-block {
+  background: var(--fundo-card, #ffffff);
+  border: 1px solid var(--borda, #e2e8f0);
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.03);
+  box-sizing: border-box;
+}
+
+.minha-vitrine-container .vitrine-card-block.span-2 {
+  grid-column: 1 / -1;
+}
+
+.minha-vitrine-container .block-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--borda, #f1f5f9);
+}
+
+.minha-vitrine-container .block-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.minha-vitrine-container .block-icon.gold { background: rgba(197, 160, 89, 0.12); color: #c5a059; }
+.minha-vitrine-container .block-icon.purple { background: rgba(139, 92, 246, 0.12); color: #8b5cf6; }
+.minha-vitrine-container .block-icon.emerald { background: rgba(5, 150, 105, 0.12); color: #059669; }
+.minha-vitrine-container .block-icon.blue { background: rgba(37, 99, 235, 0.12); color: #2563eb; }
+
+.minha-vitrine-container .block-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--texto-principal, #0f172a);
+}
+
+.minha-vitrine-container .block-header p {
+  margin: 2px 0 0 0;
+  font-size: 0.78rem;
+  color: var(--texto-secundario, #64748b);
+}
+
+/* ── 5. TOGGLE SWITCH ESTILO CELEBRE ── */
+.minha-vitrine-container .vitrine-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  background: var(--fundo-principal, #f8fafc);
+  border: 1px solid var(--borda, #e2e8f0);
+  border-radius: 14px;
+}
+
+.minha-vitrine-container .toggle-info strong {
+  display: block;
+  font-size: 0.88rem;
+  color: var(--texto-principal, #0f172a);
+}
+
+.minha-vitrine-container .toggle-info span {
+  font-size: 0.78rem;
+  color: var(--texto-secundario, #64748b);
+}
+
+.minha-vitrine-container .celebre-switch-label {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.minha-vitrine-container .celebre-switch-label input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.minha-vitrine-container .celebre-switch-slider {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #cbd5e1;
+  transition: .3s;
+  border-radius: 34px;
+}
+
+.minha-vitrine-container .celebre-switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+.minha-vitrine-container .celebre-switch-label input:checked + .celebre-switch-slider {
+  background-color: #059669;
+}
+
+.minha-vitrine-container .celebre-switch-label input:checked + .celebre-switch-slider:before {
+  transform: translateX(22px);
+}
+
+/* ── 6. DOCK DO LINK OFICIAL ── */
+.minha-vitrine-container .vitrine-link-dock .link-label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: var(--texto-principal, #0f172a);
+  margin-bottom: 6px;
+}
+
+.minha-vitrine-container .link-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.minha-vitrine-container .link-field {
+  flex: 1 1 280px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1.5px solid var(--borda, #cbd5e1);
+  background: var(--fundo-principal, #f8fafc);
+  padding: 0 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--texto-principal, #0f172a);
+  outline: none;
+  font-family: monospace;
+}
+
+.minha-vitrine-container .btn-link-action {
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-weight: 750;
+  font-size: 0.80rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  border: 1.5px solid var(--borda, #cbd5e1);
+  background: var(--fundo-card, #ffffff);
+  color: var(--texto-principal, #0f172a);
+}
+
+.minha-vitrine-container .btn-link-action.btn-copy:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.minha-vitrine-container .btn-link-action.btn-zap {
+  background: #22c55e;
+  color: #ffffff;
+  border-color: #16a34a;
+}
+
+.minha-vitrine-container .btn-link-action.btn-zap:hover {
+  background: #16a34a;
+}
+
+/* ── 7. SELETOR DE CORES DA MARCA ── */
+.minha-vitrine-container .cores-palette-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 8px 0 6px 0;
+}
+
+.minha-vitrine-container .color-pill-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 0.72rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.minha-vitrine-container .color-pill-btn:hover {
+  transform: scale(1.12);
+}
+
+.minha-vitrine-container .color-pill-btn.active {
+  transform: scale(1.18);
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2px #0f172a, 0 4px 12px rgba(0,0,0,0.25);
+}
+
+.minha-vitrine-container .field-help-text {
+  font-size: 0.74rem;
+  color: var(--texto-secundario, #64748b);
+  display: block;
+}
+
+/* ── 8. FORMULÁRIOS & CAMPOS ── */
+.minha-vitrine-container .form-group-celebre {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.minha-vitrine-container .field-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--texto-principal, #0f172a);
+}
+
+.minha-vitrine-container .celebre-input,
+.minha-vitrine-container .celebre-textarea {
+  width: 100%;
+  border-radius: 12px;
+  border: 1.5px solid var(--borda, #cbd5e1);
+  background: var(--fundo-principal, #f8fafc);
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  color: var(--texto-principal, #0f172a);
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.minha-vitrine-container .celebre-input:focus,
+.minha-vitrine-container .celebre-textarea:focus {
+  border-color: #c5a059;
+  background: var(--fundo-card, #ffffff);
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.15);
+}
+
+.minha-vitrine-container .form-row-2col {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.minha-vitrine-container .input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.minha-vitrine-container .input-icon-prefix {
+  position: absolute;
+  left: 14px;
+  font-size: 1rem;
+  color: var(--texto-secundario, #94a3b8);
+  pointer-events: none;
+}
+
+.minha-vitrine-container .celebre-input.with-prefix {
+  padding-left: 38px;
+}
+
+/* ── 9. UPLOADS DE LOGO E CAPA ── */
+.minha-vitrine-container .upload-box-mini {
+  background: var(--fundo-principal, #f8fafc);
+  border: 1px dashed var(--borda, #cbd5e1);
+  border-radius: 14px;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.minha-vitrine-container .upload-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 750;
+  color: var(--texto-secundario, #64748b);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.minha-vitrine-container .upload-preview-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.minha-vitrine-container .thumb-logo-preview {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  object-fit: contain;
+  background: #ffffff;
+  border: 1px solid var(--borda, #e2e8f0);
+}
+
+.minha-vitrine-container .thumb-capa-preview {
+  width: 72px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--borda, #e2e8f0);
+}
+
+.minha-vitrine-container .thumb-placeholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: #e2e8f0;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.minha-vitrine-container .btn-upload-file {
+  padding: 6px 12px;
+  background: var(--fundo-card, #ffffff);
+  border: 1.5px solid var(--borda, #cbd5e1);
+  border-radius: 10px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--texto-principal, #0f172a);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.minha-vitrine-container .btn-upload-file:hover {
+  border-color: #c5a059;
+  color: #c5a059;
+}
+
+/* ── 10. CHECKLIST DE PRONTIDÃO (HEALTH METER) ── */
+.minha-vitrine-container .readiness-meter-box {
+  background: var(--fundo-principal, #f8fafc);
+  border: 1px solid var(--borda, #e2e8f0);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.minha-vitrine-container .meter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.82rem;
+}
+
+.minha-vitrine-container .meter-pct {
+  font-weight: 850;
+  font-size: 0.90rem;
+}
+
+.minha-vitrine-container .meter-track {
+  width: 100%;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.minha-vitrine-container .meter-fill {
+  height: 100%;
+  transition: width 0.4s ease;
+  border-radius: 10px;
+}
+
+.minha-vitrine-container .checklist-items-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.minha-vitrine-container .checklist-item-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--fundo-principal, #f8fafc);
+  border: 1px solid var(--borda, #e2e8f0);
+  transition: all 0.2s ease;
+}
+
+.minha-vitrine-container .checklist-item-row.checked {
+  background: rgba(5, 150, 105, 0.04);
+  border-color: rgba(5, 150, 105, 0.2);
+}
+
+.minha-vitrine-container .checklist-item-row.checked .check-status-icon {
+  color: #059669;
+}
+
+.minha-vitrine-container .checklist-item-row.pending .check-status-icon {
+  color: #94a3b8;
+}
+
+.minha-vitrine-container .check-status-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.minha-vitrine-container .check-text-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.minha-vitrine-container .check-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--texto-principal, #0f172a);
+}
+
+.minha-vitrine-container .check-detail {
+  font-size: 0.72rem;
+  color: var(--texto-secundario, #64748b);
+}
+
+.minha-vitrine-container .check-alert {
+  font-size: 0.72rem;
+  font-weight: 750;
+  color: #d97706;
+}
+
+.minha-vitrine-container .badge-recomendado {
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.68rem;
+  font-weight: 750;
+  padding: 3px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+/* ── 11. UTILITÁRIOS & LOADING ── */
+.minha-vitrine-container .vitrine-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 14px;
+  color: var(--texto-principal, #0f172a);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.minha-vitrine-container .vitrine-loading-state i {
+  font-size: 2rem;
+  color: #c5a059;
+}
+
+.minha-vitrine-container .mt-12 { margin-top: 12px; }
+.minha-vitrine-container .mt-14 { margin-top: 14px; }
+.minha-vitrine-container .mt-16 { margin-top: 16px; }
+
+/* ── 12. RESPONSIVIDADE MOBILE (<= 768px) ── */
+@media (max-width: 768px) {
+  .minha-vitrine-container {
+    padding: 16px 14px 60px 14px;
+  }
+
+  .minha-vitrine-container .vitrine-hero-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .minha-vitrine-container .vitrine-header-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .minha-vitrine-container .btn-ver-vitrine,
+  .minha-vitrine-container .btn-salvar-vitrine {
+    width: 100%;
+    justify-content: center;
+    padding: 0 8px;
+    font-size: 0.78rem;
+  }
+
+  .minha-vitrine-container .vitrine-content-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .minha-vitrine-container .vitrine-card-block.span-2 {
+    grid-column: 1;
+  }
+
+  .minha-vitrine-container .form-row-2col {
+    grid-template-columns: 1fr;
+  }
+
+  .minha-vitrine-container .link-input-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .minha-vitrine-container .btn-link-action {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ── 13. DARK MODE (CHARCOAL LUXURY) ── */
+[data-theme^='dark'] .minha-vitrine-container {
+  color: #f4f4f5;
+}
+
+[data-theme^='dark'] .minha-vitrine-container .vitrine-main-title,
+[data-theme^='dark'] .minha-vitrine-container .block-header h3,
+[data-theme^='dark'] .minha-vitrine-container .toggle-info strong,
+[data-theme^='dark'] .minha-vitrine-container .field-label,
+[data-theme^='dark'] .minha-vitrine-container .check-label,
+[data-theme^='dark'] .minha-vitrine-container .stat-num {
+  color: #f4f4f5;
+}
+
+[data-theme^='dark'] .minha-vitrine-container .vitrine-card-block,
+[data-theme^='dark'] .minha-vitrine-container .stat-card-pro,
+[data-theme^='dark'] .minha-vitrine-container .btn-voltar-dash,
+[data-theme^='dark'] .minha-vitrine-container .btn-ver-vitrine {
+  background: #18181b;
+  border-color: #27272a;
+}
+
+[data-theme^='dark'] .minha-vitrine-container .vitrine-toggle-row,
+[data-theme^='dark'] .minha-vitrine-container .readiness-meter-box,
+[data-theme^='dark'] .minha-vitrine-container .checklist-item-row,
+[data-theme^='dark'] .minha-vitrine-container .upload-box-mini,
+[data-theme^='dark'] .minha-vitrine-container .celebre-input,
+[data-theme^='dark'] .minha-vitrine-container .celebre-textarea,
+[data-theme^='dark'] .minha-vitrine-container .link-field,
+[data-theme^='dark'] .minha-vitrine-container .btn-upload-file,
+[data-theme^='dark'] .minha-vitrine-container .btn-link-action.btn-copy {
+  background: #090d16;
+  border-color: #27272a;
+  color: #f4f4f5;
+}
+
+[data-theme^='dark'] .minha-vitrine-container .vitrine-alerta-proativo {
+  background: rgba(217, 119, 6, 0.12);
+  border-color: rgba(217, 119, 6, 0.3);
+}
+
+[data-theme^='dark'] .minha-vitrine-container .alerta-icon-box {
+  background: rgba(217, 119, 6, 0.25);
+  color: #fbbf24;
+}
+
+[data-theme^='dark'] .minha-vitrine-container .alerta-texto-box strong {
+  color: #fbbf24;
+}
+
+[data-theme^='dark'] .minha-vitrine-container .alerta-texto-box p {
+  color: #fde68a;
+}

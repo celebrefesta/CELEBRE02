@@ -1022,6 +1022,30 @@ a.btn-primary-celebre {
   }
 }
 
+/* ⚡ Atalhos Rápidos de Datas: 5 Colunas em 1 Linha no Desktop, 2 Colunas Simétricas no Celular */
+.nova-locacao-page .grupo-botoes-atalhos-datas {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 900px) {
+  .nova-locacao-page .grupo-botoes-atalhos-datas {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+  }
+}
+
+@media (max-width: 680px) {
+  .nova-locacao-page .grupo-botoes-atalhos-datas {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .nova-locacao-page .grupo-botoes-atalhos-datas .btn-chip-data:last-child:nth-child(odd) {
+    grid-column: 1 / -1 !important;
+  }
+}
+
 
 /* ============================================================
    🔒 PÁGINA: ESTOQUE & ACERVO — STATUS: CONGELADA em 03/09/2026
@@ -1341,6 +1365,27 @@ a.btn-primary-celebre {
 }
 
 @media (min-width: 901px) {
+  .compras-container .table-filter-bar {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+  }
+
+  .compras-container .search-input-wrapper {
+    flex: 1 1 auto !important;
+    min-width: 220px !important;
+  }
+
+  .compras-container .compras-filter-trio-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    flex: 0 0 auto !important;
+    flex-wrap: nowrap !important;
+  }
+
   .compras-container .compras-desktop-table-view {
     display: block !important;
   }
@@ -1353,20 +1398,37 @@ a.btn-primary-celebre {
 @media (max-width: 900px) {
   .compras-container .table-filter-bar,
   .compras-container .compras-filter-bar {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important;
+    display: flex !important;
+    flex-direction: column !important;
     gap: 8px !important;
+    width: 100% !important;
   }
 
   .compras-container .table-filter-bar .search-input-wrapper,
   .compras-container .compras-filter-bar .search-input-wrapper {
-    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    flex: none !important;
   }
 
+  .compras-container .compras-filter-trio-row {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .compras-container .compras-filter-trio-row .filter-select-container {
+    width: 100% !important;
+  }
+
+  .compras-container .compras-filter-trio-row .btn-ordem-celebre,
+  .compras-container .compras-filter-trio-row .btn-limpar-filtros-compras,
+  .compras-container .compras-filter-trio-row .btn-secondary-celebre,
   .compras-container .table-filter-bar .btn-ordenacao,
   .compras-container .compras-filter-bar .btn-ordenacao {
-    grid-column: span 2 !important;
+    grid-column: auto !important;
     width: 100% !important;
+    height: 38px !important;
   }
 
   /* Sem auto-zoom no iOS */
@@ -2885,7 +2947,125 @@ a.btn-primary-celebre {
 }
 
 /* ============================================================
-   🔒 SISTEMA 100% CONGELADO E BLINDADO (12/09/2026)
+   🔒 GERENCIAR PLANOS & PREÇOS (AdminPlanos.css / AdminPlanos.jsx)
+   STATUS: 🔒 CONGELADA (23/09/2026)
+   Isolamento Total: Estilos escopados estritamente em .admin-planos-wrapper
+   ============================================================ */
+
+/* ── 1. CONTAINER E LARGURA TOTAL DESKTOP ── */
+.admin-planos-wrapper {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.admin-planos-wrapper .admin-planos-hero,
+.admin-planos-wrapper .admin-cards-grid,
+.admin-planos-wrapper .admin-matrix-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* ── 2. CARDS EDITÁVEIS NO DESKTOP (GRID 3 COLUNAS) ── */
+.admin-planos-wrapper .admin-cards-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 24px !important;
+}
+
+/* Tipografia de Preço Alinhada à Linha de Base */
+.admin-planos-wrapper .admin-card-preco-box {
+  display: flex !important;
+  align-items: flex-end !important;
+  gap: 4px !important;
+}
+
+.admin-planos-wrapper .admin-card-preco-box .moeda,
+.admin-planos-wrapper .admin-card-preco-box .periodo {
+  margin-bottom: 7px !important;
+}
+
+/* ── 3. VISIBILIDADE DESKTOP vs MOBILE ── */
+/* No Desktop: Tabela de Matriz ativa, Abas mobile ocultas */
+@media (min-width: 769px) {
+  .admin-planos-wrapper .admin-matrix-table-scroll {
+    display: block !important;
+  }
+
+  .admin-planos-wrapper .admin-mobile-tabs-container {
+    display: none !important;
+  }
+}
+
+/* ── 4. VISIBILIDADE E LAYOUT NO CELULAR (<= 768px) ── */
+@media (max-width: 768px) {
+  .admin-planos-wrapper {
+    padding: 16px 12px 60px 12px !important;
+  }
+
+  .admin-planos-wrapper .admin-cards-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+    margin-bottom: 24px !important;
+  }
+
+  /* Oculta terminantemente a tabela de rolagem lateral no mobile */
+  .admin-planos-wrapper .admin-matrix-table-scroll {
+    display: none !important;
+  }
+
+  /* Ativa terminantemente o editor por abas em 100% da largura */
+  .admin-planos-wrapper .admin-mobile-tabs-container {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .admin-planos-wrapper .admin-mobile-plan-pills {
+    display: flex !important;
+    gap: 8px !important;
+    overflow-x: auto !important;
+    scrollbar-width: none !important;
+  }
+
+  .admin-planos-wrapper .admin-mobile-plan-pills::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .admin-planos-wrapper .admin-mobile-categories-stack {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+    width: 100% !important;
+  }
+
+  .admin-planos-wrapper .admin-mobile-feature-card {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .admin-planos-wrapper .mobile-feature-name-field {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .admin-planos-wrapper .admin-mobile-actions-dock {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-planos-wrapper .admin-mobile-actions-dock {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ============================================================
+   🔒 SISTEMA 100% CONGELADO E BLINDADO (23/09/2026)
    TODAS AS PÁGINAS PRINCIPAIS ESTÃO COM STATUS CONGELADA:
    ✅ 🔒 Clientes (Clientes.css, CadastroCliente.css)
    ✅ 🔒 Locações (Locacoes.css)
@@ -2900,7 +3080,9 @@ a.btn-primary-celebre {
    ✅ 🔒 Logística / Kanban Galpão (Logistica.css)
    ✅ 🔒 Relatórios (Relatorios.css, Tabs)
    ✅ 🔒 Catálogo Boutique de Luxo & Auto-Cadastro (Catalago.css, AutoCadastro.css)
+   ✅ 🔒 Gerenciar Planos Master (AdminPlanos.css, AdminPlanos.jsx)
    ✅ 🔒 Sistema Global de Cards KPI (1 linha desktop / 2 colunas mobile)
    ✅ 🔒 Motor Global de Cores Dinâmicas da Marca (Aparência)
    ============================================================ */
+
 

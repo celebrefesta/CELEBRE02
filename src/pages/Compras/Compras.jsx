@@ -814,6 +814,15 @@ const Compras = () => {
       setOrdemAlfabetica(prev => prev === 'Data' ? 'A-Z' : prev === 'A-Z' ? 'Z-A' : 'Data');
   };
 
+  const temFiltrosAtivos = Boolean(busca || filtroCategoria !== 'todos' || filtroStatus !== 'todos' || ordemAlfabetica !== 'Data');
+
+  const limparTodosFiltros = () => {
+    setBusca('');
+    setFiltroCategoria('todos');
+    setFiltroStatus('todos');
+    setOrdemAlfabetica('Data');
+  };
+
   const faltantesFiltradosDecoracao = faltantesDecoracao.filter(item => {
     const busca = normalizarTexto(buscaDecoracao);
     if (!busca) return true;
@@ -1038,6 +1047,17 @@ const Compras = () => {
               <button className="btn-secondary-celebre btn-ordem-celebre" onClick={alternarOrdem} title="Mudar Ordem">
                 <i className={ordemAlfabetica === 'A-Z' ? "fas fa-arrow-down-a-z" : ordemAlfabetica === 'Z-A' ? "fas fa-arrow-down-z-a" : "fas fa-calendar-days"}></i>
                 <span>{ordemAlfabetica === 'A-Z' ? 'Ordem: A - Z' : ordemAlfabetica === 'Z-A' ? 'Ordem: Z - A' : 'Mais Recentes'}</span>
+              </button>
+
+              <button 
+                type="button" 
+                className={`btn-secondary-celebre btn-limpar-filtros-compras${temFiltrosAtivos ? ' has-active' : ''}`}
+                onClick={limparTodosFiltros}
+                disabled={!temFiltrosAtivos}
+                title={temFiltrosAtivos ? "Limpar todos os filtros ativos" : "Nenhum filtro ativo"}
+              >
+                <i className="fas fa-filter-circle-xmark"></i>
+                <span>{temFiltrosAtivos ? 'Limpar' : 'Filtros'}</span>
               </button>
             </div>
           </div>

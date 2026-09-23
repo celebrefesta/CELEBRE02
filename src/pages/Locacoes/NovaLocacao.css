@@ -837,7 +837,7 @@
 
 .grupo-botoes-atalhos-datas {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
   width: 100%;
   box-sizing: border-box;
@@ -877,9 +877,18 @@
   flex-shrink: 0;
 }
 
+@media (max-width: 900px) {
+  .grupo-botoes-atalhos-datas {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  }
+}
+
 @media (max-width: 680px) {
   .grupo-botoes-atalhos-datas {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .grupo-botoes-atalhos-datas .btn-chip-data:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
   }
 }
 
