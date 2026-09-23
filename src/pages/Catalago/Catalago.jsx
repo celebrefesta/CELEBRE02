@@ -170,19 +170,32 @@ const Catalogo = () => {
           });
         }
 
-        // Carrega Estoque (Incluindo todas as peças, inclusive em reparo)
-        const qEstoque = query(collection(db, "estoque"), where("userId", "==", tenantId));
-        const snapEstoque = await getDocs(qEstoque);
-        const itens = snapEstoque.docs
-          .map(d => ({ id: d.id, ...d.data() }))
-          .filter(i => i.status !== 'inativo' && !( (i.status === 'manutencao' || i.status === 'reparo') && !i.dataPrevisaoRetorno )); 
+        // Carrega Estoque e Locações buscando por userId e tenantId em todos os identificadores vinculados
+        const uidsAlvo = new Set([
+          tenantId,
+          usuarioLogado?.uid,
+          localStorage.getItem('tenantId')
+        ].filter(Boolean));
+
+        const mapEstoque = new Map();
+        const mapLoc = new Map();
+
+        for (const uId of uidsAlvo) {
+          const [snapEU, snapET, snapLU, snapLT] = await Promise.all([
+            getDocs(query(collection(db, "estoque"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+            getDocs(query(collection(db, "estoque"), where("tenantId", "==", uId))).catch(() => ({ docs: [] })),
+            getDocs(query(collection(db, "locacoes"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+            getDocs(query(collection(db, "locacoes"), where("tenantId", "==", uId))).catch(() => ({ docs: [] }))
+          ]);
+          [...snapEU.docs, ...snapET.docs].forEach(d => mapEstoque.set(d.id, { id: d.id, ...d.data() }));
+          [...snapLU.docs, ...snapLT.docs].forEach(d => mapLoc.set(d.id, { id: d.id, ...d.data() }));
+        }
+
+        const itens = Array.from(mapEstoque.values())
+          .filter(i => i.status !== 'inativo' && !( (i.status === 'manutencao' || i.status === 'reparo') && !i.dataPrevisaoRetorno ));
         setEstoque(itens);
 
-        // Carrega Locações Ativas para Checagem de Disponibilidade Real
-        const qLoc = query(collection(db, "locacoes"), where("userId", "==", tenantId));
-        const snapLoc = await getDocs(qLoc);
-        const listaLoc = snapLoc.docs
-          .map(d => ({ id: d.id, ...d.data() }))
+        const listaLoc = Array.from(mapLoc.values())
           .filter(l => l.status !== 'cancelada' && l.status !== 'devolvido');
         setLocacoes(listaLoc);
 

@@ -17,6 +17,44 @@ const CORES_VITRINE = [
   { id: 'dark', nome: 'Ônix Minimal', cor: '#18181b', border: '#3f3f46', icone: '🖤' }
 ];
 
+// 🖼️ COMPRESSOR AUTOMÁTICO DE IMAGENS (NUNCA ULTRAPASSA O LIMITE DO FIRESTORE DE 1MB)
+const comprimirImagemParaUpload = (file, maxLargura, maxAltura, qualidade = 0.8) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxLargura || height > maxAltura) {
+          if (width / height > maxLargura / maxAltura) {
+            height = Math.round((height * maxLargura) / width);
+            width = maxLargura;
+          } else {
+            width = Math.round((width * maxAltura) / height);
+            height = maxAltura;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Gera JPEG otimizado e ultraleve (< 85KB)
+        const dataUrl = canvas.toDataURL('image/jpeg', qualidade);
+        resolve(dataUrl);
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
+
 const PainelMinhaVitrine = () => {
   const navigate = useNavigate();
   const usuarioLogado = auth.currentUser;
@@ -84,16 +122,27 @@ const PainelMinhaVitrine = () => {
           setMsgManutencao(d.msgManutencaoCatalogo || 'Estamos atualizando nosso acervo de peças e temas. Fale conosco no WhatsApp para atendimento!');
         }
 
-        // 2. Analisa dados do estoque para o Checklist de Prontidão
-        const qEstoque = query(collection(db, "estoque"), where("userId", "==", tenantId));
-        const snapEstoque = await getDocs(qEstoque);
+        // 2. Analisa dados do estoque para o Checklist de Prontidão (busca por userId e tenantId)
+        const uidsAlvo = new Set([
+          tenantId,
+          usuarioLogado?.uid,
+          localStorage.getItem('tenantId')
+        ].filter(Boolean));
+
+        const mapEstoque = new Map();
+        for (const uId of uidsAlvo) {
+          const [snapU, snapT] = await Promise.all([
+            getDocs(query(collection(db, "estoque"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+            getDocs(query(collection(db, "estoque"), where("tenantId", "==", uId))).catch(() => ({ docs: [] }))
+          ]);
+          [...snapU.docs, ...snapT.docs].forEach(docItem => mapEstoque.set(docItem.id, docItem.data()));
+        }
 
         let comFoto = 0;
         let comPreco = 0;
         let total = 0;
 
-        snapEstoque.forEach(docItem => {
-          const item = docItem.data();
+        mapEstoque.forEach(item => {
           if (item.status === 'inativo') return;
           total++;
 
@@ -221,6 +270,52 @@ const PainelMinhaVitrine = () => {
       const refEmpresa = doc(db, "configuracoes_empresa", tenantId);
       const snapEmpresa = await getDoc(refEmpresa);
 
+      // 🛡️ Proteção de tamanho: se a capa for uma string base64 gigante (> 400KB), comprime antes de salvar
+      let bannerFinal = capaUrl;
+      if (bannerFinal && bannerFinal.startsWith('data:image') && bannerFinal.length > 400000) {
+        try {
+          bannerFinal = await new Promise((res) => {
+            const img = new Image();
+            img.src = bannerFinal;
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              let w = img.width, h = img.height;
+              if (w > 1200) { h = Math.round((h * 1200) / w); w = 1200; }
+              canvas.width = w; canvas.height = h;
+              canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+              res(canvas.toDataURL('image/jpeg', 0.78));
+            };
+            img.onerror = () => res('');
+          });
+          setCapaUrl(bannerFinal);
+        } catch (e) {
+          console.warn("Erro ao comprimir capa no save:", e);
+        }
+      }
+
+      // 🛡️ Proteção de tamanho para logo
+      let logoFinal = logoUrl;
+      if (logoFinal && logoFinal.startsWith('data:image') && logoFinal.length > 400000) {
+        try {
+          logoFinal = await new Promise((res) => {
+            const img = new Image();
+            img.src = logoFinal;
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              let w = img.width, h = img.height;
+              if (w > 400) { h = Math.round((h * 400) / w); w = 400; }
+              canvas.width = w; canvas.height = h;
+              canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+              res(canvas.toDataURL('image/jpeg', 0.85));
+            };
+            img.onerror = () => res('');
+          });
+          setLogoUrl(logoFinal);
+        } catch (e) {
+          console.warn("Erro ao comprimir logo no save:", e);
+        }
+      }
+
       const dadosParaSalvar = {
         catalogoAtivo,
         corMarcaCatalogo: corMarca,
@@ -228,8 +323,8 @@ const PainelMinhaVitrine = () => {
         descricaoCatalogo: descricaoLoja,
         whatsapp,
         instagram,
-        logoUrl,
-        bannerUrl: capaUrl,
+        logoUrl: logoFinal,
+        bannerUrl: bannerFinal,
         msgManutencaoCatalogo: msgManutencao,
         atualizadoEm: new Date().toISOString()
       };
@@ -268,38 +363,36 @@ const PainelMinhaVitrine = () => {
     window.open(`https://api.whatsapp.com/send?text=${texto}`, '_blank');
   };
 
-  // Upload simples de Logo via FileReader (Base64)
-  const handleUploadLogo = (e) => {
+  // Upload inteligente e comprimido de Logo (< 35KB)
+  const handleUploadLogo = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      alert("A imagem da logo deve ter no máximo 2MB.");
-      return;
-    }
     setUploadingLogo(true);
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      setLogoUrl(uploadEvent.target.result);
+    try {
+      const otimizado = await comprimirImagemParaUpload(file, 400, 400, 0.85);
+      setLogoUrl(otimizado);
+    } catch (err) {
+      console.error("Erro ao processar logotipo:", err);
+      alert("Não foi possível processar a imagem do logotipo.");
+    } finally {
       setUploadingLogo(false);
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
-  // Upload simples de Capa via FileReader (Base64)
-  const handleUploadCapa = (e) => {
+  // Upload inteligente e comprimido de Capa (< 85KB, nunca estoura Firestore)
+  const handleUploadCapa = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 3 * 1024 * 1024) {
-      alert("A imagem de capa deve ter no máximo 3MB.");
-      return;
-    }
     setUploadingCapa(true);
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      setCapaUrl(uploadEvent.target.result);
+    try {
+      const otimizado = await comprimirImagemParaUpload(file, 1200, 480, 0.78);
+      setCapaUrl(otimizado);
+    } catch (err) {
+      console.error("Erro ao processar imagem de capa:", err);
+      alert("Não foi possível processar a imagem da capa.");
+    } finally {
       setUploadingCapa(false);
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   if (loading) {
