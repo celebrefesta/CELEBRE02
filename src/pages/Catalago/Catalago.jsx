@@ -1,11 +1,44 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, addDoc, doc, getDoc, serverTimestamp, query, where } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, getDoc, serverTimestamp, query, where, onSnapshot } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
 import html2canvas from 'html2canvas';
 import { processarDisparoAutomatico } from '../../utils/notificacoesDispatchService';
 import './Catalago.css';
+
+// 🎨 GERADOR DINÂMICO DE PALETA EXCLUSIVA DA VITRINE (HARMONIA DE LUXO)
+const processarPaletaVitrine = (hexCor) => {
+  const hex = (hexCor || '#c5a059').replace('#', '');
+  const r = parseInt(hex.substring(0, 2), 16) || 197;
+  const g = parseInt(hex.substring(2, 4), 16) || 160;
+  const b = parseInt(hex.substring(4, 6), 16) || 89;
+
+  // Cor mais clara (para gradientes luminosos)
+  const rL = Math.min(255, Math.round(r + (255 - r) * 0.28));
+  const gL = Math.min(255, Math.round(g + (255 - g) * 0.28));
+  const bL = Math.min(255, Math.round(b + (255 - b) * 0.28));
+  const clara = `rgb(${rL}, ${gL}, ${bL})`;
+
+  // Cor mais escura (para hover e contrastes)
+  const rD = Math.max(0, Math.round(r * 0.75));
+  const gD = Math.max(0, Math.round(g * 0.75));
+  const bD = Math.max(0, Math.round(b * 0.75));
+  const escura = `rgb(${rD}, ${gD}, ${bD})`;
+
+  const glow = `rgba(${r}, ${g}, ${b}, 0.28)`;
+  const soft = `rgba(${r}, ${g}, ${b}, 0.08)`;
+  const borderSoft = `rgba(${r}, ${g}, ${b}, 0.25)`;
+
+  return {
+    primaria: `#${hex}`,
+    clara,
+    escura,
+    glow,
+    soft,
+    borderSoft
+  };
+};
 
 const Catalogo = () => {
   const navigate = useNavigate();
@@ -15,15 +48,26 @@ const Catalogo = () => {
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
   
-  // Extrai tenantId do path (/catalogo/:idEmpresa), da query string (?t=... ou ?idEmpresa=...), do usuário logado ou do cache local
+  // Extrai tenantId do path (/catalogo/:idEmpresa), da query string (?t=... ou ?idEmpresa=...), do cache ou usuário
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const queryTenantId = queryParams.get('t') || queryParams.get('idEmpresa') || queryParams.get('empresa') || queryParams.get('tenantId');
-  const tenantId = idEmpresa || queryTenantId || (usuarioLogado ? usuarioLogado.uid : localStorage.getItem('tenantId'));
+  const tenantId = idEmpresa || queryTenantId || localStorage.getItem('tenantId') || (usuarioLogado ? usuarioLogado.uid : null);
 
   const [estoque, setEstoque] = useState([]);
   const [locacoes, setLocacoes] = useState([]);
   const [empresa, setEmpresa] = useState({ 
-    nome: 'CELEBRE FESTAS', logo: '', whats: '', endereco: '', insta: '', pixelFacebook: '', capa: '', googleAnalyticsId: '', msgPadraoWhats: '' 
+    nome: 'CELEBRE FESTAS', 
+    logo: '', 
+    whats: '', 
+    endereco: '', 
+    insta: '', 
+    pixelFacebook: '', 
+    capa: '', 
+    googleAnalyticsId: '', 
+    msgPadraoWhats: '',
+    corMarca: localStorage.getItem('corMarcaCatalogo') || '#c5a059',
+    catalogoAtivo: true,
+    msgManutencao: ''
   });
 
   const [loading, setLoading] = useState(true);
@@ -149,7 +193,39 @@ const Catalogo = () => {
       }
     };
     inicializar();
+
+    // 📡 ESCUTADOR EM TEMPO REAL DAS CONFIGURAÇÕES DA VITRINE (COR DA MARCA, STATUS, LOGO)
+    const unsubDoc = onSnapshot(doc(db, "configuracoes_empresa", tenantId), (docSnap) => {
+      if (docSnap.exists()) {
+        const d = docSnap.data();
+        const cor = d.corMarcaCatalogo || localStorage.getItem('corMarcaCatalogo') || d.accentColor || '#c5a059';
+        localStorage.setItem('corMarcaCatalogo', cor);
+        setEmpresa(prev => ({
+          ...prev,
+          nome: d.tituloCatalogo || d.nomeEmpresa || d.nome || prev.nome,
+          logo: d.logoUrl || d.logo || d.logotipo || prev.logo,
+          whats: d.whatsapp || d.telefone || prev.whats,
+          endereco: d.endereco || prev.endereco,
+          insta: d.instagram || prev.insta,
+          capa: d.bannerUrl || d.capaUrl || prev.capa,
+          pixelFacebook: d.pixelFacebook || d.pixel || prev.pixelFacebook,
+          googleAnalyticsId: d.googleAnalyticsId || prev.googleAnalyticsId,
+          msgPadraoWhats: d.msgPadraoWhats || prev.msgPadraoWhats,
+          descricao: d.descricaoCatalogo || prev.descricao,
+          corMarca: cor,
+          catalogoAtivo: d.catalogoAtivo !== false,
+          msgManutencao: d.msgManutencaoCatalogo || prev.msgManutencao
+        }));
+      }
+    }, (err) => console.warn("Erro no listener em tempo real da empresa:", err));
+
+    return () => unsubDoc();
   }, [tenantId]);
+
+  // 🎨 PALETA CALCULADA EM TEMPO REAL PARA O CATÁLOGO
+  const paletaCor = useMemo(() => {
+    return processarPaletaVitrine(empresa.corMarca);
+  }, [empresa.corMarca]);
 
   // Pixel Facebook & Instagram
   useEffect(() => {
@@ -727,7 +803,139 @@ const Catalogo = () => {
   }
 
   return (
-    <div className="catalogo-luxury-page" style={{ '--cat-gold': empresa.corMarca || '#c5a059' }}>
+    <div className="catalogo-luxury-page" style={{ '--cat-gold': paletaCor.primaria }}>
+
+      {/* 🎨 MOTOR DINÂMICO DE IDENTIDADE VISUAL EXCLUSIVA DO CATÁLOGO BOUTIQUE */}
+      <style>{`
+        .catalogo-luxury-page {
+          --cat-gold: ${paletaCor.primaria} !important;
+          --cat-gold-light: ${paletaCor.clara} !important;
+          --cat-gold-dark: ${paletaCor.escura} !important;
+          --cat-gold-glow: ${paletaCor.glow} !important;
+          --cat-gold-soft: ${paletaCor.soft} !important;
+        }
+
+        /* 🔘 Botão Adicionar à Lista em Todos os Cards de Produtos */
+        .catalogo-luxury-page .btn-add-lista {
+          background: ${paletaCor.primaria} !important;
+          color: #ffffff !important;
+          border: none !important;
+          box-shadow: 0 2px 10px ${paletaCor.glow} !important;
+        }
+        .catalogo-luxury-page .btn-add-lista:hover {
+          background: ${paletaCor.escura} !important;
+          color: #ffffff !important;
+          transform: translateY(-1px) scale(1.03) !important;
+        }
+
+        /* 🛍️ Botão de Ver Carrinho e Barra Flutuante Oficial */
+        .catalogo-luxury-page .btn-floating-view-cart {
+          background: linear-gradient(135deg, ${paletaCor.primaria} 0%, ${paletaCor.clara} 100%) !important;
+          color: #ffffff !important;
+          box-shadow: 0 4px 16px ${paletaCor.glow} !important;
+        }
+        .catalogo-luxury-page .cat-floating-cart-pill {
+          border-color: ${paletaCor.primaria} !important;
+          box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45), 0 0 25px ${paletaCor.glow} !important;
+        }
+        .catalogo-luxury-page .floating-cart-badge {
+          background: ${paletaCor.primaria} !important;
+          color: #ffffff !important;
+        }
+        .catalogo-luxury-page .floating-cart-sub {
+          color: ${paletaCor.clara} !important;
+        }
+
+        /* 📑 Abas de Categoria / Modalidades Ativas */
+        .catalogo-luxury-page .modalidade-tab-btn.active {
+          background: ${paletaCor.primaria} !important;
+          border-color: ${paletaCor.primaria} !important;
+          box-shadow: 0 4px 14px ${paletaCor.glow} !important;
+        }
+        .catalogo-luxury-page .modalidade-tab-btn.active .tab-label,
+        .catalogo-luxury-page .modalidade-tab-btn.active .tab-badge {
+          color: #ffffff !important;
+        }
+        .catalogo-luxury-page .modalidade-tab-btn:hover {
+          border-color: ${paletaCor.primaria} !important;
+        }
+
+        /* 📋 Menu Lateral: Categoria Ativa, Destaque e Contador */
+        .catalogo-luxury-page .sidebar-list li.active {
+          background: ${paletaCor.soft} !important;
+          color: ${paletaCor.primaria} !important;
+          border-left: 3px solid ${paletaCor.primaria} !important;
+        }
+        .catalogo-luxury-page .sidebar-list li.active .sidebar-count {
+          background: ${paletaCor.glow} !important;
+          color: ${paletaCor.primaria} !important;
+        }
+        .catalogo-luxury-page .sidebar-title {
+          border-left: 3px solid ${paletaCor.primaria} !important;
+        }
+
+        /* 💰 Preço em Destaque nos Cards */
+        .catalogo-luxury-page .cat-price {
+          color: ${paletaCor.primaria} !important;
+        }
+
+        /* 🌟 Modais de Detalhe, Autocadastro e Finalização */
+        .catalogo-luxury-page .btn-modal-add-cart:not(.already-added),
+        .catalogo-luxury-page .btn-ir-autocadastro,
+        .catalogo-luxury-page .btn-send-whatsapp-checkout,
+        .catalogo-luxury-page .btn-start-shopping {
+          background: linear-gradient(135deg, ${paletaCor.primaria} 0%, ${paletaCor.clara} 100%) !important;
+          color: #ffffff !important;
+          box-shadow: 0 4px 14px ${paletaCor.glow} !important;
+        }
+
+        /* 🔍 Campo de Busca & Seletor de Data */
+        .catalogo-luxury-page .cat-search-field:focus {
+          border-color: ${paletaCor.primaria} !important;
+          box-shadow: 0 0 0 3px ${paletaCor.glow} !important;
+        }
+        .catalogo-luxury-page .cat-date-input-highlight:focus,
+        .catalogo-luxury-page .cat-date-input-highlight {
+          border-color: ${paletaCor.borderSoft} !important;
+        }
+
+        /* 👑 Logotipo e Avatar da Marca */
+        .catalogo-luxury-page .cat-brand-avatar {
+          border-color: ${paletaCor.primaria} !important;
+          background: linear-gradient(135deg, ${paletaCor.soft} 0%, rgba(15, 23, 42, 0.8) 100%) !important;
+        }
+        .catalogo-luxury-page .cat-brand-logo {
+          border-color: ${paletaCor.primaria} !important;
+        }
+
+        /* ❤️ Favoritos */
+        .catalogo-luxury-page .btn-cat-top-favoritos {
+          border-color: ${paletaCor.primaria} !important;
+        }
+        .catalogo-luxury-page .fav-count-pill {
+          background: ${paletaCor.primaria} !important;
+          color: #ffffff !important;
+        }
+
+        /* 🎨 Simulador de Harmonia */
+        .catalogo-luxury-page .btn-open-simulador-harmonia {
+          border-color: ${paletaCor.primaria} !important;
+          color: ${paletaCor.primaria} !important;
+        }
+
+        /* 🛒 Card Selecionado */
+        .catalogo-luxury-page .cat-card.in-cart {
+          border: 1.5px solid ${paletaCor.primaria} !important;
+          box-shadow: 0 4px 16px ${paletaCor.glow} !important;
+        }
+        .catalogo-luxury-page .cart-qty-inline-ctrl {
+          border: 1px solid ${paletaCor.primaria} !important;
+        }
+        .catalogo-luxury-page .badge-decor {
+          border-color: ${paletaCor.primaria} !important;
+          color: ${paletaCor.primaria} !important;
+        }
+      `}</style>
 
       {/* 👑 BARRA DE PRÉVIA ADMINISTRATIVA (VISÍVEL SOMENTE PARA A EQUIPE/ADMINISTRADORA LOGADA) */}
       {usuarioLogado && (

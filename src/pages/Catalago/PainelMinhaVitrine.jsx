@@ -41,6 +41,8 @@ const PainelMinhaVitrine = () => {
   // Upload previews e states
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingCapa, setUploadingCapa] = useState(false);
+  const [salvandoCor, setSalvandoCor] = useState(false);
+  const [avisoCor, setAvisoCor] = useState('');
 
   // Estados de Diagnóstico do Acervo (Health Score)
   const [metricasEstoque, setMetricasEstoque] = useState({
@@ -183,11 +185,37 @@ const PainelMinhaVitrine = () => {
     };
   }, [tituloLoja, whatsapp, metricasEstoque, logoUrl, capaUrl]);
 
+  // Troca instantânea e auto-save da cor de destaque do catálogo
+  const handleTrocarCor = async (novaCor) => {
+    setCorMarca(novaCor);
+    localStorage.setItem('corMarcaCatalogo', novaCor);
+
+    if (tenantId) {
+      setSalvandoCor(true);
+      try {
+        const refEmpresa = doc(db, "configuracoes_empresa", tenantId);
+        await setDoc(refEmpresa, { 
+          corMarcaCatalogo: novaCor,
+          atualizadoEm: new Date().toISOString()
+        }, { merge: true });
+
+        const nomeCor = CORES_VITRINE.find(c => c.cor === novaCor)?.nome || novaCor;
+        setAvisoCor(`✓ Cor "${nomeCor}" aplicada e salva para o Catálogo!`);
+        setTimeout(() => setAvisoCor(''), 3500);
+      } catch (err) {
+        console.warn("Erro ao auto-salvar cor:", err);
+      } finally {
+        setSalvandoCor(false);
+      }
+    }
+  };
+
   // Salvar configurações
   const handleSalvar = async () => {
     if (!tenantId) return;
     setSalvando(true);
     setSalvoSucesso(false);
+    localStorage.setItem('corMarcaCatalogo', corMarca);
 
     try {
       const refEmpresa = doc(db, "configuracoes_empresa", tenantId);
@@ -525,16 +553,93 @@ const PainelMinhaVitrine = () => {
                     type="button"
                     className={`color-pill-btn ${corMarca === p.cor ? 'active' : ''}`}
                     style={{ backgroundColor: p.cor }}
-                    onClick={() => setCorMarca(p.cor)}
+                    onClick={() => handleTrocarCor(p.cor)}
                     title={`${p.nome} (${p.cor})`}
                   >
                     {corMarca === p.cor && <i className="fas fa-check"></i>}
                   </button>
                 ))}
               </div>
-              <span className="field-help-text">
-                Cor ativa: <strong style={{ color: corMarca }}>{CORES_VITRINE.find(c => c.cor === corMarca)?.nome || corMarca}</strong>
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
+                <span className="field-help-text">
+                  Cor ativa: <strong style={{ color: corMarca }}>{CORES_VITRINE.find(c => c.cor === corMarca)?.nome || corMarca}</strong>
+                </span>
+                {salvandoCor && (
+                  <small style={{ color: '#c5a059', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <i className="fas fa-spinner fa-spin"></i> Salvando cor...
+                  </small>
+                )}
+                {avisoCor && (
+                  <span style={{ color: '#16a34a', fontWeight: 700, fontSize: '0.78rem' }}>
+                    {avisoCor}
+                  </span>
+                )}
+              </div>
+
+              {/* 🌟 PREVIEW EM TEMPO REAL DA COR NA VITRINE */}
+              <div className="mini-vitrine-color-preview-card" style={{
+                marginTop: '14px',
+                padding: '14px 18px',
+                borderRadius: '14px',
+                background: 'var(--fundo-principal, #f8fafc)',
+                border: '1.5px solid var(--borda, #e2e8f0)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '16px',
+                flexWrap: 'wrap'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ 
+                    width: '38px', 
+                    height: '38px', 
+                    borderRadius: '10px', 
+                    background: corMarca, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    color: '#ffffff',
+                    fontSize: '16px',
+                    boxShadow: `0 3px 10px ${corMarca}40`
+                  }}>
+                    <i className="fas fa-magic"></i>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 800, display: 'block', color: 'var(--texto-principal, #0f172a)' }}>
+                      Prévia dos Botões & Preços no Catálogo
+                    </span>
+                    <small style={{ fontSize: '0.73rem', color: 'var(--texto-secundario, #64748b)' }}>
+                      Esta cor personaliza os botões, links, abas ativas e carrinho na vitrine do seu cliente.
+                    </small>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button type="button" style={{
+                    background: corMarca,
+                    color: '#ffffff',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '999px',
+                    fontSize: '0.78rem',
+                    fontWeight: 800,
+                    boxShadow: `0 3px 10px ${corMarca}40`,
+                    cursor: 'default',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <i className="fas fa-plus"></i> Adicionar
+                  </button>
+                  <span style={{
+                    color: corMarca,
+                    fontWeight: 900,
+                    fontSize: '0.92rem'
+                  }}>
+                    R$ 180,00
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Título e Descrição */}
