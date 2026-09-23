@@ -170,25 +170,46 @@ const Catalogo = () => {
           });
         }
 
-        // Carrega Estoque e Locações buscando por userId e tenantId em todos os identificadores vinculados
+        // Carrega Estoque e Locações buscando por userId, tenantId e empresaId em todos os identificadores vinculados
         const uidsAlvo = new Set([
           tenantId,
           usuarioLogado?.uid,
           localStorage.getItem('tenantId')
         ].filter(Boolean));
 
+        const rawImp = localStorage.getItem('impersonatingTenant');
+        if (rawImp) {
+          try {
+            const imp = JSON.parse(rawImp);
+            if (imp.uid) uidsAlvo.add(imp.uid);
+            if (imp.originalUid) uidsAlvo.add(imp.originalUid);
+            if (Array.isArray(imp.allUids)) imp.allUids.forEach(u => u && uidsAlvo.add(u));
+          } catch (e) {}
+        }
+
+        try {
+          const userDoc = await getDoc(doc(db, "usuarios", tenantId));
+          if (userDoc.exists()) {
+            const ud = userDoc.data();
+            if (ud.tenantId) uidsAlvo.add(ud.tenantId);
+            if (ud.empresaId) uidsAlvo.add(ud.empresaId);
+          }
+        } catch (e) {}
+
         const mapEstoque = new Map();
         const mapLoc = new Map();
 
         for (const uId of uidsAlvo) {
-          const [snapEU, snapET, snapLU, snapLT] = await Promise.all([
+          const [snapEU, snapET, snapEE, snapLU, snapLT, snapLE] = await Promise.all([
             getDocs(query(collection(db, "estoque"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
             getDocs(query(collection(db, "estoque"), where("tenantId", "==", uId))).catch(() => ({ docs: [] })),
+            getDocs(query(collection(db, "estoque"), where("empresaId", "==", uId))).catch(() => ({ docs: [] })),
             getDocs(query(collection(db, "locacoes"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
-            getDocs(query(collection(db, "locacoes"), where("tenantId", "==", uId))).catch(() => ({ docs: [] }))
+            getDocs(query(collection(db, "locacoes"), where("tenantId", "==", uId))).catch(() => ({ docs: [] })),
+            getDocs(query(collection(db, "locacoes"), where("empresaId", "==", uId))).catch(() => ({ docs: [] }))
           ]);
-          [...snapEU.docs, ...snapET.docs].forEach(d => mapEstoque.set(d.id, { id: d.id, ...d.data() }));
-          [...snapLU.docs, ...snapLT.docs].forEach(d => mapLoc.set(d.id, { id: d.id, ...d.data() }));
+          [...snapEU.docs, ...snapET.docs, ...snapEE.docs].forEach(d => mapEstoque.set(d.id, { id: d.id, ...d.data() }));
+          [...snapLU.docs, ...snapLT.docs, ...snapLE.docs].forEach(d => mapLoc.set(d.id, { id: d.id, ...d.data() }));
         }
 
         const itens = Array.from(mapEstoque.values())

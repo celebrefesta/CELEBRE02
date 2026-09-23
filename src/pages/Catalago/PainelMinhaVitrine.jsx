@@ -122,20 +122,40 @@ const PainelMinhaVitrine = () => {
           setMsgManutencao(d.msgManutencaoCatalogo || 'Estamos atualizando nosso acervo de peças e temas. Fale conosco no WhatsApp para atendimento!');
         }
 
-        // 2. Analisa dados do estoque para o Checklist de Prontidão (busca por userId e tenantId)
+        // 2. Analisa dados do estoque para o Checklist de Prontidão (busca por userId, tenantId e empresaId)
         const uidsAlvo = new Set([
           tenantId,
           usuarioLogado?.uid,
           localStorage.getItem('tenantId')
         ].filter(Boolean));
 
+        const rawImp = localStorage.getItem('impersonatingTenant');
+        if (rawImp) {
+          try {
+            const imp = JSON.parse(rawImp);
+            if (imp.uid) uidsAlvo.add(imp.uid);
+            if (imp.originalUid) uidsAlvo.add(imp.originalUid);
+            if (Array.isArray(imp.allUids)) imp.allUids.forEach(u => u && uidsAlvo.add(u));
+          } catch (e) {}
+        }
+
+        try {
+          const userDoc = await getDoc(doc(db, "usuarios", tenantId));
+          if (userDoc.exists()) {
+            const ud = userDoc.data();
+            if (ud.tenantId) uidsAlvo.add(ud.tenantId);
+            if (ud.empresaId) uidsAlvo.add(ud.empresaId);
+          }
+        } catch (e) {}
+
         const mapEstoque = new Map();
         for (const uId of uidsAlvo) {
-          const [snapU, snapT] = await Promise.all([
+          const [snapU, snapT, snapE] = await Promise.all([
             getDocs(query(collection(db, "estoque"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
-            getDocs(query(collection(db, "estoque"), where("tenantId", "==", uId))).catch(() => ({ docs: [] }))
+            getDocs(query(collection(db, "estoque"), where("tenantId", "==", uId))).catch(() => ({ docs: [] })),
+            getDocs(query(collection(db, "estoque"), where("empresaId", "==", uId))).catch(() => ({ docs: [] }))
           ]);
-          [...snapU.docs, ...snapT.docs].forEach(docItem => mapEstoque.set(docItem.id, docItem.data()));
+          [...snapU.docs, ...snapT.docs, ...snapE.docs].forEach(docItem => mapEstoque.set(docItem.id, docItem.data()));
         }
 
         let comFoto = 0;
