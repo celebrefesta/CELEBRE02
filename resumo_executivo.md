@@ -3,7 +3,7 @@
 > **Plataforma SaaS Multi-Tenant Especializada em Gestão de Locação de Acervo, Decoração e Pegue & Monte**  
 > *Documento Executivo e Técnico Definitivo cobrindo Arquitetura, Módulos, Segurança, Workflows Operacionais, Blindagem de UI/UX e Histórico de Evolução.*  
 > **Tecnologias**: React 19 / 18 + Vite 7 · Firebase Firestore & Auth · Mercado Pago SDK · Vanilla CSS Luxury Design System (`#c5a059`, Glassmorphism, Dark/Light Mode)  
-> **Data de Referência**: 22 de Setembro / 2026  
+> **Data de Referência**: 23 de Setembro / 2026  
 
 ---
 
@@ -259,8 +259,35 @@ graph TD
 
 ---
 
-### 🛍️ 6.11. Catálogo Virtual & Vitrine (`/src/pages/Catalago/`)
-- **Vitrine Virtual Público (`Catalago.jsx`)**: Galeria dinâmica com foto principal e visualização de itens inclusos em cenários completos, pronta para envio de orçamentos pelo WhatsApp.
+### 🛍️ 6.11. Catálogo Boutique Online & Painel Minha Vitrine (`/src/pages/Catalago/`)
+
+O módulo de Catálogo do Celebre opera em duas frentes complementares: o **Painel Administrativo da Vitrine** (gestão interna pela decoradora) e o **Catálogo Boutique de Luxo** (vitrine pública para os clientes finais).
+
+- **1. Painel de Controle Oficial da Vitrine (`PainelMinhaVitrine.jsx` / `PainelMinhaVitrine.css`)**:
+  - **Cards de Indicadores (KPIs) Blindados**: 1 linha no Desktop / 2 colunas no Mobile (`.clientes-stats-grid`):
+    - *Status da Vitrine* (Ativa ou Pausada com badge em tempo real);
+    - *Saúde da Vitrine (Health Score %)*: Diagnóstico automatizado da prontidão da loja (fotos, preços, contatos);
+    - *Peças Publicadas* (total de itens visíveis no catálogo);
+    - *Pedidos Recebidos* (volume gerado pela vitrine).
+  - **Dock de Publicação & Compartilhamento**: Chave rápida de pausa/manutenção, link canônico oficial gerado com 1-click para cópia e botão para disparo direto de convite no WhatsApp.
+  - **Customização de Identidade Visual**:
+    - Seletor de **9 Paletas de Cores de Luxo** (*Dourado Real, Rosa Quartz, Pink Vibrante, Lilás Lavanda, Terracota Chic, Verde Botânico, Azul Celeste, Azul Royal e Ônix Minimal*);
+    - Upload inteligente e comprimido (< 35KB) de **Logotipo** e **Banner de Capa**;
+    - Título, subtítulo institucional e mensagem personalizada de manutenção.
+  - **Políticas Comerciais & 6 Regras de Negócio**:
+    - **Aviso de Sinal / Caução**: Políticas claras para reserva de data e garantia com atalhos de 1 clique (*50% Sinal*, *Caução Obrigatória*, etc.);
+    - **Ocultar Preços (Modo Cotação "Sob Consulta")**: Alterna a vitrine para modelo sob medida sem exibir valores monetários;
+    - **Cidades & Regiões Atendidas**: Delimitação clara do raio geográfico de atendimento;
+    - **Template Dinâmico de WhatsApp**: Editor de mensagens com tags `{cliente}`, `{itens}`, `{data}`, `{total}`, `{empresa}` e `{condicoes}`;
+    - **Destaques da Vitrine**: Criação de coleções especiais estreladas;
+    - **Gerenciador de Peças na Vitrine**: Nova aba com busca, filtros por status e botões de 1 clique para ligar/desligar a visibilidade de itens no catálogo (`visivelCatalogo`) e eleger destaques (`destaqueCatalogo`).
+
+- **2. Catálogo Boutique de Luxo Público (`Catalago.jsx` / `Catalago.css`)**:
+  - **Menu Lateral Oficial (`.cat-sidebar`)**: Categorias consolidadas, modalidades (*Pegue & Monte*, *Decorações*) e abas de coleções exclusivas.
+  - **Modo Cotação Inteligente**: Exibição harmônica de `Sob Consulta` nos cards, modal, carrinho e envio WhatsApp quando ativado.
+  - **Badge de Regiões**: Destaque geográfico imediato `🚚 Atendemos: [...]` no topo da vitrine.
+  - **Simulador de Cenários / Painel**: Montagem visual de acervo com exportação de imagem em alta resolução e compartilhamento direto.
+  - **Carrinho Flutuante & Checkout WhatsApp**: Gaveta com checagem de disponibilidade por data, resumo financeiro, nota de caução e geração instantânea de link WhatsApp.
 
 ---
 
@@ -324,6 +351,40 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 ---
 
 ## 📅 9. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
+
+### 🗓️ Sessão: 23/09/2026 — 16h00 às 18h30 (BRT)
+- ✅ **👑 Painel Minha Vitrine & 6 Novas Regras Comerciais do Catálogo Boutique (`PainelMinhaVitrine.jsx`, `PainelMinhaVitrine.css`, `Catalago.jsx`, `Catalago.css`)**:
+  - **Novo Painel de Controle Oficial da Vitrine (`/minha-vitrine`)**:
+    - Acessível diretamente pelo item "Catálogo" do menu lateral, com proteção de permissão por `TravaSeguranca`.
+    - **Cards KPI Blindados**: *Status da Vitrine*, *Saúde da Vitrine (Health Score)*, *Peças Publicadas* e *Pedidos Recebidos* (1 linha no Desktop / 2 colunas no Mobile).
+    - **Dock de Compartilhamento Canônico**: Link oficial gerado dinamicamente para o domínio oficial `celebrefesta.com.br`, botão de cópia de 1 clique e botão de disparo de convite direto no WhatsApp.
+    - **Identidade da Marca**: 9 paletas exclusivas de cores de luxo, upload inteligente de logotipo e banner, títulos, descrições e mensagem personalizada de manutenção.
+  - **6 Novas Regras Comerciais & Funcionalidades da Vitrine**:
+    1. **🛡️ Aviso de Sinal / Caução**: Campo com atalhos de 1 clique (`50% Sinal`, `Caução Obrigatória`, etc.) que renderiza um card estilizado com ícone de escudo no carrinho do catálogo.
+    2. **🏷️ Ocultar Preços / Modo Cotação "Sob Consulta"**: Chave para vitrines sob medida, substituindo valores monetários pelo selo sofisticado `Sob Consulta` nos cards, modal, carrinho e resumo do WhatsApp.
+    3. **🚚 Cidades & Regiões Atendidas**: Delimitação de atendimento com exibição de badge `🚚 Atendemos: [...]` no topo do catálogo e no carrinho.
+    4. **📲 Personalização da Mensagem do WhatsApp com Tags Dinâmicas**: Editor visual de templates com tags `{cliente}`, `{itens}`, `{data}`, `{total}`, `{empresa}` e `{condicoes}`, além de botão de restauração do modelo padrão.
+    5. **⭐ Destaques da Vitrine (Coleções Especiais)**: Criação de abas exclusivas no menu lateral do catálogo, badge dourado na foto do item e ordenação prioritária na vitrine.
+    6. **📦 Gerenciador de Visibilidade do Acervo na Vitrine**: Nova aba com busca, filtros por status e botões de alternância instantânea de visibilidade (`[ 👁️ Visível / 🚫 Oculta ]`) e destaque (`[ ⭐ Destaque / ☆ Normal ]`) com atualização no Firestore.
+  - **Blindagem e Escopo Total de CSS**: Estilos 100% isolados sob `.minha-vitrine-container` e `.catalogo-luxury-page` sem afetar nenhuma outra tela.
+  - **Deploy & Homologação de Produção**: `npm run build` aprovado com 0 erros (15.20s), sincronizado no GitHub e publicado no Firebase Hosting com suporte ao domínio oficial `celebrefesta.com.br`.
+
+---
+
+# 🚨 ATENÇÃO: ROTEIRO PRÁTICO DE HOMOLOGAÇÃO E TESTES DA ÚLTIMA ATUALIZAÇÃO DO CATÁLOGO
+
+Para testar e homologar a última versão do Catálogo e do Painel Minha Vitrine, siga o roteiro passo a passo:
+
+1. **Acesso ao Painel**: No menu lateral esquerdo, clique em **Catálogo** (redireciona para `/minha-vitrine`). Confira os 4 KPIs no topo e as 2 abas centrais.
+2. **Aviso de Sinal / Caução**: Na aba *Identidade, Regras & Comunicação*, role até *Políticas Comerciais*, clique no atalho `50% de Sinal`, salve e abra o catálogo. Adicione uma peça e confira o card `🛡️ Condição de Reserva` no carrinho.
+3. **Modo Ocultar Preços**: Ative o botão *Ocultar Preços das Peças*, salve e recarregue o catálogo. Verifique se o texto `Sob Consulta` substituiu os preços nos cards, no modal da peça, no carrinho e no total.
+4. **Cidades Atendidas**: Preencha o campo *Cidades e Regiões Atendidas*, salve e confira o badge `🚚 Atendemos: [...]` no cabeçalho do catálogo.
+5. **Mensagem do WhatsApp**: Edite o texto usando as tags dinâmicas (`{cliente}`, `{itens}`, `{total}`), salve e faça uma simulação de envio de pedido pelo carrinho.
+6. **Destaques da Vitrine**: Na aba *[ 📦 Gerenciar Peças na Vitrine ]*, marque 2 peças com o botão `[ ⭐ Destaque ]`. Abra o catálogo e veja o filtro `⭐ Destaques` no menu lateral e os selos dourados nas fotos.
+7. **Visibilidade do Acervo**: Desative uma peça clicando em `[ 🚫 Oculta ]`. Abra a vitrine e confirme que a peça não aparece na listagem dos clientes.
+8. **Validação de Domínio**: Confirme que tudo está rodando sob `https://celebrefesta.com.br` com links canônicos perfeitos.
+
+---
 
 ### 🗓️ Sessão: 22/09/2026 — 08h30 às 10h15 (BRT)
 - ✅ **🖼️ Compactação dos Cards de Acervo do Moodboard no Controle Geral (`ControleGeral.jsx`, `ControleGeral.css`)**:
