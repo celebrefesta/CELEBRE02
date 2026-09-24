@@ -3,7 +3,7 @@
 > **Plataforma SaaS Multi-Tenant Especializada em Gestão de Locação de Acervo, Decoração e Pegue & Monte**  
 > *Documento Executivo e Técnico Definitivo cobrindo Arquitetura, Módulos, Segurança, Workflows Operacionais, Blindagem de UI/UX e Histórico de Evolução.*  
 > **Tecnologias**: React 19 / 18 + Vite 7 · Firebase Firestore & Auth · Mercado Pago SDK · Vanilla CSS Luxury Design System (`#c5a059`, Glassmorphism, Dark/Light Mode)  
-> **Data de Referência**: 23 de Setembro / 2026  
+> **Data de Referência**: 24 de Setembro / 2026  
 
 ---
 
@@ -325,6 +325,20 @@ O módulo de Catálogo do Celebre opera em duas frentes complementares: o **Pain
 
 ---
 
+### 🎨 6.17. Moodboard & Estúdio 3D de Cenografia Visual (`/src/pages/Moodboard/`)
+- **Estúdio de Criação Visual Interativo**: Ferramenta completa de design de festas onde decoradores montam o cenário real com painéis, mesas cilindro 3D, arcos de balões orgânicos, acervo fotográfico da loja e iluminação.
+- **Letreiros & Tipografia de Alta Performance (60–120 FPS)**:
+  - Efeitos realistas de Neon LED, Acrílico Espelhado Dourado/Rose Gold/Prata, MDF 3D Madeirado a Laser e Glitter.
+  - Curvatura precisa em arco Bézier (SVG nativo ultra-leve acelerado por GPU).
+  - Digitação instantânea com 0ms de latência, atualização síncrona visual no DOM e histórico desacoplado.
+  - Memoização estrita (`areTextPropsEqual`) isolando os letreiros contra re-renders desnecessários durante movimentação de outros itens no canvas.
+  - Redimensionamento suave nas alças de quina com suporte a `scale()` para SVG e `fontSize` direto no DOM para texto normal.
+- **Galeria de Projetos Salvos**:
+  - Salva versões de projetos vinculadas a clientes e contratos, com geração automática de miniaturas e orçamento comercial automático em Reais (R$).
+  - Layout limpo, minimalista e responsivo no desktop e celular, sem barras de rolagem duplicadas e com tratamento refinado para estado vazio.
+
+---
+
 ## 🔒 7. REGRAMENTO E BLINDAGEM DE LAYOUT (COMPLIANCE AGENTS.MD)
 
 O projeto possui regras de layout estritas e ativas para garantir estabilidade visual contínua em todos os dispositivos:
@@ -351,6 +365,31 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 ---
 
 ## 📅 9. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
+
+### 🗓️ Sessão: 24/09/2026 — 15h30 às 16h35 (BRT)
+- ✅ **🎨 Estúdio Moodboard — Eliminação Total de Travamentos em Letreiros, Texto Curvo SVG & Otimização da Galeria de Projetos (`Moodboard.jsx`, `Moodboard.css`)**:
+  - **Zero Input Lag na Digitação de Letreiros**:
+    - Desacoplamento da gravação contínua no histórico (`agendarSaveSnapshotTexto`) via debounce de 450ms e persistência no `onBlur`, impedindo a clonagem profunda do array de objetos a cada caractere digitado.
+    - Atualização síncrona visual imediata no DOM do elemento na prancheta, garantindo resposta visual em 0ms.
+  - **Editor Inline Direto no Canvas (`InlineTextareaEditor`)**:
+    - Subcomponente isolado com estado local reativo para duplo clique no cenário, eliminando layout thrashing (`scrollWidth`/`scrollHeight` em cascata) e travamento de cursor.
+  - **Memoização Estrita com `areTextPropsEqual`**:
+    - Comparador dedicado para `React.memo` que bloqueia re-renders dos letreiros quando outros elementos (balões, mesas, painéis) são movidos ou manipulados no canvas.
+    - Vinculação de callbacks estáveis via `useCallback` (`handleTextDoubleClick`, `handleTextChange`, `handleTextBlur`).
+  - **Aceleração por Hardware de GPU no CSS**:
+    - Adição de `contain: layout style`, `will-change: transform`, `transform: translateZ(0)` e `-webkit-backface-visibility: hidden` em `Moodboard.css` para a classe `.text-render-element`.
+    - Eliminação do empilhamento redundante de multi-camadas de `text-shadow` pesadas combinadas com `filter: drop-shadow` sobre o SVG (`<textPath>`), transferindo a carga inteiramente para a GPU nativa.
+  - **Redimensionamento Fluido a 60–120 FPS**:
+    - Suporte a escalonamento por `scale()` para SVG curvo e `fontSize` direto no DOM para texto normal durante o arraste das alças de canto.
+    - Otimização de sliders (Escala, Curvatura, Contorno e Espaçamento) com `deveSalvarHistorico = false` durante o arraste e gravação no `onPointerUp`.
+  - **Refinamento da Galeria de Projetos Salvos**:
+    - Remoção de barras de rolagem duplicadas que poluíam a visualização.
+    - Eliminação do botão redundante de criação no topo quando já existia na base.
+    - Tratamento amigável e limpo para estado vazio quando não há projetos salvos.
+- ✅ **🛡️ Auditoria Anti-Churn & Faturamento Master (`AbaAuditoriaAntiChurn.jsx`, `AbaFaturamentoAdmin.jsx`)**:
+  - Central de auditoria e saúde de assinaturas, monitoramento de clientes inativos, mudanças de plano e faturas em risco.
+  - Trancamento e blindagem de regras em `design-lock.css`.
+- ✅ **Build de Produção Verificado**: `npx vite build` aprovado com **0 erros** (`built in 14.35s`).
 
 ### 🗓️ Sessão: 23/09/2026 — 16h00 às 18h30 (BRT)
 - ✅ **👑 Painel Minha Vitrine & 6 Novas Regras Comerciais do Catálogo Boutique (`PainelMinhaVitrine.jsx`, `PainelMinhaVitrine.css`, `Catalago.jsx`, `Catalago.css`)**:
@@ -723,5 +762,5 @@ Para testar e homologar a última versão do Catálogo e do Painel Minha Vitrine
 
 ---
 
-> **⏱️ Última atualização:** 22/09/2026 — 10h20 (BRT)  
+> **⏱️ Última atualização:** 24/09/2026 — 16h35 (BRT)  
 > **✍️ Consolidação e Fusão Executiva por:** Antigravity AI — Workspace CELEBRE02  

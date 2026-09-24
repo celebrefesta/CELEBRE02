@@ -16,7 +16,6 @@ import {
 import { enviarAvisoInatividadeEmail } from '../../utils/emailInatividadeService';
 import { enviarConfirmacaoReativacaoEmail } from '../../utils/emailReativacaoService';
 import AbaFaturamentoAdmin from './AbaFaturamentoAdmin';
-import AbaAuditoriaAntiChurn from './AbaAuditoriaAntiChurn';
 import './ControleGeral.css';
 
 // 🌿 Função auxiliar para renderizar SVG com cor dourada nos cards de admin
@@ -2032,19 +2031,6 @@ const ControleGeral = () => {
         </button>
         <button 
           type="button"
-          className={`cg-main-tab-btn ${abaPrincipal === 'auditoria' ? 'active' : ''}`}
-          onClick={() => setAbaPrincipal('auditoria')}
-        >
-          <i className="fas fa-satellite-dish"></i>
-          <span className="cg-tab-text-full">Auditoria Global ao Vivo</span>
-          <span className="cg-tab-text-short">Auditoria Live</span>
-          <span className="cg-tab-badge green">
-            <span className="cg-tab-badge-full">🟢 AO VIVO</span>
-            <span className="cg-tab-badge-short"><i className="fas fa-bolt"></i></span>
-          </span>
-        </button>
-        <button 
-          type="button"
           className={`cg-main-tab-btn ${abaPrincipal === 'moodboard' ? 'active' : ''}`}
           onClick={() => { setAbaPrincipal('moodboard'); carregarItensMoodboard(); }}
         >
@@ -2064,15 +2050,6 @@ const ControleGeral = () => {
         <AbaFaturamentoAdmin 
           clientes={clientes} 
           onAbrirSuporteCliente={abrirVisualizadorSuporte} 
-        />
-      ) : abaPrincipal === 'auditoria' ? (
-        <AbaAuditoriaAntiChurn
-          clientes={clientes}
-          planos={planos}
-          onAbrirSuporteCliente={abrirVisualizadorSuporte}
-          entrarModoSuporte={entrarModoSuporte}
-          onProrrogarTeste={prorrogarTesteDias}
-          onAtualizarDados={carregarDados}
         />
       ) : abaPrincipal === 'moodboard' ? (
         <div className="cg-moodboard-manager">

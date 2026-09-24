@@ -466,10 +466,45 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
 
   const filtroAtivoObj = listaFiltrosStatus.find(f => f.id === filtroStatus) || listaFiltrosStatus[0];
 
+  // 🏥 Badge de Saúde e Inatividade do Cliente
+  const renderHealthBadge = (clienteObj) => {
+    if (!clienteObj) return null;
+    const status = clienteObj.status;
+    if (status === 'suspenso') {
+      return (
+        <span className="fat-health-badge badge-suspenso" title="Conta suspensa por inatividade prolongada (180+ dias)">
+          <i className="fas fa-pause-circle"></i> Suspenso
+        </span>
+      );
+    }
+    if (status === 'risco') {
+      return (
+        <span className="fat-health-badge badge-risco" title="Em risco de cancelamento (cliente sem acessar há dias)">
+          <i className="fas fa-heartbeat"></i> Em Risco
+        </span>
+      );
+    }
+    if (status === 'vencendo') {
+      return (
+        <span className="fat-health-badge badge-vencendo" title="Período de teste gratuito vencendo">
+          <i className="fas fa-hourglass-half"></i> Teste Vencendo
+        </span>
+      );
+    }
+    if (status === 'bloqueado') {
+      return (
+        <span className="fat-health-badge badge-bloqueado" title="Conta bloqueada por vencimento">
+          <i className="fas fa-lock"></i> Bloqueado
+        </span>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="cg-faturamento-container fade-in">
       
-      {/* 🌟 BARRA SUPERIOR DE KPI EXECUTIVO (3 Colunas x 2 Linhas: 3 Cards na mesma linha) */}
+      {/* 🌟 BARRA SUPERIOR DE KPI EXECUTIVO (6 Cards em 1 Linha Única no Desktop) */}
       <div className="cg-fat-kpi-grid">
         
         {/* CARD 1: RECEITA TOTAL QUITADA */}
@@ -826,9 +861,12 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
                         {/* EMPRESA & CLIENTE */}
                         <td className="fat-col-empresa">
                           <div className="fat-empresa-info">
-                            <strong className="fat-empresa-nome" title={fat.empresaNome}>
-                              {fat.empresaNome}
-                            </strong>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              <strong className="fat-empresa-nome" title={fat.empresaNome}>
+                                {fat.empresaNome}
+                              </strong>
+                              {renderHealthBadge(fat.clienteObj)}
+                            </div>
                             <span className="fat-empresa-email" title={fat.email}>
                               {fat.email}
                             </span>
@@ -1044,7 +1082,10 @@ const AbaFaturamentoAdmin = ({ clientes = [], onAbrirSuporteCliente }) => {
 
                     {/* Linha 2: Empresa & Contatos */}
                     <div className="cg-fat-mcard-empresa">
-                      <strong className="fat-empresa-nome">{fat.empresaNome}</strong>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <strong className="fat-empresa-nome">{fat.empresaNome}</strong>
+                        {renderHealthBadge(fat.clienteObj)}
+                      </div>
                       <div className="cg-fat-mcard-contato-row">
                         <span className="fat-empresa-email">
                           <i className="fas fa-envelope"></i> {fat.email}

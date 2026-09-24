@@ -14,11 +14,12 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Inicializa Firestore com persistência de cache moderna multi-abas (Zero warnings)
+// Inicializa Firestore com persistência de cache moderna multi-abas e auto-detecção resiliente de rede
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager()
-  })
+  }),
+  experimentalAutoDetectLongPolling: true
 });
 
 export const auth = getAuth(app); 

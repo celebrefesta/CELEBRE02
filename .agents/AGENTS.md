@@ -63,6 +63,7 @@
   - `🔒 Relatórios` (`Relatorios.css`, `PedidosTab.css`, `EstoqueTab.css`, `ClientesTab.css`, `FinanceiroTab.css`)
   - `🔒 Catálogo Boutique de Luxo & Auto-Cadastro` (`Catalago.css`, `AutoCadastro.css`)
   - `🔒 Gerenciar Planos Master` (`AdminPlanos.css`, `AdminPlanos.jsx`)
+  - `🔒 Faturas & Auditoria de Pagamentos` (`AbaFaturamentoAdmin.css`, `AbaFaturamentoAdmin.jsx`)
   - `🔒 Sistema Global de Cards KPI` (1 linha desktop / 2 colunas mobile)
   - `🔒 Motor Global de Cores Dinâmicas da Marca` (`src/utils/themeUtils.js` e `design-lock.css`)
 
@@ -139,6 +140,22 @@
   - Linha 2 (Par 1): `Tipo: Todos` + `Status: Todos` (2 colunas simétricas).
   - Linha 3 (Par 2): `Mais Recentes` + `Limpar Filtros` (2 colunas simétricas).
   - **PROIBIDO**: Deixar qualquer botão de ordenação ou filtro isolado ocupando uma linha inteira sozinho.
+
+## 14. 🔒 Blindagem Específica de Faturas & Auditoria de Pagamentos (`AbaFaturamentoAdmin.css`, `AbaFaturamentoAdmin.jsx`, `design-lock.css`)
+- **Cards de KPI no Desktop (`> 900px`)**:
+  - Grid de **6 Colunas em 1 Linha Única Horizontal** (`grid-template-columns: repeat(6, 1fr) !important;`).
+  - Estrutura vertical limpa de 3 linhas (título em caixa alta, valor com ícone compacto e micro-badge subtítulo).
+- **Cards de KPI no Mobile (`<= 900px`)**:
+  - Grid de **3 Colunas x 2 Linhas** (`grid-template-columns: repeat(3, 1fr) !important;`) com padding e tipografia calibrados.
+- **Barra de Filtros & Gaveta Mobile (`<= 900px`)**:
+  - Busca 100% no topo.
+  - Ações em 2 colunas simétricas (`[ 🔄 Atualizar ]` e `[ 📥 Exportar CSV ]`) + botão largo de destaque `[ 📄 Relatório PDF ]` em largura total.
+  - Gaveta inline expansível acoplada ao trigger `.cg-fat-btn-trigger-gaveta` para alternar entre status sem poluir o topo.
+- **Visualização de Dados no Mobile**:
+  - Tabela tradicional desktop estritamente oculta (`display: none !important;`).
+  - Cards mobile elegantes com borda indicativa de status, dados de contato da empresa, badge de saúde da assinatura (`[🔴 Em Risco]`, `[⏸️ Suspenso]`, `[⏳ Teste Vencendo]`, `[🔒 Bloqueado]`), detalhes da transação e botões de ação rápidos.
+- **BLOQUEIO DE ALTERAÇÃO INDEVIDA**:
+  - Os arquivos `AbaFaturamentoAdmin.css`, `AbaFaturamentoAdmin.jsx` e seu bloco em `design-lock.css` estão **BLINDADOS E CONGELADOS**. Nenhuma alteração pode ser realizada sem autorização expressa do usuário.
 
 
 

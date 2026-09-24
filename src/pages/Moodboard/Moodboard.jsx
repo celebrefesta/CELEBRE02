@@ -61,7 +61,9 @@ const Icons = {
   Eye: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>,
   EyeOff: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>,
   Sliders: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>,
-  Sun: (props) => <svg {...props} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>
+  Sun: (props) => <svg {...props} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>,
+  X: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
+  Plus: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
 };
 
 // 🎈 Categorias da Galeria de Cenografia & Inspirações (Padrão inicial - atualizado dinamicamente via Firestore)
@@ -3005,6 +3007,106 @@ const ElementoOrnamentoSVG = React.memo(({ item, customOrnaments = {} }) => {
   );
 });
 
+// ✍️ Editor Inline Ultra-Fluido Direto na Prancheta (Zero Latência de Digitação)
+const InlineTextareaEditor = React.memo(({ item, onChange, onBlur }) => {
+  const [val, setVal] = useState(item.content || '');
+  const timerRef = useRef(null);
+
+  const handleChange = (e) => {
+    const nextVal = e.target.value;
+    setVal(nextVal);
+    e.target.style.width = Math.max(100, e.target.scrollWidth + 12) + 'px';
+    e.target.style.height = Math.max(36, e.target.scrollHeight) + 'px';
+
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      onChange(nextVal);
+    }, 45);
+  };
+
+  const handleBlur = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    onChange(val);
+    onBlur();
+  };
+
+  const textShadow = item.neonGlow > 0
+    ? `0 0 4px ${item.neonColor || item.color}, 0 0 10px ${item.neonColor || item.color}, 0 0 ${Math.min(item.neonGlow, 30)}px ${item.neonColor || item.color}`
+    : (item.shadow > 0 ? `2px 2px ${item.shadow}px rgba(0,0,0,0.5)` : 'none');
+
+  return (
+    <textarea
+      autoFocus
+      wrap="off"
+      value={val}
+      onFocus={(e) => {
+        const v = e.target.value;
+        e.target.setSelectionRange(v.length, v.length);
+        e.target.style.width = Math.max(100, e.target.scrollWidth + 12) + 'px';
+        e.target.style.height = Math.max(36, e.target.scrollHeight) + 'px';
+      }}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      style={{
+        minWidth: '100px',
+        width: item.content ? 'auto' : '150px',
+        height: 'auto',
+        fontSize: `${Number(item.fontSize || 48)}px`,
+        color: item.color,
+        fontFamily: item.fontFamily,
+        fontWeight: item.fontWeight,
+        fontStyle: item.fontStyle,
+        textAlign: item.textAlign,
+        letterSpacing: item.letterSpacing ? `${item.letterSpacing}px` : undefined,
+        WebkitTextStroke: item.strokeWidth > 0 ? `${item.strokeWidth}px ${item.strokeColor}` : undefined,
+        paintOrder: 'stroke fill',
+        background: 'rgba(255,255,255,0.95)',
+        border: '2px dashed #0f172a',
+        borderRadius: '6px',
+        outline: 'none',
+        resize: 'none',
+        overflow: 'hidden',
+        padding: '5px 10px',
+        lineHeight: '1.2',
+        whiteSpace: 'pre',
+        textShadow,
+        zIndex: 9999
+      }}
+    />
+  );
+});
+
+// Comparador Estrito para React.memo: Impede re-renders do letreiro quando outros itens se movem no canvas
+const areTextPropsEqual = (prev, next) => {
+  if (prev.isEditing !== next.isEditing) return false;
+  const p = prev.item;
+  const n = next.item;
+  if (p === n) return true;
+  if (!p || !n) return false;
+  return (
+    p.uniqueId === n.uniqueId &&
+    p.content === n.content &&
+    p.fontSize === n.fontSize &&
+    p.color === n.color &&
+    p.neonColor === n.neonColor &&
+    p.neonGlow === n.neonGlow &&
+    p.neon === n.neon &&
+    p.material === n.material &&
+    p.curvatura === n.curvatura &&
+    p.fontFamily === n.fontFamily &&
+    p.fontWeight === n.fontWeight &&
+    p.fontStyle === n.fontStyle &&
+    p.textAlign === n.textAlign &&
+    p.letterSpacing === n.letterSpacing &&
+    p.strokeWidth === n.strokeWidth &&
+    p.strokeColor === n.strokeColor &&
+    p.placaFundo === n.placaFundo &&
+    p.textureUrl === n.textureUrl &&
+    p.textureScale === n.textureScale &&
+    p.shadow === n.shadow
+  );
+};
+
 // ✍️ Componente Avançado de Tipografia, Letreiros, Texto Curvo & Materiais de Festa
 const ElementoTextoPersonalizado = React.memo(({ item, isEditing, onDoubleClick, onChange, onBlur }) => {
   const material = item.material || 'none';
@@ -3016,8 +3118,11 @@ const ElementoTextoPersonalizado = React.memo(({ item, isEditing, onDoubleClick,
   const placaFundo = item.placaFundo || 'nenhuma';
   const fontSize = Number(item.fontSize || 48);
   const letterSpacing = Number(item.letterSpacing || 0);
-  const textShadow = item.neonGlow > 0
-    ? `0 0 4px ${item.neonColor || item.color}, 0 0 10px ${item.neonColor || item.color}, 0 0 ${item.neonGlow}px ${item.neonColor || item.color}, 0 0 ${item.neonGlow * 1.8}px ${item.neonColor || item.color}`
+
+  const neonGlowVal = Number(item.neonGlow || 0);
+  const neonColorVal = item.neonColor || item.color || '#ec4899';
+  const textShadow = neonGlowVal > 0
+    ? `0 0 4px ${neonColorVal}, 0 0 10px ${neonColorVal}, 0 0 ${Math.min(neonGlowVal, 30)}px ${neonColorVal}`
     : (item.shadow > 0 ? `2px 2px ${item.shadow}px rgba(0,0,0,0.5)` : 'none');
 
   let materialClass = '';
@@ -3030,7 +3135,7 @@ const ElementoTextoPersonalizado = React.memo(({ item, isEditing, onDoubleClick,
 
   const isCustomTex = material === 'custom_texture' || !!textureUrl;
 
-  // 🌈 Renderizador de Texto Curvo SVG (Com Fórmula Bézier Precisa, Sem Inversão e Sem Espaço Vazio)
+  // 🌈 Renderizador de Texto Curvo SVG de Alta Performance (Com Fórmula Bézier Precisa)
   const renderCurvedText = () => {
     const content = (item.content !== undefined && item.content !== null && item.content !== '') ? item.content : ' ';
     const textLen = Math.max(content.length, 3);
@@ -3079,6 +3184,7 @@ const ElementoTextoPersonalizado = React.memo(({ item, isEditing, onDoubleClick,
 
     return (
       <svg
+        className="text-render-element text-render-curved-svg"
         width={svgW}
         height={svgH}
         viewBox={`0 0 ${svgW} ${svgH}`}
@@ -3089,7 +3195,7 @@ const ElementoTextoPersonalizado = React.memo(({ item, isEditing, onDoubleClick,
             ? 'drop-shadow(2px 2px 0px #543110) drop-shadow(3px 4px 4px rgba(45, 20, 5, 0.4))'
             : (material === 'gold_mirror' || material === 'rose_gold' || material === 'silver_mirror' || material === 'glitter_gold')
               ? 'drop-shadow(2px 3px 3px rgba(0,0,0,0.35))'
-              : undefined
+              : (neonGlowVal > 0 ? `drop-shadow(0 0 5px ${neonColorVal}) drop-shadow(0 0 ${Math.min(neonGlowVal, 25)}px ${neonColorVal})` : undefined)
         }}
       >
         <defs>
@@ -3099,40 +3205,50 @@ const ElementoTextoPersonalizado = React.memo(({ item, isEditing, onDoubleClick,
               <image href={textureUrl} x="0" y="0" width={patSize} height={patSize} preserveAspectRatio="xMidYMid slice" />
             </pattern>
           )}
-          <linearGradient id={`grad-gold-${item.uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#bf953f" />
-            <stop offset="25%" stopColor="#fcf6ba" />
-            <stop offset="50%" stopColor="#b38728" />
-            <stop offset="75%" stopColor="#fbf5b7" />
-            <stop offset="100%" stopColor="#aa771c" />
-          </linearGradient>
-          <linearGradient id={`grad-rose-${item.uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#b76e79" />
-            <stop offset="30%" stopColor="#ffd1dc" />
-            <stop offset="50%" stopColor="#e0a9af" />
-            <stop offset="75%" stopColor="#f7c5cc" />
-            <stop offset="100%" stopColor="#9c4f5a" />
-          </linearGradient>
-          <linearGradient id={`grad-silver-${item.uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#8a8a8a" />
-            <stop offset="25%" stopColor="#ffffff" />
-            <stop offset="50%" stopColor="#a6a6a6" />
-            <stop offset="75%" stopColor="#f5f5f5" />
-            <stop offset="100%" stopColor="#737373" />
-          </linearGradient>
-          <linearGradient id={`grad-mdf-wood-${item.uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#e6be8a" />
-            <stop offset="30%" stopColor="#caa070" />
-            <stop offset="60%" stopColor="#dfb582" />
-            <stop offset="100%" stopColor="#b88652" />
-          </linearGradient>
-          <pattern id={`pat-glitter-${item.uniqueId}`} width="20" height="20" patternUnits="userSpaceOnUse">
-            <rect width="20" height="20" fill="#d4af37" />
-            <circle cx="4" cy="4" r="2" fill="#fff7cc" />
-            <circle cx="14" cy="8" r="2.5" fill="#ffd700" />
-            <circle cx="8" cy="15" r="1.8" fill="#fff" />
-            <circle cx="17" cy="16" r="1.5" fill="#aa771c" />
-          </pattern>
+          {material === 'gold_mirror' && (
+            <linearGradient id={`grad-gold-${item.uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#bf953f" />
+              <stop offset="25%" stopColor="#fcf6ba" />
+              <stop offset="50%" stopColor="#b38728" />
+              <stop offset="75%" stopColor="#fbf5b7" />
+              <stop offset="100%" stopColor="#aa771c" />
+            </linearGradient>
+          )}
+          {material === 'rose_gold' && (
+            <linearGradient id={`grad-rose-${item.uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#b76e79" />
+              <stop offset="30%" stopColor="#ffd1dc" />
+              <stop offset="50%" stopColor="#e0a9af" />
+              <stop offset="75%" stopColor="#f7c5cc" />
+              <stop offset="100%" stopColor="#9c4f5a" />
+            </linearGradient>
+          )}
+          {material === 'silver_mirror' && (
+            <linearGradient id={`grad-silver-${item.uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#8a8a8a" />
+              <stop offset="25%" stopColor="#ffffff" />
+              <stop offset="50%" stopColor="#a6a6a6" />
+              <stop offset="75%" stopColor="#f5f5f5" />
+              <stop offset="100%" stopColor="#737373" />
+            </linearGradient>
+          )}
+          {material === 'mdf_wood' && (
+            <linearGradient id={`grad-mdf-wood-${item.uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#e6be8a" />
+              <stop offset="30%" stopColor="#caa070" />
+              <stop offset="60%" stopColor="#dfb582" />
+              <stop offset="100%" stopColor="#b88652" />
+            </linearGradient>
+          )}
+          {material === 'glitter_gold' && (
+            <pattern id={`pat-glitter-${item.uniqueId}`} width="20" height="20" patternUnits="userSpaceOnUse">
+              <rect width="20" height="20" fill="#d4af37" />
+              <circle cx="4" cy="4" r="2" fill="#fff7cc" />
+              <circle cx="14" cy="8" r="2.5" fill="#ffd700" />
+              <circle cx="8" cy="15" r="1.8" fill="#fff" />
+              <circle cx="17" cy="16" r="1.5" fill="#aa771c" />
+            </pattern>
+          )}
         </defs>
         <text
           fontSize={fontSize}
@@ -3144,10 +3260,6 @@ const ElementoTextoPersonalizado = React.memo(({ item, isEditing, onDoubleClick,
           stroke={mdfStroke}
           strokeWidth={mdfStrokeW}
           paintOrder="stroke fill"
-          style={{
-            textShadow: (!isCustomTex && material === 'none') ? textShadow : undefined,
-            filter: item.neonGlow > 0 ? `drop-shadow(0 0 ${item.neonGlow * 0.7}px ${item.neonColor || item.color})` : undefined
-          }}
         >
           <textPath href={`#${pathId}`} startOffset="50%" textAnchor="middle">
             {content}
@@ -3165,46 +3277,10 @@ const ElementoTextoPersonalizado = React.memo(({ item, isEditing, onDoubleClick,
 
     if (isEditing) {
       return (
-        <textarea
-          autoFocus
-          wrap="off"
-          onFocus={(e) => {
-            const val = e.target.value;
-            e.target.setSelectionRange(val.length, val.length);
-          }}
-          value={item.content}
-          onChange={(e) => {
-            e.target.style.width = '100px';
-            e.target.style.width = (e.target.scrollWidth + 10) + 'px';
-            e.target.style.height = 'auto';
-            e.target.style.height = e.target.scrollHeight + 'px';
-            onChange(e.target.value);
-          }}
+        <InlineTextareaEditor
+          item={item}
+          onChange={onChange}
           onBlur={onBlur}
-          style={{
-            minWidth: '100px',
-            width: item.content ? 'auto' : '150px',
-            height: 'auto',
-            fontSize: `${fontSize}px`,
-            color: item.color,
-            fontFamily: item.fontFamily,
-            fontWeight: item.fontWeight,
-            fontStyle: item.fontStyle,
-            textAlign: item.textAlign,
-            letterSpacing: letterSpacing ? `${letterSpacing}px` : undefined,
-            WebkitTextStroke: strokeWidth > 0 ? `${strokeWidth}px ${strokeColor}` : undefined,
-            paintOrder: 'stroke fill',
-            background: 'rgba(255,255,255,0.95)',
-            border: '2px dashed #0f172a',
-            borderRadius: '6px',
-            outline: 'none',
-            resize: 'none',
-            overflow: 'hidden',
-            padding: '5px 10px',
-            lineHeight: '1.2',
-            whiteSpace: 'pre',
-            textShadow
-          }}
         />
       );
     }
@@ -3223,7 +3299,7 @@ const ElementoTextoPersonalizado = React.memo(({ item, isEditing, onDoubleClick,
     return (
       <div
         onDoubleClick={onDoubleClick}
-        className={materialClass}
+        className={`text-render-element ${materialClass}`}
         style={{
           width: 'max-content',
           height: 'max-content',
@@ -3241,6 +3317,7 @@ const ElementoTextoPersonalizado = React.memo(({ item, isEditing, onDoubleClick,
           padding: '2px 4px',
           lineHeight: '1.05',
           textShadow: (isCustomTex && textureUrl) ? 'none' : textShadow,
+          willChange: 'transform',
           ...customTexStyle
         }}
       >
@@ -3259,7 +3336,7 @@ const ElementoTextoPersonalizado = React.memo(({ item, isEditing, onDoubleClick,
   }
 
   return renderTextBody();
-});
+}, areTextPropsEqual);
 
 // 🚶‍♀️ Componente de Silhueta Humana Vetorial para Escala Real
 const SilhuetaHumanaSVG = React.memo(({ tipo = 'mulher', heightPx = 204 }) => {
@@ -3555,7 +3632,77 @@ const Moodboard = () => {
   const [listaClientes, setListaClientes] = useState([]);
   const [listaLocacoes, setListaLocacoes] = useState([]);
   const [filtroStatusGaleria, setFiltroStatusGaleria] = useState('todos');
+  const [buscaGaleria, setBuscaGaleria] = useState('');
+  const [ordenacaoGaleria, setOrdenacaoGaleria] = useState('recentes');
   const [temaSugestaoAtivo, setTemaSugestaoAtivo] = useState('');
+
+  // 📊 Contadores de status da galeria
+  const statusCountsGaleria = useMemo(() => {
+    const counts = {
+      todos: projetosSalvos.length,
+      rascunho: 0,
+      em_analise: 0,
+      aprovado: 0,
+      em_producao: 0,
+      concluido: 0
+    };
+    projetosSalvos.forEach(p => {
+      const st = p.status || 'rascunho';
+      if (counts[st] !== undefined) counts[st]++;
+      else counts.rascunho++;
+    });
+    return counts;
+  }, [projetosSalvos]);
+
+  // 🔍 Filtro e ordenação dos projetos salvos na galeria
+  const projetosFiltradosGaleria = useMemo(() => {
+    let lista = [...projetosSalvos];
+
+    // Filtro por status
+    if (filtroStatusGaleria !== 'todos') {
+      lista = lista.filter(p => (p.status || 'rascunho') === filtroStatusGaleria);
+    }
+
+    // Busca por texto (nome do projeto, nome do cliente, observações)
+    if (buscaGaleria.trim()) {
+      const termo = buscaGaleria.toLowerCase().trim();
+      lista = lista.filter(p =>
+        (p.nome && p.nome.toLowerCase().includes(termo)) ||
+        (p.clienteNome && p.clienteNome.toLowerCase().includes(termo)) ||
+        (p.cliente?.nome && p.cliente.nome.toLowerCase().includes(termo)) ||
+        (p.observacoes && p.observacoes.toLowerCase().includes(termo))
+      );
+    }
+
+    // Ordenação
+    lista.sort((a, b) => {
+      if (ordenacaoGaleria === 'recentes') {
+        const dataA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+        const dataB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+        return dataB - dataA;
+      }
+      if (ordenacaoGaleria === 'antigos') {
+        const dataA = new Date(a.createdAt || a.updatedAt || 0).getTime();
+        const dataB = new Date(b.createdAt || b.updatedAt || 0).getTime();
+        return dataA - dataB;
+      }
+      if (ordenacaoGaleria === 'az') {
+        return (a.nome || '').localeCompare(b.nome || '', 'pt-BR');
+      }
+      if (ordenacaoGaleria === 'za') {
+        return (b.nome || '').localeCompare(a.nome || '', 'pt-BR');
+      }
+      if (ordenacaoGaleria === 'maior_valor') {
+        return (Number(b.valorTotal) || 0) - (Number(a.valorTotal) || 0);
+      }
+      if (ordenacaoGaleria === 'menor_valor') {
+        return (Number(a.valorTotal) || 0) - (Number(b.valorTotal) || 0);
+      }
+      return 0;
+    });
+
+    return lista;
+  }, [projetosSalvos, filtroStatusGaleria, buscaGaleria, ordenacaoGaleria]);
 
   // 🎨 CORES EXTRAÍDAS AUTOMATICAMENTE DA DECORAÇÃO (Atualiza sozinho conforme peças são adicionadas ou editadas)
   const coresDaDecoracao = useMemo(() => {
@@ -4374,6 +4521,17 @@ const Moodboard = () => {
     }, 300);
   }, [saveSnapshot, wallBackground, floorBackground]);
 
+  // Agendador leve com debounce dedicado para digitação de letreiros (não congela a thread principal)
+  const debounceTextoHistoricoRef = useRef(null);
+  const agendarSaveSnapshotTexto = useCallback((delay = 450) => {
+    if (debounceTextoHistoricoRef.current) clearTimeout(debounceTextoHistoricoRef.current);
+    debounceTextoHistoricoRef.current = setTimeout(() => {
+      if (itensCanvasRef.current) {
+        saveSnapshot(itensCanvasRef.current);
+      }
+    }, delay);
+  }, [saveSnapshot]);
+
   const handleUndo = useCallback(() => {
     if (historyStep <= 0) return;
     isHistoryAction.current = true;
@@ -5184,6 +5342,27 @@ const Moodboard = () => {
     }
   };
 
+  const handleCriarNovoProjetoEmBranco = () => {
+    if (itensCanvas.length > 0) {
+      if (!window.confirm("Deseja iniciar um novo projeto em branco? As alterações não salvas do cenário atual serão perdidas.")) {
+        return;
+      }
+    }
+    setItensCanvas([]);
+    setWallBackground('#f8fafc');
+    setFloorBackground('#e2e8f0');
+    setNomeProjeto("");
+    setProjetoIdAtual(null);
+    setVersaoProjeto(1);
+    setStatusProjeto('rascunho');
+    setObservacoesProjeto('');
+    setPaletaEvento(['#c5a059', '#e2b1b8', '#ffffff', '#0f172a']);
+    setClienteSelecionado(null);
+    setLocacaoSelecionada(null);
+    setModalAbrirAberto(false);
+    saveSnapshot([], '#f8fafc', '#e2e8f0');
+  };
+
   const alterarStatusProjetoGaleria = async (projId, novoStatus) => {
     try {
       await updateDoc(doc(db, "projetos_moodboard", projId), {
@@ -5881,10 +6060,19 @@ const Moodboard = () => {
           else if (resizeDir.current === 'sw') scaleFactor = (-totalDx + totalDy) * 0.35;
           else scaleFactor = (totalDx + totalDy) * 0.35;
 
-          const newFontSize = Math.max(14, Math.min(220, Math.round((s.fontSize || 48) + scaleFactor)));
+          const baseFont = Math.max(12, s.fontSize || 48);
+          const newFontSize = Math.max(14, Math.min(400, Math.round(baseFont + scaleFactor)));
           currentPendingChanges.current = { fontSize: newFontSize };
           const textEl = el.querySelector('.text-render-element') || el.querySelector('text') || el;
-          if (textEl) textEl.style.fontSize = `${newFontSize}px`;
+          if (textEl) {
+            if (textEl.tagName && textEl.tagName.toLowerCase() === 'svg') {
+              const scaleRatio = (newFontSize / baseFont).toFixed(3);
+              textEl.style.transform = `scale(${scaleRatio})`;
+              textEl.style.transformOrigin = 'center center';
+            } else {
+              textEl.style.fontSize = `${newFontSize}px`;
+            }
+          }
           return;
         } else {
           let newW = s.width;
@@ -6035,6 +6223,27 @@ const Moodboard = () => {
       });
     }
   }, [agendarSaveSnapshot]);
+
+  // ✍️ Callbacks estáveis para o ElementoTextoPersonalizado (mantém React.memo 100% ativo sem re-render fantasma)
+  const handleTextDoubleClick = useCallback((id, e) => {
+    e?.stopPropagation?.();
+    setEditingTextId(id);
+  }, []);
+
+  const handleTextChange = useCallback((id, newVal) => {
+    atualizarItem(id, { content: newVal }, false);
+    agendarSaveSnapshotTexto(500);
+  }, [atualizarItem, agendarSaveSnapshotTexto]);
+
+  const handleTextBlur = useCallback((id) => {
+    setEditingTextId(null);
+    if (debounceTextoHistoricoRef.current) {
+      clearTimeout(debounceTextoHistoricoRef.current);
+    }
+    if (itensCanvasRef.current) {
+      saveSnapshot(itensCanvasRef.current);
+    }
+  }, [saveSnapshot]);
 
   const deleteItem = useCallback((id) => {
     setItensCanvas(prev => {
@@ -7443,7 +7652,15 @@ const Moodboard = () => {
                                   const novoVal = clip;
                                   setTextoNovoInput(novoVal);
                                   if (itemSelecionado?.type === 'text' && selecionadoId) {
-                                    atualizarItem(selecionadoId, { content: novoVal });
+                                    const domEl = itensDomRef.current?.get(selecionadoId);
+                                    if (domEl) {
+                                      const textInner = domEl.querySelector('.text-render-element');
+                                      if (textInner && textInner.tagName?.toLowerCase() !== 'svg') {
+                                        textInner.textContent = novoVal || '(Texto vazio)';
+                                      }
+                                    }
+                                    atualizarItem(selecionadoId, { content: novoVal }, false);
+                                    agendarSaveSnapshotTexto(300);
                                   } else {
                                     const novoId = adicionarTexto({ content: novoVal }, true);
                                     if (novoId) setSelecionadoId(novoId);
@@ -7478,11 +7695,24 @@ const Moodboard = () => {
                           const val = e.target.value;
                           setTextoNovoInput(val);
                           if (itemSelecionado?.type === 'text' && selecionadoId) {
-                            atualizarItem(selecionadoId, { content: val });
+                            // Atualização síncrona visual instantânea no DOM (0ms lag, sem esperar re-render)
+                            const domEl = itensDomRef.current?.get(selecionadoId);
+                            if (domEl) {
+                              const textInner = domEl.querySelector('.text-render-element');
+                              if (textInner && textInner.tagName?.toLowerCase() !== 'svg') {
+                                textInner.textContent = val || '(Texto vazio)';
+                              }
+                            }
+                            atualizarItem(selecionadoId, { content: val }, false);
+                            agendarSaveSnapshotTexto(450);
                           } else {
                             const novoId = adicionarTexto({ content: val }, true);
                             if (novoId) setSelecionadoId(novoId);
                           }
+                        }}
+                        onBlur={() => {
+                          if (debounceTextoHistoricoRef.current) clearTimeout(debounceTextoHistoricoRef.current);
+                          if (itensCanvasRef.current) saveSnapshot(itensCanvasRef.current);
                         }}
                         onFocus={(e) => {
                           try { e.target.select(); } catch (_) {}
@@ -7519,7 +7749,15 @@ const Moodboard = () => {
                             e.stopPropagation();
                             setTextoNovoInput('');
                             if (itemSelecionado?.type === 'text' && selecionadoId) {
-                              atualizarItem(selecionadoId, { content: '' });
+                              const domEl = itensDomRef.current?.get(selecionadoId);
+                              if (domEl) {
+                                const textInner = domEl.querySelector('.text-render-element');
+                                if (textInner && textInner.tagName?.toLowerCase() !== 'svg') {
+                                  textInner.textContent = '(Texto vazio)';
+                                }
+                              }
+                              atualizarItem(selecionadoId, { content: '' }, false);
+                              agendarSaveSnapshotTexto(300);
                             }
                             if (inputTextoLetreiroRef.current) {
                               inputTextoLetreiroRef.current.focus();
@@ -8657,22 +8895,6 @@ const Moodboard = () => {
                     </button>
                   </>
                 )}
-
-                {isMobile && (
-                  <>
-                    <div className="header-divider"></div>
-
-                    {/* Alternador do Painel Direito Pro (Exclusivo Mobile) */}
-                    <button
-                      className={`btn-header-action btn-header-pro-mobile ${painelDireitoAberto ? 'luxury-gold' : ''}`}
-                      onClick={() => abrirAbaMobile('pro')}
-                      title="Alternar Painel Lateral Pro (Camadas & Inspetor)"
-                    >
-                      <Icons.Sliders width={14} height={14} />
-                      <span className="btn-text">PAINEL PRO</span>
-                    </button>
-                  </>
-                )}
               </>
             )}
           </div>
@@ -8922,11 +9144,9 @@ const Moodboard = () => {
                     <ElementoTextoPersonalizado
                       item={item}
                       isEditing={editingTextId === item.uniqueId}
-                      onDoubleClick={(e) => { e.stopPropagation(); setEditingTextId(item.uniqueId); }}
-                      onChange={(newVal) => atualizarItem(item.uniqueId, { content: newVal })}
-                      onBlur={() => {
-                        setEditingTextId(null);
-                      }}
+                      onDoubleClick={(e) => handleTextDoubleClick(item.uniqueId, e)}
+                      onChange={(newVal) => handleTextChange(item.uniqueId, newVal)}
+                      onBlur={() => handleTextBlur(item.uniqueId)}
                     />
                   )}
 
@@ -9971,131 +10191,226 @@ const Moodboard = () => {
           </div>
         )}
 
-        {/* 📂 MODAL: ABRIR PROJETOS (GALERIA VISUAL COM THUMBNAILS, STATUS & FILTROS) */}
+        {/* 📂 MODAL: ABRIR PROJETOS (GALERIA VISUAL LUXURY COM THUMBNAILS, BUSCA, ORDENAÇÃO & STATUS) */}
         {modalAbrirAberto && (
           <div className="overlay" onClick={() => setModalAbrirAberto(false)}>
-            <div className="modal-content large luxury-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '900px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-              <div className="modal-header-luxury">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="modal-content galeria-projetos-modal" onClick={e => e.stopPropagation()}>
+              {/* 🌟 Cabeçalho Executivo */}
+              <div className="galeria-header">
+                <div className="galeria-header-left">
+                  <div className="galeria-header-icon">
+                    <Icons.Folder width={20} height={20} />
+                  </div>
                   <div>
-                    <h3 style={{ margin: 0 }}>🎨 Galeria de Projetos Salvos</h3>
-                    <p style={{ margin: '3px 0 0 0', fontSize: '11.5px', color: '#64748b' }}>
-                      Gerencie propostas decorativas, filtre por status e envie pelo WhatsApp
+                    <div className="galeria-title-row">
+                      <h3 className="galeria-title">Galeria de Projetos Salvos</h3>
+                      <span className="galeria-badge-total">{projetosSalvos.length} {projetosSalvos.length === 1 ? 'projeto' : 'projetos'}</span>
+                    </div>
+                    <p className="galeria-subtitle">
+                      Cenários e propostas decorativas salvas no Studio
                     </p>
                   </div>
-                  <span className="panel-badge-count">{projetosSalvos.length} projetos</span>
+                </div>
+                <button
+                  type="button"
+                  className="galeria-btn-close"
+                  onClick={() => setModalAbrirAberto(false)}
+                  title="Fechar (Esc)"
+                >
+                  <Icons.X width={15} height={15} />
+                </button>
+              </div>
+
+              {/* 🔍 Barra de Controles: Busca + Filtros em 2 Colunas Simétricas */}
+              <div className="galeria-controls-bar">
+                <div className="galeria-search-wrapper">
+                  <span className="galeria-search-icon">
+                    <Icons.Search width={14} height={14} />
+                  </span>
+                  <input
+                    type="text"
+                    className="galeria-search-input"
+                    placeholder="Buscar projeto ou cliente..."
+                    value={buscaGaleria}
+                    onChange={e => setBuscaGaleria(e.target.value)}
+                  />
+                  {buscaGaleria && (
+                    <button
+                      type="button"
+                      className="galeria-btn-clear-search"
+                      onClick={() => setBuscaGaleria('')}
+                      title="Limpar busca"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
 
-                {/* 🔀 Filtros por Status na Galeria */}
-                <div style={{ display: 'flex', gap: '6px', marginTop: '12px', overflowX: 'auto', paddingBottom: '4px' }}>
-                  {[
-                    { id: 'todos', label: `Todos (${projetosSalvos.length})` },
-                    { id: 'rascunho', label: `🟡 Rascunho (${projetosSalvos.filter(p => (p.status || 'rascunho') === 'rascunho').length})` },
-                    { id: 'em_analise', label: `🔵 Em Análise (${projetosSalvos.filter(p => p.status === 'em_analise').length})` },
-                    { id: 'aprovado', label: `🟢 Aprovado (${projetosSalvos.filter(p => p.status === 'aprovado').length})` },
-                    { id: 'em_producao', label: `🟣 Em Produção (${projetosSalvos.filter(p => p.status === 'em_producao').length})` },
-                    { id: 'concluido', label: `⚪ Concluído (${projetosSalvos.filter(p => p.status === 'concluido').length})` }
-                  ].map(f => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => setFiltroStatusGaleria(f.id)}
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: '20px',
-                        fontSize: '10.5px',
-                        fontWeight: '700',
-                        whiteSpace: 'nowrap',
-                        background: filtroStatusGaleria === f.id ? '#0f172a' : '#f1f5f9',
-                        color: filtroStatusGaleria === f.id ? '#fef08a' : '#475569',
-                        border: filtroStatusGaleria === f.id ? '1px solid #c5a059' : '1px solid #e2e8f0',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {f.label}
-                    </button>
-                  ))}
+                <div className="galeria-filters-grid">
+                  <select
+                    className="galeria-select-pill"
+                    value={filtroStatusGaleria}
+                    onChange={e => setFiltroStatusGaleria(e.target.value)}
+                  >
+                    <option value="todos">Status: Todos ({statusCountsGaleria.todos})</option>
+                    <option value="rascunho">🟡 Rascunho ({statusCountsGaleria.rascunho})</option>
+                    <option value="em_analise">🔵 Em Análise ({statusCountsGaleria.em_analise})</option>
+                    <option value="aprovado">🟢 Aprovado ({statusCountsGaleria.aprovado})</option>
+                    <option value="em_producao">🟣 Em Produção ({statusCountsGaleria.em_producao})</option>
+                    <option value="concluido">⚪ Concluído ({statusCountsGaleria.concluido})</option>
+                  </select>
+
+                  <select
+                    className="galeria-select-pill"
+                    value={ordenacaoGaleria}
+                    onChange={e => setOrdenacaoGaleria(e.target.value)}
+                  >
+                    <option value="recentes">⇅ Mais Recentes</option>
+                    <option value="antigos">⏳ Mais Antigos</option>
+                    <option value="az">🔤 Nome (A - Z)</option>
+                    <option value="za">🔤 Nome (Z - A)</option>
+                    <option value="maior_valor">💎 Maior Valor</option>
+                    <option value="menor_valor">🏷️ Menor Valor</option>
+                  </select>
                 </div>
               </div>
 
-              <div className="projects-grid-cards" style={{ flex: 1, overflowY: 'auto', maxHeight: '60vh', padding: '14px' }}>
-                {projetosSalvos.filter(p => filtroStatusGaleria === 'todos' || (p.status || 'rascunho') === filtroStatusGaleria).length === 0 ? (
-                  <div className="empty-projects-state">
-                    <Icons.Folder width={40} height={40} style={{ opacity: 0.3 }} />
-                    <p>Nenhum projeto encontrado nesta categoria.</p>
+              {/* 🖼️ Grid de Cards com Rolagem Suave */}
+              <div className="galeria-cards-scroll">
+                {projetosFiltradosGaleria.length === 0 ? (
+                  <div className="galeria-empty-state">
+                    <div className="galeria-empty-icon-box">
+                      <Icons.Folder width={26} height={26} />
+                    </div>
+                    <h4 className="galeria-empty-title">
+                      {projetosSalvos.length === 0
+                        ? 'Não há projetos salvos'
+                        : 'Nenhum projeto encontrado'}
+                    </h4>
+                    <p className="galeria-empty-desc">
+                      {projetosSalvos.length === 0
+                        ? 'Nenhum projeto decorativo foi salvo no momento.'
+                        : 'Tente alterar os filtros ou limpar a busca.'}
+                    </p>
+                    {projetosSalvos.length > 0 && (buscaGaleria || filtroStatusGaleria !== 'todos') && (
+                      <button
+                        type="button"
+                        className="galeria-btn-cta-limpar"
+                        onClick={() => {
+                          setBuscaGaleria('');
+                          setFiltroStatusGaleria('todos');
+                        }}
+                      >
+                        ✕ Limpar Filtros
+                      </button>
+                    )}
                   </div>
                 ) : (
-                  projetosSalvos
-                    .filter(p => filtroStatusGaleria === 'todos' || (p.status || 'rascunho') === filtroStatusGaleria)
-                    .map(proj => {
+                  <div className="projects-grid-cards">
+                    {projetosFiltradosGaleria.map(proj => {
                       const st = proj.status || 'rascunho';
-                      const stColors = {
-                        rascunho: { bg: '#fef3c7', text: '#92400e', label: '🟡 Rascunho' },
-                        em_analise: { bg: '#e0f2fe', text: '#0369a1', label: '🔵 Em Análise' },
-                        aprovado: { bg: '#dcfce7', text: '#15803d', label: '🟢 Aprovado' },
-                        em_producao: { bg: '#f3e8ff', text: '#7e22ce', label: '🟣 Em Produção' },
-                        concluido: { bg: '#f1f5f9', text: '#475569', label: '⚪ Concluído' }
+                      const stMap = {
+                        rascunho: { label: 'Rascunho', icon: '🟡', classSuffix: 'st-rascunho' },
+                        em_analise: { label: 'Em Análise', icon: '🔵', classSuffix: 'st-analise' },
+                        aprovado: { label: 'Aprovado', icon: '🟢', classSuffix: 'st-aprovado' },
+                        em_producao: { label: 'Em Produção', icon: '🟣', classSuffix: 'st-producao' },
+                        concluido: { label: 'Concluído', icon: '⚪', classSuffix: 'st-concluido' }
                       };
-                      const stBadge = stColors[st] || stColors.rascunho;
+                      const stInfo = stMap[st] || stMap.rascunho;
+                      const clienteNomeExibicao = proj.clienteNome || proj.cliente?.nome || '';
 
                       return (
-                        <div key={proj.id} className="project-card-luxury" style={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                        <div key={proj.id} className="project-card-luxury">
+                          {/* Miniatura do Cenário */}
                           <div className="proj-thumb" onClick={() => carregarProjeto(proj)}>
                             {proj.thumbnail ? (
-                              <img src={proj.thumbnail} alt={proj.nome} />
+                              <img src={proj.thumbnail} alt={proj.nome} loading="lazy" />
                             ) : (
                               <div className="proj-thumb-placeholder">
                                 <Icons.Crown width={32} height={32} />
+                                <span>Sem Miniatura</span>
                               </div>
                             )}
-                            <div className="proj-hover-overlay">
-                              <span>Abrir no Studio</span>
-                            </div>
 
-                            {/* Badge de Versão */}
-                            {proj.versao && proj.versao > 1 && (
-                              <span style={{ position: 'absolute', top: '8px', left: '8px', background: '#0f172a', color: '#fef08a', fontSize: '9px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px', border: '1px solid #c5a059' }}>
+                            {/* Badge Flutuante de Status */}
+                            <span className={`proj-float-badge-status ${stInfo.classSuffix}`}>
+                              {stInfo.icon} {stInfo.label}
+                            </span>
+
+                            {/* Badge Flutuante de Versão */}
+                            {proj.versao && Number(proj.versao) > 1 && (
+                              <span className="proj-float-badge-version">
                                 v{proj.versao}
                               </span>
                             )}
+
+                            {/* Hover Overlay */}
+                            <div className="proj-hover-overlay">
+                              <span className="btn-hover-open">Abrir no Studio</span>
+                            </div>
                           </div>
 
-                          <div className="proj-info-bottom" style={{ padding: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <div className="proj-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                              <div>
-                                <h4 title={proj.nome} style={{ margin: 0, fontSize: '12px', fontWeight: '800' }}>{proj.nome}</h4>
-                                {proj.clienteNome && (
-                                  <div style={{ fontSize: '10.5px', color: '#0369a1', fontWeight: 'bold', marginTop: '2px' }}>
-                                    👤 {proj.clienteNome}
+                          {/* Informações do Projeto */}
+                          <div className="proj-card-body">
+                            <div>
+                              <div className="proj-card-head">
+                                <h4 className="proj-card-name" title={proj.nome}>
+                                  {proj.nome}
+                                </h4>
+                                <button
+                                  type="button"
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    deletarProjetoSalvo(proj.id, proj.nome);
+                                  }}
+                                  className="proj-btn-delete-icon"
+                                  title="Excluir Projeto"
+                                >
+                                  <Icons.Trash width={14} height={14} />
+                                </button>
+                              </div>
+
+                              {/* Identificação do Cliente */}
+                              <div style={{ marginTop: '5px' }}>
+                                {clienteNomeExibicao ? (
+                                  <div className="proj-cliente-badge" title={`Cliente: ${clienteNomeExibicao}`}>
+                                    <span>👤</span>
+                                    <span>{clienteNomeExibicao}</span>
+                                  </div>
+                                ) : (
+                                  <div className="proj-cliente-badge empty">
+                                    <span>👤 Sem cliente vinculado</span>
                                   </div>
                                 )}
                               </div>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); deletarProjetoSalvo(proj.id, proj.nome); }}
-                                className="btn-del-proj-icon"
-                                title="Excluir Projeto"
-                                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '2px' }}
-                              >
-                                <Icons.Trash width={13} height={13} />
-                              </button>
                             </div>
 
-                            {/* Seletor Rápido de Status */}
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px' }}>
+                            {/* Métricas: Peças e Valor */}
+                            <div className="proj-card-metrics-row">
+                              <div className="proj-metric-item">
+                                <span className="proj-metric-val">{proj.itens?.length || 0}</span>
+                                <span className="proj-metric-lbl">peças</span>
+                              </div>
+                              <div className="proj-metric-divider" />
+                              <div className="proj-metric-item valor">
+                                <span className="proj-metric-cur">R$</span>
+                                <span className="proj-metric-val">
+                                  {Number(proj.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Seletor Rápido de Status e Data */}
+                            <div className="proj-status-change-row">
                               <select
                                 value={st}
                                 onClick={e => e.stopPropagation()}
-                                onChange={e => { e.stopPropagation(); alterarStatusProjetoGaleria(proj.id, e.target.value); }}
-                                style={{
-                                  fontSize: '10px',
-                                  fontWeight: '800',
-                                  padding: '2px 6px',
-                                  borderRadius: '6px',
-                                  backgroundColor: stBadge.bg,
-                                  color: stBadge.text,
-                                  border: '1px solid rgba(0,0,0,0.1)',
-                                  cursor: 'pointer'
+                                onChange={e => {
+                                  e.stopPropagation();
+                                  alterarStatusProjetoGaleria(proj.id, e.target.value);
                                 }}
+                                className={`proj-status-quick-select ${stInfo.classSuffix}`}
+                                title="Alterar status deste projeto"
                               >
                                 <option value="rascunho">🟡 Rascunho</option>
                                 <option value="em_analise">🔵 Em Análise</option>
@@ -10104,50 +10419,59 @@ const Moodboard = () => {
                                 <option value="concluido">⚪ Concluído</option>
                               </select>
 
-                              <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#0f172a' }}>
-                                R$ {Number(proj.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              <span className="proj-created-date">
+                                {proj.updatedAt || proj.createdAt
+                                  ? new Date(proj.updatedAt || proj.createdAt).toLocaleDateString('pt-BR')
+                                  : ''}
                               </span>
                             </div>
 
-                            <div className="proj-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '6px', marginTop: '2px' }}>
-                              <span>{proj.itens?.length || 0} peças</span>
-                              <span>{proj.createdAt ? new Date(proj.createdAt).toLocaleDateString('pt-BR') : ''}</span>
-                            </div>
-
-                            {/* Botões de Ação Rápida */}
-                            <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                            {/* Barra de Ações Rápidas */}
+                            <div className="proj-card-actions-bar">
                               <button
                                 type="button"
+                                className="proj-btn-action-open"
                                 onClick={() => carregarProjeto(proj)}
-                                style={{ flex: 1, padding: '5px', fontSize: '10px', fontWeight: '800', background: '#0f172a', color: '#ffffff', borderRadius: '4px', border: 'none', cursor: 'pointer' }}
                               >
-                                Abrir
+                                <span>Abrir</span>
                               </button>
                               <button
                                 type="button"
+                                className="proj-btn-action-wa"
                                 onClick={() => handleCompartilharWhatsApp(proj)}
-                                style={{ padding: '5px 8px', fontSize: '10px', background: '#22c55e', color: '#fff', borderRadius: '4px', border: 'none', cursor: 'pointer' }}
-                                title="Enviar no WhatsApp"
+                                title="Compartilhar proposta via WhatsApp"
                               >
-                                📱
+                                <span>📱 WhatsApp</span>
                               </button>
                               <button
                                 type="button"
+                                className="proj-btn-action-dup"
                                 onClick={() => duplicarProjetoSalvo(proj)}
-                                style={{ padding: '5px 8px', fontSize: '10px', background: '#f1f5f9', color: '#475569', borderRadius: '4px', border: '1px solid #cbd5e1', cursor: 'pointer' }}
-                                title="Duplicar Projeto"
+                                title="Duplicar como novo projeto"
                               >
-                                📑
+                                <Icons.Copy width={13} height={13} />
                               </button>
                             </div>
                           </div>
                         </div>
                       );
-                    })
+                    })}
+                  </div>
                 )}
               </div>
-              <div className="modal-footer-row" style={{ padding: '12px 16px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
-                <button className="btn-cancel" onClick={() => setModalAbrirAberto(false)}>Fechar Galeria</button>
+
+              {/* 🌟 Rodapé da Galeria */}
+              <div className="galeria-footer">
+                <span className="galeria-footer-info">
+                  <strong>{projetosFiltradosGaleria.length}</strong> de <strong>{projetosSalvos.length}</strong> {projetosSalvos.length === 1 ? 'projeto salvo' : 'projetos salvos'}
+                </span>
+                <button
+                  type="button"
+                  className="galeria-btn-fechar"
+                  onClick={() => setModalAbrirAberto(false)}
+                >
+                  Fechar
+                </button>
               </div>
             </div>
           </div>
@@ -10650,7 +10974,8 @@ const Moodboard = () => {
                                   </div>
                                   <input
                                     type="range" min="12" max="500" value={itemSelecionado.fontSize || 48}
-                                    onChange={e => atualizarItem(selecionadoId, { fontSize: Number(e.target.value) })}
+                                    onChange={e => atualizarItem(selecionadoId, { fontSize: Number(e.target.value) }, false)}
+                                    onPointerUp={() => agendarSaveSnapshot(itensCanvasRef.current || itensCanvas)}
                                     onDoubleClick={() => atualizarItem(selecionadoId, { fontSize: 60 })}
                                     style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
                                   />
@@ -10818,7 +11143,8 @@ const Moodboard = () => {
                               </div>
                               <input
                                 type="range" min="-100" max="100" value={itemSelecionado.curvatura || 0}
-                                onChange={e => atualizarItem(selecionadoId, { curvatura: Number(e.target.value) })}
+                                onChange={e => atualizarItem(selecionadoId, { curvatura: Number(e.target.value) }, false)}
+                                onPointerUp={() => agendarSaveSnapshot(itensCanvasRef.current || itensCanvas)}
                                 onDoubleClick={() => atualizarItem(selecionadoId, { curvatura: 0 })}
                                 style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
                               />
@@ -10832,7 +11158,8 @@ const Moodboard = () => {
                               </div>
                               <input
                                 type="range" min="0" max="12" value={itemSelecionado.strokeWidth || 0}
-                                onChange={e => atualizarItem(selecionadoId, { strokeWidth: Number(e.target.value) })}
+                                onChange={e => atualizarItem(selecionadoId, { strokeWidth: Number(e.target.value) }, false)}
+                                onPointerUp={() => agendarSaveSnapshot(itensCanvasRef.current || itensCanvas)}
                                 onDoubleClick={() => atualizarItem(selecionadoId, { strokeWidth: 0 })}
                                 style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
                               />
@@ -10872,7 +11199,8 @@ const Moodboard = () => {
                               </div>
                               <input
                                 type="range" min="-2" max="20" value={itemSelecionado.letterSpacing || 0}
-                                onChange={e => atualizarItem(selecionadoId, { letterSpacing: Number(e.target.value) })}
+                                onChange={e => atualizarItem(selecionadoId, { letterSpacing: Number(e.target.value) }, false)}
+                                onPointerUp={() => agendarSaveSnapshot(itensCanvasRef.current || itensCanvas)}
                                 onDoubleClick={() => atualizarItem(selecionadoId, { letterSpacing: 0 })}
                               />
                             </div>
@@ -10883,13 +11211,19 @@ const Moodboard = () => {
                                 <span style={{ color: '#c5a059', fontWeight: 'bold', fontSize: '10.5px' }}>🌟 Neon LED</span>
                                 <button
                                   type="button"
-                                  onClick={() => atualizarItem(selecionadoId, { neonGlow: (itemSelecionado.neonGlow > 0 ? 0 : 20) })}
+                                  onClick={() => {
+                                    const isCurrentlyOn = (itemSelecionado.neonGlow || 0) > 0;
+                                    atualizarItem(selecionadoId, {
+                                      neonGlow: isCurrentlyOn ? 0 : 20,
+                                      neon: !isCurrentlyOn
+                                    });
+                                  }}
                                   style={{
                                     fontSize: '9.5px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px',
-                                    border: 'none', background: itemSelecionado.neonGlow > 0 ? '#22c55e' : '#334155', color: '#fff', cursor: 'pointer'
+                                    border: 'none', background: (itemSelecionado.neonGlow || 0) > 0 ? '#22c55e' : '#334155', color: '#fff', cursor: 'pointer'
                                   }}
                                 >
-                                  {itemSelecionado.neonGlow > 0 ? 'ON' : 'OFF'}
+                                  {(itemSelecionado.neonGlow || 0) > 0 ? 'ON' : 'OFF'}
                                 </button>
                               </div>
                               <div className="neon-light-palette" style={{ marginTop: '4px' }}>
@@ -10899,7 +11233,7 @@ const Moodboard = () => {
                                     type="button"
                                     className={`neon-dot-btn ${(itemSelecionado.neonColor || '#c5a059') === cor ? 'active' : ''}`}
                                     style={{ backgroundColor: cor, width: '18px', height: '18px' }}
-                                    onClick={() => atualizarItem(selecionadoId, { neonColor: cor, neonGlow: Math.max(16, itemSelecionado.neonGlow || 20) })}
+                                    onClick={() => atualizarItem(selecionadoId, { neonColor: cor, neonGlow: Math.max(16, itemSelecionado.neonGlow || 20), neon: true })}
                                   />
                                 ))}
                               </div>

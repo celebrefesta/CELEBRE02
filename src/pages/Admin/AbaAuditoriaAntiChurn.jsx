@@ -74,6 +74,25 @@ const AbaAuditoriaAntiChurn = ({
 
       snap.docs.forEach(docSnap => {
         const d = docSnap.data();
+        const acaoUpper = String(d.acao || '').toUpperCase();
+        const detUpper = String(d.detalhes || '').toUpperCase();
+
+        // 🚫 FILTRO DE AUDITORIA: Ignora rigorosamente logs de login, logout e sessões
+        // O Super Admin não precisa rastrear horários de acesso/login, apenas pagamentos e eventos operacionais
+        if (
+          acaoUpper === 'LOGIN' ||
+          acaoUpper === 'LOGOUT' ||
+          acaoUpper.includes('AUTH') ||
+          acaoUpper.includes('ACESSO') ||
+          detUpper.includes('INICIOU SESSÃO') ||
+          detUpper.includes('INICIOU SESSAO') ||
+          detUpper.includes('ENCERROU A SESSÃO') ||
+          detUpper.includes('ENCERROU A SESSAO') ||
+          detUpper.includes('ACESSOU O SISTEMA')
+        ) {
+          return;
+        }
+
         const empId = d.empresaId || d.userId || '';
         const cliVinculado = mapaClientes[empId] || mapaClientes[String(d.usuarioEmail || '').toLowerCase()] || null;
 
@@ -136,8 +155,8 @@ const AbaAuditoriaAntiChurn = ({
     let unsubscribe = null;
 
     try {
-      // Escuta em tempo real até 500 registros sem limitação por campo específico
-      const qStreaming = query(collection(db, "logs_atividades"), limit(500));
+      // Escuta em tempo real até 800 registros mais recentes para compensar registros legados
+      const qStreaming = query(collection(db, "logs_atividades"), limit(800));
       unsubscribe = onSnapshot(qStreaming, (snap) => {
         processarDocsSnapshot(snap);
       }, (err) => {
@@ -162,11 +181,11 @@ const AbaAuditoriaAntiChurn = ({
     try {
       const agora = new Date();
       const acoesPossiveis = [
+        { acao: "PAGAMENTO APROVADO (PIX)", tipo: "FINANCEIRO", detalhes: `Pagamento de R$ 99,90 aprovado via PIX para o plano: "Profissional" (Transação MP: 178990123) às ${agora.toLocaleTimeString('pt-BR')}` },
+        { acao: "GERAÇÃO DE PIX", tipo: "FINANCEIRO", detalhes: `Gerou um QR Code PIX para pagamento da assinatura do Plano: Básico (R$ 49,90) às ${agora.toLocaleTimeString('pt-BR')}` },
+        { acao: "ASSINATURA APROVADA (CARTÃO)", tipo: "FINANCEIRO", detalhes: `Pagamento de assinatura processado com sucesso via Cartão. Plano: Premium (R$ 159,90) às ${agora.toLocaleTimeString('pt-BR')}` },
         { acao: "NOVA LOCAÇÃO (TESTE AO VIVO)", tipo: "CRIACAO", detalhes: `Criou pedido #${agora.getFullYear()}-999 (Decoração Completa) para Cliente VIP às ${agora.toLocaleTimeString('pt-BR')}` },
-        { acao: "ENTRADA DE ESTOQUE (TESTE AO VIVO)", tipo: "CRIACAO", detalhes: `Cadastrou 24 Taças Lapidadas Âmbar no Galpão Principal às ${agora.toLocaleTimeString('pt-BR')}` },
-        { acao: "PAGAMENTO CONFIRMADO (TESTE AO VIVO)", tipo: "FINANCEIRO", detalhes: `Recebeu sinal de R$ 680,00 via Pix instantâneo às ${agora.toLocaleTimeString('pt-BR')}` },
-        { acao: "CONTRATO ASSINADO (TESTE AO VIVO)", tipo: "CONTRATO", detalhes: `Cliente assinou contrato digital #CT-2026 às ${agora.toLocaleTimeString('pt-BR')}` },
-        { acao: "CHECK-IN OPERACIONAL (TESTE AO VIVO)", tipo: "LOGISTICA", detalhes: `Equipe conferiu retorno de 32 itens sem avarias às ${agora.toLocaleTimeString('pt-BR')}` }
+        { acao: "CONTRATO ASSINADO (TESTE AO VIVO)", tipo: "CONTRATO", detalhes: `Cliente assinou contrato digital #CT-2026 às ${agora.toLocaleTimeString('pt-BR')}` }
       ];
       const sorteada = acoesPossiveis[Math.floor(Math.random() * acoesPossiveis.length)];
 
@@ -190,21 +209,80 @@ const AbaAuditoriaAntiChurn = ({
     }
   };
 
+  // 💰 Extração inteligente e limpa dos dados de pagamento dos detalhes do log
+  const extrairInfoPagamento = (detalhes = '', acao = '') => {
+    const texto = String(detalhes || '');
+    const textoUpper = (texto + ' ' + acao).toUpperCase();
+
+    // Extrai valor monetário (R$ XX,XX)
+    const matchValor = texto.match(/R\$\s?([\d.,]+)/i);
+    const valor = matchValor ? `R$ ${matchValor[1]}` : null;
+
+    // Identifica método de pagamento
+    let metodo = null;
+    if (textoUpper.includes('PIX')) {
+      metodo = { nome: 'PIX', icon: 'fa-bolt', classe: 'metodo-pix' };
+    } else if (textoUpper.includes('CARTÃO') || textoUpper.includes('CARTAO') || textoUpper.includes('CRÉDITO') || textoUpper.includes('CREDITO')) {
+      metodo = { nome: 'Cartão de Crédito', icon: 'fa-credit-card', classe: 'metodo-cartao' };
+    } else if (textoUpper.includes('BOLETO')) {
+      metodo = { nome: 'Boleto Bancário', icon: 'fa-barcode', classe: 'metodo-boleto' };
+    }
+
+    // Identifica plano
+    let plano = null;
+    const matchPlano = texto.match(/plano:?\s*["']?([^("'\n,]+)["']?/i);
+    if (matchPlano && matchPlano[1]) {
+      plano = matchPlano[1].trim();
+    }
+
+    // Transação MP
+    const matchMp = texto.match(/(?:transação|transacao|mp:?)\s*#?([0-9]{8,})/i);
+    const transacaoId = matchMp ? matchMp[1] : null;
+
+    return { valor, metodo, plano, transacaoId };
+  };
+
   // ---------- 📜 CLASSIFICAÇÃO E FILTROS DO FEED DE LOGS ----------
   const classificarCategoriaLog = (log) => {
     const acao = String(log.acao || '').toUpperCase();
+    const detalhes = String(log.detalhes || '').toUpperCase();
 
-    if (acao.includes('LOGIN') || acao.includes('LOGOUT') || acao.includes('SENHA') || acao.includes('AUTH') || acao.includes('ACESSO')) {
-      return { id: 'acessos', label: 'Acessos & Auth', icon: 'fa-key', classe: 'cat-acessos' };
+    // 💰 FINANCEIRO & PAGAMENTOS (Prioridade com badges ricos)
+    if (
+      acao.includes('PAGAMENTO') || 
+      acao.includes('ASSINATURA') || 
+      acao.includes('PLANO') || 
+      acao.includes('FATURA') || 
+      acao.includes('FINANCEIRO') || 
+      acao.includes('PIX') || 
+      acao.includes('BOLETO') || 
+      acao.includes('CARTAO') || 
+      acao.includes('CARTÃO') ||
+      acao.includes('UPGRADE') ||
+      acao.includes('RENOVA') ||
+      detalhes.includes('PAGAMENTO') ||
+      detalhes.includes('PIX') ||
+      detalhes.includes('ASSINATURA') ||
+      detalhes.includes('TRANSAÇÃO') ||
+      detalhes.includes('TRANSACAO')
+    ) {
+      const isPix = acao.includes('PIX') || detalhes.includes('PIX');
+      const isAprovado = acao.includes('APROVAD') || acao.includes('CONFIRM') || detalhes.includes('APROVADO') || detalhes.includes('COM SUCESSO');
+      return { 
+        id: 'financeiro', 
+        label: isAprovado ? 'Pagamento Aprovado' : (isPix ? 'PIX / Pagamento' : 'Pagamento & Assinatura'), 
+        icon: isAprovado ? 'fa-check-circle' : (isPix ? 'fa-bolt' : 'fa-dollar-sign'), 
+        classe: 'cat-financeiro',
+        isPagamento: true,
+        isAprovado
+      };
     }
+
     if (acao.includes('LOCACAO') || acao.includes('PEDIDO') || acao.includes('CONTRATO') || acao.includes('CHECKIN') || acao.includes('CHECKOUT') || acao.includes('ENTREGA')) {
       return { id: 'locacoes', label: 'Locações & Pedidos', icon: 'fa-calendar-check', classe: 'cat-locacoes' };
     }
     if (acao.includes('ESTOQUE') || acao.includes('PRODUTO') || acao.includes('MOODBOARD') || acao.includes('ACERVO') || acao.includes('PECA')) {
       return { id: 'estoque', label: 'Acervo & Estoque', icon: 'fa-boxes', classe: 'cat-estoque' };
-    }
-    if (acao.includes('PAGAMENTO') || acao.includes('ASSINATURA') || acao.includes('PLANO') || acao.includes('FATURA') || acao.includes('FINANCEIRO')) {
-      return { id: 'financeiro', label: 'Financeiro & SaaS', icon: 'fa-dollar-sign', classe: 'cat-financeiro' };
     }
     if (acao.includes('EXCLU') || acao.includes('DELETE') || acao.includes('SUSPEN') || acao.includes('BLOQUE') || acao.includes('CANCEL')) {
       return { id: 'criticos', label: 'Ação Crítica', icon: 'fa-exclamation-triangle', classe: 'cat-criticos' };
@@ -214,6 +292,23 @@ const AbaAuditoriaAntiChurn = ({
 
   const logsFiltrados = useMemo(() => {
     return logs.filter(log => {
+      // 0. Bloqueio absoluto de logs de login/logout/sessão
+      const acaoUpper = String(log.acao || '').toUpperCase();
+      const detUpper = String(log.detalhes || '').toUpperCase();
+      if (
+        acaoUpper === 'LOGIN' || 
+        acaoUpper === 'LOGOUT' || 
+        acaoUpper.includes('AUTH') || 
+        acaoUpper.includes('ACESSO') || 
+        detUpper.includes('INICIOU SESSÃO') || 
+        detUpper.includes('INICIOU SESSAO') ||
+        detUpper.includes('ENCERROU A SESSÃO') ||
+        detUpper.includes('ENCERROU A SESSAO') ||
+        detUpper.includes('ACESSOU O SISTEMA')
+      ) {
+        return false;
+      }
+
       // 1. Busca
       if (buscaLogs) {
         const termo = buscaLogs.toLowerCase();
@@ -321,17 +416,38 @@ const AbaAuditoriaAntiChurn = ({
             )}
           </div>
 
+          {/* Pílulas de filtro rápido de modo */}
+          <div className="cg-auditoria-quick-filter-pills">
+            <button
+              type="button"
+              className={`cg-quick-pill ${filtroCategoria === 'financeiro' ? 'active' : ''}`}
+              onClick={() => setFiltroCategoria(filtroCategoria === 'financeiro' ? 'todas' : 'financeiro')}
+              title="Filtrar somente pagamentos, assinaturas e transações"
+            >
+              <i className="fas fa-dollar-sign"></i>
+              <span>{filtroCategoria === 'financeiro' ? '✓ Só Pagamentos' : 'Só Pagamentos'}</span>
+            </button>
+            <button
+              type="button"
+              className={`cg-quick-pill ${filtroCategoria === 'todas' ? 'active-all' : ''}`}
+              onClick={() => setFiltroCategoria('todas')}
+              title="Exibir todos os eventos operacionais (sem logins)"
+            >
+              <i className="fas fa-layer-group"></i>
+              <span>Todos os Eventos</span>
+            </button>
+          </div>
+
           <div className="cg-auditoria-filters-group">
             <select
               className="cg-auditoria-select"
               value={filtroCategoria}
               onChange={(e) => setFiltroCategoria(e.target.value)}
             >
-              <option value="todas">Todas as Categorias</option>
-              <option value="acessos">🔑 Acessos & Logins</option>
+              <option value="todas">Todos os Eventos (sem logins)</option>
+              <option value="financeiro">💰 Pagamentos & Assinaturas</option>
               <option value="locacoes">📅 Locações & Pedidos</option>
               <option value="estoque">📦 Acervo & Estoque</option>
-              <option value="financeiro">💰 Financeiro & Assinaturas</option>
               <option value="criticos">⚠️ Ações Críticas & Exclusões</option>
             </select>
 
@@ -401,13 +517,14 @@ const AbaAuditoriaAntiChurn = ({
           <div className="cg-auditoria-timeline">
             {logsFiltrados.map((log) => {
               const cat = classificarCategoriaLog(log);
+              const infoPag = cat.isPagamento ? extrairInfoPagamento(log.detalhes, log.acao) : null;
               const tempoInfo = formatarTempoRelativo(log.timestampMs, log.dataHora || log.criadoEm);
               const isRecente = novosLogsIds.has(log.id) || (Date.now() - (log.timestampMs || 0) < 15000);
 
               return (
                 <div 
                   key={log.id} 
-                  className={`cg-auditoria-log-card ${isRecente ? 'cg-log-new-arrival' : ''}`}
+                  className={`cg-auditoria-log-card ${cat.isPagamento ? 'cg-log-card-financeiro' : ''} ${isRecente ? 'cg-log-new-arrival' : ''}`}
                 >
                   <div className={`cg-auditoria-log-icon ${cat.classe}`}>
                     <i className={`fas ${cat.icon}`}></i>
@@ -417,27 +534,71 @@ const AbaAuditoriaAntiChurn = ({
                     <div className="cg-auditoria-log-header">
                       <div className="cg-auditoria-log-meta">
                         <span className="cg-auditoria-log-empresa">{log.empresaNome}</span>
-                        <span className={`cg-auditoria-log-badge-acao ${cat.classe}`}>{log.acao || 'OPERAÇÃO'}</span>
-                        {log.nomeFuncionario && (
+                        <span className={`cg-auditoria-log-badge-acao ${cat.classe}`}>
+                          <i className={`fas ${cat.icon}`}></i> {log.acao || (cat.isPagamento ? 'PAGAMENTO' : 'OPERAÇÃO')}
+                        </span>
+                        {/* Pílulas de Pagamento em Destaque */}
+                        {infoPag?.valor && (
+                          <span className="cg-auditoria-badge-valor" title="Valor do Pagamento">
+                            <i className="fas fa-coins"></i> {infoPag.valor}
+                          </span>
+                        )}
+                        {infoPag?.metodo && (
+                          <span className={`cg-auditoria-badge-metodo ${infoPag.metodo.classe}`} title="Forma de Pagamento">
+                            <i className={`fas ${infoPag.metodo.icon}`}></i> {infoPag.metodo.nome}
+                          </span>
+                        )}
+                        {infoPag?.plano && (
+                          <span className="cg-auditoria-badge-plano" title="Plano da Assinatura">
+                            <i className="fas fa-cube"></i> {infoPag.plano}
+                          </span>
+                        )}
+                        {log.nomeFuncionario && !cat.isPagamento && (
                           <span className="cg-auditoria-log-user" title="Operador / Funcionário responsável">
                             <i className="fas fa-user-circle"></i> {log.nomeFuncionario}
                           </span>
                         )}
                       </div>
-                      <div className="cg-auditoria-log-time-group" title={`Data e Hora exata: ${tempoInfo.completo}`}>
-                        <span className={`cg-auditoria-log-time ${tempoInfo.relativo.includes('ao vivo') ? 'live-text' : ''}`}>
-                          <i className={tempoInfo.relativo.includes('ao vivo') ? 'fas fa-bolt' : 'far fa-clock'}></i> 
-                          {tempoInfo.relativo}
-                        </span>
-                        <span className="cg-auditoria-log-exact-time">
-                          {tempoInfo.horaExata}
-                        </span>
+
+                      {/* Bloco de Data e Horário com Destaque Bonitinho */}
+                      <div 
+                        className={`cg-auditoria-log-time-group ${cat.isPagamento ? 'time-group-pagamento' : ''}`} 
+                        title={`Data e Hora exata: ${tempoInfo.completo}`}
+                      >
+                        {cat.isPagamento ? (
+                          <>
+                            <span className="cg-auditoria-time-label">
+                              <i className="fas fa-clock"></i> Horário do Pagamento:
+                            </span>
+                            <span className="cg-auditoria-log-exact-time destaque-hora">
+                              {tempoInfo.horaExata}
+                            </span>
+                            <span className="cg-auditoria-log-date-tag">
+                              {tempoInfo.dataExata} • {tempoInfo.relativo}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className={`cg-auditoria-log-time ${tempoInfo.relativo.includes('ao vivo') ? 'live-text' : ''}`}>
+                              <i className={tempoInfo.relativo.includes('ao vivo') ? 'fas fa-bolt' : 'far fa-clock'}></i> 
+                              {tempoInfo.relativo}
+                            </span>
+                            <span className="cg-auditoria-log-exact-time">
+                              {tempoInfo.horaExata}
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
 
                     {log.detalhes && (
-                      <div className="cg-auditoria-log-detalhes">
+                      <div className={`cg-auditoria-log-detalhes ${cat.isPagamento ? 'detalhes-pagamento' : ''}`}>
                         {typeof log.detalhes === 'object' ? JSON.stringify(log.detalhes) : String(log.detalhes)}
+                        {infoPag?.transacaoId && (
+                          <span className="cg-auditoria-mp-pill" title="ID da Transação Mercado Pago">
+                            <i className="fas fa-receipt"></i> MP: {infoPag.transacaoId}
+                          </span>
+                        )}
                       </div>
                     )}
 

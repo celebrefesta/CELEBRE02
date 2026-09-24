@@ -222,24 +222,6 @@ const Login = () => {
       localStorage.setItem('userRole', 'owner');
     }
     
-    // 🔥 REGISTRAR LOG DE LOGIN (Assíncrono sem await para não travar o fluxo de login nem o botão)
-    try {
-      const tenantId = localStorage.getItem('tenantId') || user.uid;
-      const nomeEquipe = localStorage.getItem('funcName') || user.displayName || user.email || 'Usuário';
-      addDoc(collection(db, "logs_atividades"), {
-        empresaId: tenantId,
-        userId: tenantId,
-        funcionarioId: user.uid,
-        nomeFuncionario: nomeEquipe,
-        usuarioEmail: user.email,
-        acao: "LOGIN",
-        detalhes: "Iniciou sessão no sistema.",
-        dataHora: new Date().toISOString(),
-        criadoEm: serverTimestamp()
-      }).catch(logErr => console.error("Erro ao gravar log de login:", logErr));
-    } catch (logErr) {
-      console.error("Erro ao tentar gravar log de login:", logErr);
-    }
 
     // Salva preferências de "Lembrar meu acesso"
     if (lembrarAcesso) {

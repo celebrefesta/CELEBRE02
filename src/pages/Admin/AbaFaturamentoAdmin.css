@@ -13,14 +13,14 @@
 
 /* ==========================================
    1. KPI CARDS EXECUTIVOS
-   3 Colunas x 2 Linhas (3 cards por linha)
+   💻 DESKTOP (> 900px): 6 CARDS EM 1 LINHA ÚNICA HORIZONTAL
    ========================================== */
 .cg-faturamento-container .cg-fat-kpi-grid {
   display: grid !important;
-  grid-template-columns: repeat(3, 1fr) !important;
-  gap: 10px;
+  grid-template-columns: repeat(6, 1fr) !important;
+  gap: 8px;
   width: 100%;
-  margin-bottom: 4px;
+  margin-bottom: 12px;
 }
 
 .cg-faturamento-container .cg-fat-kpi-card {
@@ -539,6 +539,68 @@
   background: #8b5cf6;
   border-color: #8b5cf6;
   color: #ffffff;
+}
+
+/* ---------- 🏥 BADGE DE SAÚDE E INATIVIDADE NA AUDITORIA DE FATURAS ---------- */
+.cg-faturamento-container .fat-health-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  line-height: 1.3;
+}
+
+.cg-faturamento-container .fat-health-badge.badge-suspenso {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.cg-faturamento-container .fat-health-badge.badge-risco {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.cg-faturamento-container .fat-health-badge.badge-vencendo {
+  background: #fff7ed;
+  color: #ea580c;
+  border: 1px solid #fed7aa;
+}
+
+.cg-faturamento-container .fat-health-badge.badge-bloqueado {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #f87171;
+}
+
+[data-theme^='dark'] .cg-faturamento-container .fat-health-badge.badge-suspenso {
+  background: rgba(100, 116, 139, 0.25);
+  color: #cbd5e1;
+  border-color: rgba(100, 116, 139, 0.4);
+}
+
+[data-theme^='dark'] .cg-faturamento-container .fat-health-badge.badge-risco {
+  background: rgba(220, 38, 38, 0.22);
+  color: #fca5a5;
+  border-color: rgba(220, 38, 38, 0.4);
+}
+
+[data-theme^='dark'] .cg-faturamento-container .fat-health-badge.badge-vencendo {
+  background: rgba(234, 88, 12, 0.22);
+  color: #fdba74;
+  border-color: rgba(234, 88, 12, 0.4);
+}
+
+[data-theme^='dark'] .cg-faturamento-container .fat-health-badge.badge-bloqueado {
+  background: rgba(153, 27, 27, 0.28);
+  color: #f87171;
+  border-color: rgba(153, 27, 27, 0.45);
 }
 
 .cg-faturamento-container .cg-fat-selects-group {

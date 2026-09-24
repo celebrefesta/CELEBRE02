@@ -164,25 +164,7 @@ const Topbar = () => {
   };
 
   const registrarLogLogout = async () => {
-    if (!userAuthObj) return;
-    try {
-      const tenantId = localStorage.getItem('tenantId') || userAuthObj.uid;
-      const nomeEquipa = localStorage.getItem('funcName') || userAuthObj.displayName || userAuthObj.email || "Usuário";
-      
-      await addDoc(collection(db, "logs_atividades"), {
-        empresaId: tenantId,
-        userId: tenantId,
-        funcionarioId: userAuthObj.uid,
-        nomeFuncionario: nomeEquipa,
-        usuarioEmail: userAuthObj.email,
-        acao: "LOGOUT",
-        detalhes: "Encerrou a sessão e saiu do sistema.",
-        dataHora: new Date().toISOString(),
-        criadoEm: serverTimestamp()
-      });
-    } catch (error) {
-      console.error("Erro ao gravar log de logout:", error);
-    }
+    // Não polui logs_atividades com encerramento de sessão
   };
 
   const handleSair = async () => {

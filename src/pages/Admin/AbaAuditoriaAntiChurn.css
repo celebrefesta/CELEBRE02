@@ -985,6 +985,211 @@
   background: rgba(197, 160, 89, 0.12);
 }
 
+/* ---------- 💎 CARDS E DESTAQUES DE PAGAMENTO (TUDO BONITINHO) ---------- */
+.cg-auditoria-container .cg-log-card-financeiro {
+  border-color: rgba(16, 185, 129, 0.45) !important;
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.04) 0%, var(--cg-card-bg, #ffffff) 100%) !important;
+  box-shadow: 0 3px 12px rgba(16, 185, 129, 0.08) !important;
+}
+
+[data-theme^='dark'] .cg-auditoria-container .cg-log-card-financeiro {
+  border-color: rgba(16, 185, 129, 0.45) !important;
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.08) 0%, rgba(15, 23, 42, 0.85) 100%) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+}
+
+.cg-auditoria-container .cg-auditoria-badge-valor {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 850;
+  letter-spacing: 0.3px;
+}
+
+[data-theme^='dark'] .cg-auditoria-container .cg-auditoria-badge-valor {
+  background: rgba(16, 185, 129, 0.18);
+  color: #86efac;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.cg-auditoria-container .cg-auditoria-badge-metodo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.cg-auditoria-container .cg-auditoria-badge-metodo.metodo-pix {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.cg-auditoria-container .cg-auditoria-badge-metodo.metodo-cartao {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.cg-auditoria-container .cg-auditoria-badge-metodo.metodo-boleto {
+  background: #fffbeb;
+  color: #b45309;
+  border-color: #fde68a;
+}
+
+.cg-auditoria-container .cg-auditoria-badge-plano {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fefce8;
+  color: #a16207;
+  border: 1px solid #fef08a;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+/* Horário do Pagamento em Destaque Bonitinho */
+.cg-auditoria-container .time-group-pagamento {
+  background: #f8fafc;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  align-items: flex-end;
+}
+
+[data-theme^='dark'] .cg-auditoria-container .time-group-pagamento {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.cg-auditoria-container .cg-auditoria-time-label {
+  font-size: 9.5px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #15803d;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+[data-theme^='dark'] .cg-auditoria-container .cg-auditoria-time-label {
+  color: #86efac;
+}
+
+.cg-auditoria-container .destaque-hora {
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  color: #0f172a !important;
+  font-family: 'Consolas', 'Courier New', monospace;
+  letter-spacing: 0.5px;
+}
+
+[data-theme^='dark'] .cg-auditoria-container .destaque-hora {
+  color: #f8fafc !important;
+}
+
+.cg-auditoria-container .cg-auditoria-log-date-tag {
+  font-size: 10.5px;
+  color: var(--cg-text-muted, #64748b);
+  font-weight: 600;
+}
+
+.cg-auditoria-container .detalhes-pagamento {
+  border-left-color: #10b981 !important;
+  background: rgba(16, 185, 129, 0.03);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+[data-theme^='dark'] .cg-auditoria-container .detalhes-pagamento {
+  background: rgba(16, 185, 129, 0.06);
+}
+
+.cg-auditoria-container .cg-auditoria-mp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 750;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--cg-text-muted, #64748b);
+}
+
+[data-theme^='dark'] .cg-auditoria-container .cg-auditoria-mp-pill {
+  background: rgba(255, 255, 255, 0.06);
+  color: #94a3b8;
+}
+
+/* Pílulas de filtro rápido de modo (Só Pagamentos / Todos) */
+.cg-auditoria-container .cg-auditoria-quick-filter-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cg-auditoria-container .cg-quick-pill {
+  height: 38px;
+  padding: 0 13px;
+  border-radius: 8px;
+  border: 1px solid var(--cg-card-border, #cbd5e1);
+  background: var(--cg-card-bg, #ffffff);
+  color: var(--cg-text-muted, #64748b);
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.cg-auditoria-container .cg-quick-pill:hover {
+  border-color: var(--cg-gold, #c5a059);
+  color: var(--cg-text-main, #0f172a);
+}
+
+.cg-auditoria-container .cg-quick-pill.active {
+  background: #10b981;
+  color: #ffffff;
+  border-color: #10b981;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+
+.cg-auditoria-container .cg-quick-pill.active-all {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.25);
+}
+
+[data-theme^='dark'] .cg-auditoria-container .cg-quick-pill.active-all {
+  background: var(--cg-gold, #c5a059);
+  color: #0f172a;
+  border-color: var(--cg-gold, #c5a059);
+}
+
 /* Empty states */
 .cg-auditoria-empty {
   background: var(--cg-card-bg, #ffffff);
@@ -1344,5 +1549,26 @@
   .cg-auditoria-log-detalhes {
     font-size: 11px !important;
     padding: 5px 8px !important;
+  }
+
+  .cg-auditoria-quick-filter-pills {
+    width: 100% !important;
+  }
+
+  .cg-quick-pill {
+    flex: 1 !important;
+    justify-content: center !important;
+    font-size: 11.5px !important;
+    height: 36px !important;
+  }
+
+  .time-group-pagamento {
+    width: 100% !important;
+    align-items: flex-start !important;
+    margin-top: 4px !important;
+  }
+
+  .destaque-hora {
+    font-size: 13px !important;
   }
 }
