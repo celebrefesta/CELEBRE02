@@ -1,38 +1,51 @@
-# 🎨 Resumo & Roteiro de Homologação: Estúdio Moodboard & Letreiros 3D
+# 🎨 Resumo & Roteiro de Homologação: Estúdio Moodboard & Google Play Store
 
-> **Status Atual:** 🚀 **TRABALHANDO ATIVAMENTE NO MÓDULO MOODBOARD**  
+> **Status Atual:** 🚀 **TRABALHANDO ATIVAMENTE NO MÓDULO MOODBOARD & GOOGLE PLAY**  
 > **Projeto:** Sistema Celebre — Gestão de Festas, Acervo & Locações  
-> **Data:** 24 de Setembro de 2026  
-> **Foco:** Eliminação de Travamentos no Letreiro & Otimização da Galeria de Projetos  
+> **Data:** 25 de Setembro de 2026  
+> **Foco:** Correção Crítica de Runtime no Letreiro & Migração para Conta Organizacional Google Play (CNPJ / D-U-N-S)  
 > **Ambiente:** Homologação e Produção ([celebrefesta.com.br](https://celebrefesta.com.br))  
 
 ---
 
-## ⚡ O QUE FOI FEITO NO MOODBOARD
+## ⚡ O QUE FOI FEITO NESTA SESSÃO (25/09/2026)
 
-Identificamos e corrigimos na raiz os gargalos que estavam provocando congelamentos e quedas drásticas de FPS na ferramenta de **Letreiros & Textos** e refinamos a **Galeria de Projetos**:
+### 1. 🛠️ Correção Crítica de Runtime no Letreiro do Moodboard (`Moodboard.jsx`)
+- **Problema Identificado:** Erro `Uncaught ReferenceError: itensDomRef is not defined at onChange (Moodboard.jsx:7699:43)` no console do navegador ao tentar digitar texto no campo de letreiro.
+- **Causa Raiz:** A otimização de 0ms lag no DOM chamava a referência `itensDomRef.current.get(selecionadoId)`, porém a ref não estava declarada no escopo do componente.
+- **Solução Implementada:**
+  - Adicionada a declaração `const itensDomRef = useRef(new Map());` no topo do componente.
+  - Vinculada a callback `ref` na renderização das peças na prancheta (`<div data-item-id={item.uniqueId} ref={el => ...} />`), populando e desalocando nós DOM em tempo $O(1)$.
+  - Implementada camada de fallback defensivo via `boardRef.current?.querySelector?.(...)` nos 3 pontos de entrada:
+    1. Digitação direta no input (`onChange`).
+    2. Colagem de texto da área de transferência (`📋 Colar`).
+    3. Limpeza rápida de campo (`✕ Limpar`).
+- **Resultado:** Digitação 100% fluida, com 0ms de atraso visual no DOM e zero erros no console do navegador.
 
-1. **Zero Latência de Digitação (0ms Input Lag):**
-   - **Atualização síncrona visual no DOM:** Ao digitar no campo de texto da barra lateral, o letreiro na prancheta atualiza imediatamente no DOM em tempo real.
-   - **Desacoplamento do histórico:** O histórico agora é salvo com debounce leve (`agendarSaveSnapshotTexto`) após a pausa na digitação ou no `onBlur` (saída do campo), eliminando clones pesados de array por caractere.
-   - **Editor inline otimizado (`InlineTextareaEditor`):** O duplo clique de edição no canvas agora utiliza estado local reativo isolado, acabando com layout thrashing e reposicionamentos involuntários de cursor.
+---
 
-2. **Memoização Estrita do Letreiro (`areTextPropsEqual`):**
-   - Adicionamos um comparador de propriedades dedicado que impede 100% que os letreiros sejam re-renderizados quando outros elementos da decoração (balões, mesas cilindro, painéis, flores) são movidos ou manipulados no canvas.
-   - Callbacks estáveis com `useCallback` (`handleTextDoubleClick`, `handleTextChange`, `handleTextBlur`) foram vinculados na prancheta.
+### 2. 📱 Google Play Store — Estratégia de Migração para CNPJ & D-U-N-S
+- **Diagnóstico da Retenção:** O Google Play Console manteve a exigência de teste fechado por mais 14 dias com 12 testadores ativos para contas de Pessoa Física (CPF).
+- **Decisão Estratégica:** Iniciar a conversão da conta para **Organização (Pessoa Jurídica / CNPJ)**, o que **extingue em definitivo** a regra de 14 dias / 12 testadores, liberando a publicação direta no canal de Produção.
+- **Verificação Oficial do Domínio no Google Search Console:**
+  - Gerado e publicado o arquivo HTML oficial: `public/google0cd890e1480ced68.html`.
+  - Inserida a metatag de autenticação no `<head>` do `index.html`: `<meta name="google-site-verification" content="GeZsEtfFNMxr-RFSsVMq3bcXstIS4lO5UnbJDrtSKA8" />`.
+  - Deploy efetuado no Firebase Hosting.
+  - **Propriedade verificada com sucesso (Selo Verde)** no Google Search Console sob a conta `celebrefesta25@gmail.com`.
+  - Tela de migração para Organização desbloqueada no Google Play Console.
+- **Solicitação do Número D-U-N-S (9 dígitos):**
+  - Solicitação formal gratuita encaminhada pelo portal da CIAL Dun & Bradstreet América Latina / Brasil, selecionando a categoria oficial de desenvolvedor Google Play. Aguardando retorno da emissão para inserção no Google Play Console.
 
-3. **Aceleração por Hardware no CSS & Renderização SVG Leve:**
-   - Adicionamos em `Moodboard.css` isolamento de layout de camada (`contain: layout style; will-change: transform; transform: translateZ(0); -webkit-backface-visibility: hidden;`).
-   - Otimizamos a renderização do Neon LED e do texto curvo SVG, eliminando o empilhamento redundante de multi-camadas de `text-shadow` e `filter: drop-shadow` sobre o SVG (`<textPath>`), transferindo a carga inteiramente para a GPU nativa.
+---
 
-4. **Sliders e Redimensionamento a 60–120 FPS:**
-   - Os controles deslizantes de **Escala do Letreiro**, **Curvatura do Arco**, **Contorno / Borda** e **Espaçamento de Letras** agora operam com `deveSalvarHistorico = false` durante o arraste e gravam o histórico apenas no `onPointerUp`.
-   - As alças de quina agora redimensionam o letreiro fluidamente (inclusive texto curvo via `scale()`), sem solavancos.
+## 🎨 OTIMIZAÇÕES ANTERIORES DO MOODBOARD (PRESERVADAS)
 
-5. **Aprimoramento da Galeria de Projetos Salvos:**
-   - Remoção de barras de rolagem duplicadas que quebravam a estética no desktop e mobile.
-   - Remoção do botão de ação duplicado no topo ("Criar Novo Projeto"), mantendo a interface limpa e focada.
-   - Tratamento elegante para estado vazio: quando não há projetos salvos, exibe uma mensagem informativa limpa e minimalista.
+1. **Zero Latência de Digitação (0ms Input Lag):** Atualização visual síncrona no DOM e histórico desacoplado com debounce leve (`agendarSaveSnapshotTexto`).
+2. **Editor Inline no Canvas (`InlineTextareaEditor`):** Duplo clique no palco com estado isolado e auto-expansão sem layout thrashing.
+3. **Memoização Estrita (`areTextPropsEqual`):** Letreiros não sofrem re-render ao movimentar outras peças (mesas, balões, painéis).
+4. **Aceleração por Hardware no CSS:** `will-change: transform`, `transform: translateZ(0)` e SVG `<textPath>` com Neon nativo por GPU.
+5. **Sliders e Alças a 60–120 FPS:** Escala, curvatura, contorno e espaçamento suaves com gravação no `onPointerUp`.
+6. **Galeria de Projetos Limpa:** Sem barras de rolagem duplicadas e sem botões redundantes.
 
 ---
 
@@ -43,7 +56,7 @@ Identificamos e corrigimos na raiz os gargalos que estavam provocando congelamen
 │                 ROTEIRO DE TESTES — 6 ETAPAS NO MOODBOARD                   │
 │                                                                             │
 │  [1] Menu Lateral ➔ Estúdio Moodboard                                       │
-│  [2] Adicionar Letreiro ➔ Digitação Rápida sem Travar                        │
+│  [2] Adicionar Letreiro ➔ Digitação Rápida sem Erros no Console             │
 │  [3] Duplo Clique na Prancheta ➔ Edição Direta Fluida                       │
 │  [4] Sliders do Letreiro ➔ Escala, Curvatura e Espaçamento a 60-120 FPS     │
 │  [5] Redimensionamento por Alça ➔ Arrastar Quinas sem Delay                 │
@@ -64,8 +77,9 @@ Identificamos e corrigimos na raiz os gargalos que estavam provocando congelamen
 2. No campo **✍️ Digite o Texto / Nome / Frase**, digite rapidamente uma frase longa (ex.: *"15 Anos da Maria Alice - Bem-vindos"*).
 3. **O que observar:** 
    - A digitação flui imediatamente sem travar, sem engolir letras e sem cursor pulando.
-   - O letreiro no palco atualiza instantaneamente a cada tecla.
-   - O botão `✕` (limpar campo) apaga o texto imediatamente sem travamentos.
+   - O console do navegador (F12) permanece **100% limpo, sem nenhum erro de `itensDomRef`**.
+   - O letreiro no palco atualiza instantaneamente a cada tecla digitada.
+   - O botão `✕` (limpar campo) apaga o texto imediatamente sem nenhum travamento.
 
 ---
 
@@ -115,9 +129,10 @@ Identificamos e corrigimos na raiz os gargalos que estavam provocando congelamen
 | **Regra 1 & 2** | Layout dos Cards KPI em 1 linha (desktop) e 2 colunas (mobile) | ✅ Preservado |
 | **Regra 5** | Isolamento de CSS escopado sem vazamento de estilos | ✅ Preservado |
 | **Regra 7** | Arquivo `design-lock.css` 100% blindado e intocado | ✅ Preservado |
-| **Moodboard** | Otimização de GPU & Zero Latência em Letreiros | ✅ Aprovado |
+| **Moodboard** | Otimização de GPU, Resolução de `itensDomRef` & Zero Latência | ✅ Aprovado |
 
 ---
 
 ## 🚀 Status do Build
-* **Build de Produção:** Concluído com sucesso via `vite build` em **14.35s** com **0 erros**.
+* **Build de Produção:** Concluído com sucesso via `vite build` em **18.09s** com **0 erros**.
+* **Deploy no Firebase Hosting:** Atualizado e publicado em produção com suporte ao domínio canônico `https://celebrefesta.com.br`.

@@ -366,6 +366,27 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 
 ## 📅 9. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
 
+### 🗓️ Sessão: 25/09/2026 — 15h15 às 16h55 (BRT)
+- ✅ **📱 Google Play Store — Estratégia de Migração para Conta Organizacional (CNPJ) & D-U-N-S**:
+  - **Diagnóstico da Política de Testes**: Identificada a retenção do Google Play Console solicitando mais 14 dias com 12 testadores ativos para contas de Pessoa Física (CPF).
+  - **Transição para Conta Organizacional (CNPJ)**: Decisão estratégica de converter a conta para Pessoa Jurídica, modalidade que **elimina em definitivo** a exigência de 14 dias de teste fechado, permitindo publicação direta no canal de Produção.
+  - **Verificação Oficial do Domínio no Google Search Console**:
+    - Geração e publicação do arquivo HTML de verificação: `public/google0cd890e1480ced68.html` com o token oficial.
+    - Inclusão da metatag de verificação de propriedade no cabeçalho `<head>` de `index.html`: `<meta name="google-site-verification" content="GeZsEtfFNMxr-RFSsVMq3bcXstIS4lO5UnbJDrtSKA8" />`.
+    - Execução de build e deploy no Firebase Hosting (`npx firebase deploy --only hosting`).
+    - Propriedade do domínio `https://celebrefesta.com.br` **verificada com sucesso (status verde)** no Google Search Console.
+    - Desbloqueio imediato da tela oficial de transição de tipo de conta no Google Play Console.
+  - **Solicitação do Número D-U-N-S (9 dígitos)**:
+    - Encaminhada solicitação formal no portal da CIAL Dun & Bradstreet América Latina / Brasil, direcionada para a categoria oficial de desenvolvedores do Google Play. Aguardando retorno da emissão para inclusão no console.
+- ✅ **🎨 Estúdio Moodboard — Correção Crítica de Runtime no Letreiro (`Moodboard.jsx`)**:
+  - **Diagnóstico**: Erro `Uncaught ReferenceError: itensDomRef is not defined at onChange (Moodboard.jsx:7699:43)` disparado durante a digitação de novos textos ou frases no campo de letreiro.
+  - **Declaração e Inicialização da Ref**: Adicionada a declaração `const itensDomRef = useRef(new Map())` no topo do componente.
+  - **Mapeamento Direto no Canvas**: Vinculado o callback `ref` na renderização das peças na prancheta para manter o mapa atualizado em tempo real com complexidade $O(1)$.
+  - **Fallbacks Defensivos**: Implementada proteção resiliente com busca condicional via `boardRef.current?.querySelector?.(...)` nos 3 pontos de manipulação de texto (digitação `onChange`, atalho `📋 Colar` e limpeza `✕ Limpar`), prevenindo qualquer travamento de tela.
+- ✅ **🛠️ Auditoria de Build e Deploy**:
+  - `npm run build` aprovado com **0 erros** (`✓ built in 18.09s`).
+  - Deploy no Firebase Hosting concluído com sucesso.
+
 ### 🗓️ Sessão: 24/09/2026 — 15h30 às 16h35 (BRT)
 - ✅ **🎨 Estúdio Moodboard — Eliminação Total de Travamentos em Letreiros, Texto Curvo SVG & Otimização da Galeria de Projetos (`Moodboard.jsx`, `Moodboard.css`)**:
   - **Zero Input Lag na Digitação de Letreiros**:

@@ -3516,6 +3516,7 @@ const Moodboard = () => {
   const [uploadOrigem, setUploadOrigem] = useState('geral');
   const fileUploadInputRef = useRef(null);
   const inputTextoLetreiroRef = useRef(null);
+  const itensDomRef = useRef(new Map());
 
   // 📱 MOBILE: Bottom Sheet State
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 900);
@@ -7652,7 +7653,7 @@ const Moodboard = () => {
                                   const novoVal = clip;
                                   setTextoNovoInput(novoVal);
                                   if (itemSelecionado?.type === 'text' && selecionadoId) {
-                                    const domEl = itensDomRef.current?.get(selecionadoId);
+                                    const domEl = itensDomRef.current?.get(selecionadoId) || boardRef.current?.querySelector?.(`[data-item-id="${selecionadoId}"]`);
                                     if (domEl) {
                                       const textInner = domEl.querySelector('.text-render-element');
                                       if (textInner && textInner.tagName?.toLowerCase() !== 'svg') {
@@ -7696,7 +7697,7 @@ const Moodboard = () => {
                           setTextoNovoInput(val);
                           if (itemSelecionado?.type === 'text' && selecionadoId) {
                             // Atualização síncrona visual instantânea no DOM (0ms lag, sem esperar re-render)
-                            const domEl = itensDomRef.current?.get(selecionadoId);
+                            const domEl = itensDomRef.current?.get(selecionadoId) || boardRef.current?.querySelector?.(`[data-item-id="${selecionadoId}"]`);
                             if (domEl) {
                               const textInner = domEl.querySelector('.text-render-element');
                               if (textInner && textInner.tagName?.toLowerCase() !== 'svg') {
@@ -7749,7 +7750,7 @@ const Moodboard = () => {
                             e.stopPropagation();
                             setTextoNovoInput('');
                             if (itemSelecionado?.type === 'text' && selecionadoId) {
-                              const domEl = itensDomRef.current?.get(selecionadoId);
+                              const domEl = itensDomRef.current?.get(selecionadoId) || boardRef.current?.querySelector?.(`[data-item-id="${selecionadoId}"]`);
                               if (domEl) {
                                 const textInner = domEl.querySelector('.text-render-element');
                                 if (textInner && textInner.tagName?.toLowerCase() !== 'svg') {
@@ -9101,6 +9102,10 @@ const Moodboard = () => {
 
               return (
                 <div key={item.uniqueId}
+                  ref={el => {
+                    if (el) itensDomRef.current?.set(item.uniqueId, el);
+                    else itensDomRef.current?.delete(item.uniqueId);
+                  }}
                   data-item-id={item.uniqueId}
                   className={`canvas-object ${isSelected ? 'selected' : ''} ${item.locked ? 'locked-item' : ''} ${isPanCapaMode && isSelected ? 'in-pan-mode' : ''}`}
                   style={{
