@@ -9,6 +9,7 @@ import {
 import { anonimizarEmail } from '../../utils/mascaras';
 import './Auth.css';
 import logoImage from '../../assets/LOGO_CELEBRE.png';
+import { enviarAlertaSenhaAlterada } from '../../utils/emailSegurancaService';
 
 const RedefinirSenha = () => {
   const navigate = useNavigate();
@@ -51,6 +52,12 @@ const RedefinirSenha = () => {
   const criterios = validarSenha(novaSenha);
   const pontosForte = Object.values(criterios).filter(Boolean).length;
   const isSenhaForte = pontosForte === 5;
+
+  useEffect(() => {
+    if (emailParam) {
+      setEmailReferencia(emailParam);
+    }
+  }, [emailParam]);
 
   useEffect(() => {
     if (!oobCode) {
@@ -146,6 +153,15 @@ const RedefinirSenha = () => {
     setSalvando(true);
     try {
       await confirmPasswordReset(auth, oobCode, novaSenha);
+      
+      // ✉️ Dispara imediatamente o e-mail de alerta de segurança
+      const emailAlvo = emailConta || emailParam || '';
+      if (emailAlvo) {
+        enviarAlertaSenhaAlterada({ 
+          email: emailAlvo 
+        }).catch(errAlert => console.warn("Aviso ao enviar e-mail de alerta de senha alterada:", errAlert));
+      }
+
       setSucessoRedefinicao(true);
     } catch (error) {
       console.error("Erro ao redefinir senha:", error);
@@ -400,9 +416,13 @@ const RedefinirSenha = () => {
                 <div style={{ background: '#ecfdf5', border: '1.5px solid #6ee7b7', borderRadius: '16px', padding: '24px', marginBottom: '24px', color: '#065f46' }}>
                   <i className="fas fa-check-circle" style={{ fontSize: '44px', marginBottom: '12px', display: 'block', color: '#10b981' }}></i>
                   <strong style={{ fontSize: '18px', display: 'block', marginBottom: '6px' }}>Senha Alterada com Sucesso!</strong>
-                  <p style={{ margin: 0, fontSize: '13px', lineHeight: '1.5' }}>
+                  <p style={{ margin: '0 0 10px 0', fontSize: '13px', lineHeight: '1.5' }}>
                     Sua nova senha foi atualizada. Acesse com suas novas credenciais.
                   </p>
+                  <div style={{ fontSize: '11.5px', background: 'rgba(255, 255, 255, 0.75)', borderRadius: '8px', padding: '6px 12px', color: '#047857', border: '1px solid #a7f3d0' }}>
+                    <i className="fas fa-envelope-circle-check" style={{ marginRight: '6px' }}></i>
+                    Enviamos um e-mail de confirmação de segurança para <strong>{emailConta}</strong>.
+                  </div>
                 </div>
                 <button 
                   type="button" 

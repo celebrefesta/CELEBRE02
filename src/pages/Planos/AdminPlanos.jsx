@@ -11,7 +11,29 @@ const AdminPlanos = () => {
   const [salvando, setSalvando] = useState(false);
   const [recursos, setRecursos] = useState([]);
   const [planoAtivoMobileIdx, setPlanoAtivoMobileIdx] = useState(0);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
   const navigate = useNavigate();
+
+  const handleTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const minSwipe = 45;
+    if (distance > minSwipe && planoAtivoMobileIdx < planos.length - 1) {
+      setPlanoAtivoMobileIdx(prev => prev + 1);
+    } else if (distance < -minSwipe && planoAtivoMobileIdx > 0) {
+      setPlanoAtivoMobileIdx(prev => prev - 1);
+    }
+  };
 
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
@@ -124,13 +146,16 @@ const AdminPlanos = () => {
   const mudarOrdem = (planoId, novaOrdem) => {
     setPlanos(planosAtuais => {
       const planoAlterado = planosAtuais.find(p => p.id === planoId);
+      if (!planoAlterado) return planosAtuais;
       const ordemAntiga = Number(planoAlterado.ordem);
 
-      return planosAtuais.map(p => {
-        if (p.id === planoId) return { ...p, ordem: novaOrdem };
-        if (Number(p.ordem) === novaOrdem) return { ...p, ordem: ordemAntiga };
-        return p;
-      });
+      return planosAtuais
+        .map(p => {
+          if (p.id === planoId) return { ...p, ordem: novaOrdem };
+          if (Number(p.ordem) === novaOrdem) return { ...p, ordem: ordemAntiga };
+          return p;
+        })
+        .sort((a, b) => Number(a.ordem) - Number(b.ordem));
     });
   };
 
@@ -300,144 +325,235 @@ const AdminPlanos = () => {
   return (
     <div className="admin-planos-wrapper">
         
-        {/* HERO SECTION DE EDIÇÃO */}
-        <header className="admin-planos-hero">
-          <div className="admin-hero-top-nav">
-            <button onClick={() => navigate('/gestao-usuarios')} className="btn-voltar-master">
-              <i className="fas fa-arrow-left"></i>
-              <span>Painel Master</span>
-            </button>
-
-            <div className="admin-hero-badge">
-              <i className="fas fa-crown"></i>
-              <span>PAINEL MASTER • EDITOR DE PLANOS</span>
+        {/* HERO CABEÇALHO CELEBRE (PADRÃO LUXURY EXECUTIVE) */}
+        <header className="clientes-hero-header admin-planos-hero-header">
+          <div className="welcome-text">
+            <div className="header-title-row">
+              <span className="header-icon-badge">
+                <i className="fas fa-crown"></i>
+              </span>
+              <div>
+                <h1>Gestão da Matriz de Planos & Preços</h1>
+                <p>Edite os nomes, valores, limites e recursos dos planos em tempo real.</p>
+              </div>
             </div>
-
-            <button onClick={() => navigate('/planos')} className="btn-ver-publico">
-              <i className="fas fa-external-link-alt"></i>
-              <span>Ver Vitrine Pública</span>
-            </button>
           </div>
 
-          <h1 className="admin-hero-title">
-            Gestão da Matriz de Planos & Preços
-          </h1>
-          
-          <p className="admin-hero-subtitle">
-            Edite os nomes, valores, limites e recursos dos planos. As alterações são sincronizadas em tempo real com a vitrine pública e o checkout.
-          </p>
+          <div className="header-actions">
+            <button 
+              type="button" 
+              onClick={() => navigate('/gestao-usuarios')} 
+              className="btn-secondary-celebre"
+              title="Voltar ao Painel Master"
+            >
+              <i className="fas fa-arrow-left"></i>
+              <span>PAINEL MASTER</span>
+            </button>
 
-          <div className="admin-hero-actions">
-            <button className="btn-action-add" onClick={adicionarPlano}>
-              <i className="fas fa-plus"></i>
-              <span>+ Novo Plano</span>
-            </button>
-            <button className="btn-action-add-rec" onClick={adicionarRecurso}>
-              <i className="fas fa-layer-group"></i>
-              <span>+ Nova Funcionalidade</span>
-            </button>
-            <button className="btn-action-save" onClick={salvarTudo} disabled={salvando}>
-              <i className={`fas ${salvando ? 'fa-spinner fa-spin' : 'fa-cloud-upload-alt'}`}></i>
-              <span>{salvando ? 'Salvando...' : 'SALVAR MATRIZ NA NUVEM'}</span>
+            <button 
+              type="button" 
+              onClick={() => navigate('/planos')} 
+              className="btn-secondary-celebre"
+              title="Ver Vitrine Pública de Planos"
+            >
+              <i className="fas fa-external-link-alt"></i>
+              <span>VER VITRINE</span>
             </button>
           </div>
         </header>
 
-        {/* CARDS EM DESTAQUE EDITÁVEIS (PADRÃO LUXURY PLANOS) */}
-        <div className="admin-cards-grid">
-          {planos.map(p => {
-            const isDestaque = String(p.destaque) === "true";
-            const numBeneficios = Array.isArray(p.beneficios) ? p.beneficios.length : 0;
+        {/* BARRA DE AÇÕES OPERACIONAIS */}
+        <div className="admin-planos-toolbar">
+          <div className="toolbar-left">
+            <button className="btn-toolbar-action" onClick={adicionarPlano}>
+              <i className="fas fa-plus"></i>
+              <span>Novo Plano</span>
+            </button>
+            <button className="btn-toolbar-action" onClick={adicionarRecurso}>
+              <i className="fas fa-layer-group"></i>
+              <span>Nova Funcionalidade</span>
+            </button>
+          </div>
 
-            return (
-              <div 
-                key={p.id} 
-                className={`admin-card ${isDestaque ? 'is-destaque' : ''}`}
-              >
-                {isDestaque && (
-                  <div className="admin-card-ribbon">
-                    <i className="fas fa-star"></i> MAIS ESCOLHIDO
-                  </div>
-                )}
+          <div className="toolbar-right">
+            <button className="btn-toolbar-save" onClick={salvarTudo} disabled={salvando}>
+              <i className={`fas ${salvando ? 'fa-spinner fa-spin' : 'fa-cloud-upload-alt'}`}></i>
+              <span>{salvando ? 'Salvando...' : 'SALVAR MATRIZ NA NUVEM'}</span>
+            </button>
+          </div>
+        </div>
 
-                {/* BARRA SUPERIOR DE CONTROLE DO PLANO */}
-                <div className="admin-card-top-control">
-                  <div className="pos-badge">
-                    <span className="ctrl-tag-label">ORDEM:</span>
-                    <select 
-                      value={p.ordem} 
-                      onChange={(e) => mudarOrdem(p.id, Number(e.target.value))}
-                      title="Posição de exibição do plano"
+        {/* 📱 CONTROLE DE NAVEGAÇÃO LATERAL MOBILE (FLECHAS INDICATIVAS & ABAS RÁPIDAS) */}
+        <div className="admin-carousel-nav-wrapper">
+          <button
+            type="button"
+            className="admin-carousel-nav-arrow prev"
+            onClick={() => setPlanoAtivoMobileIdx(prev => Math.max(0, prev - 1))}
+            disabled={planoAtivoMobileIdx === 0}
+            title="Plano Anterior"
+            aria-label="Plano Anterior"
+          >
+            <i className="fas fa-chevron-left"></i>
+          </button>
+
+          <div className="admin-carousel-pills-track">
+            {planos.map((p, idx) => {
+              const isSelected = idx === planoAtivoMobileIdx;
+              const isDestaque = String(p.destaque) === "true";
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`admin-carousel-pill-item ${isSelected ? 'active' : ''}`}
+                  onClick={() => setPlanoAtivoMobileIdx(idx)}
+                >
+                  <span className="pill-dot"></span>
+                  <span className="pill-nome">{p.nome}</span>
+                  {isDestaque && <span className="pill-star">★</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            className="admin-carousel-nav-arrow next"
+            onClick={() => setPlanoAtivoMobileIdx(prev => Math.min(planos.length - 1, prev + 1))}
+            disabled={planoAtivoMobileIdx === planos.length - 1}
+            title="Próximo Plano"
+            aria-label="Próximo Plano"
+          >
+            <i className="fas fa-chevron-right"></i>
+          </button>
+        </div>
+
+        {/* CARDS EM DESTAQUE EDITÁVEIS (PADRÃO LUXURY PLANOS COM SLIDER MOBILE) */}
+        <div 
+          className="admin-cards-carousel-wrapper"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          {/* Flecha Lateral Esquerda Flutuante (Mobile) */}
+          <button 
+            type="button"
+            className="carousel-arrow-btn prev"
+            onClick={() => setPlanoAtivoMobileIdx(prev => Math.max(0, prev - 1))}
+            disabled={planoAtivoMobileIdx === 0}
+            title="Ver plano anterior"
+            aria-label="Plano anterior"
+          >
+            <i className="fas fa-chevron-left"></i>
+          </button>
+
+          <div className="admin-cards-grid">
+            {planos.map((p, idx) => {
+              const isDestaque = String(p.destaque) === "true";
+              const isMobileActive = idx === planoAtivoMobileIdx;
+              const numBeneficios = Array.isArray(p.beneficios) ? p.beneficios.length : 0;
+
+              return (
+                <div 
+                  key={p.id} 
+                  className={`admin-card ${isDestaque ? 'is-destaque' : ''} ${isMobileActive ? 'is-active-mobile' : ''}`}
+                >
+                  {isDestaque && (
+                    <div className="admin-card-ribbon">
+                      <i className="fas fa-star"></i> MAIS ESCOLHIDO
+                    </div>
+                  )}
+
+                  {/* BARRA SUPERIOR DE CONTROLE DO PLANO */}
+                  <div className="admin-card-top-control">
+                    <div className="pos-badge">
+                      <span className="ctrl-tag-label">ORDEM:</span>
+                      <select 
+                        value={p.ordem} 
+                        onChange={(e) => mudarOrdem(p.id, Number(e.target.value))}
+                        title="Posição de exibição do plano"
+                      >
+                        {planos.map((_, i) => (
+                          <option key={i + 1} value={i + 1}>{i + 1}º</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="destaque-selector">
+                      <i className="fas fa-star" style={{ color: isDestaque ? '#c5a059' : '#cbd5e1' }}></i>
+                      <select 
+                        value={String(p.destaque)} 
+                        onChange={(e) => updateLocalPlano(p.id, 'destaque', e.target.value === 'true')}
+                        title="Destacar como plano mais escolhido"
+                      >
+                        <option value="false">Padrão</option>
+                        <option value="true">Destaque</option>
+                      </select>
+                    </div>
+
+                    <button 
+                      className="btn-trash-plano" 
+                      title="Excluir este plano"
+                      onClick={() => deletarPlano(p.id)}
                     >
-                      {planos.map((_, i) => (
-                        <option key={i + 1} value={i + 1}>{i + 1}º</option>
-                      ))}
-                    </select>
+                      <i className="fas fa-trash-alt"></i>
+                    </button>
                   </div>
 
-                  <div className="destaque-selector">
-                    <i className="fas fa-star" style={{ color: isDestaque ? '#c5a059' : '#cbd5e1' }}></i>
-                    <select 
-                      value={String(p.destaque)} 
-                      onChange={(e) => updateLocalPlano(p.id, 'destaque', e.target.value === 'true')}
-                      title="Destacar como plano mais escolhido"
-                    >
-                      <option value="false">Padrão</option>
-                      <option value="true">Destaque</option>
-                    </select>
+                  {/* TÍTULO EDITÁVEL LIMPO */}
+                  <div className="admin-card-header">
+                    <span className="admin-card-tipo">
+                      {isDestaque ? 'Custo-Benefício VIP' : 'Assinatura Mensal'}
+                    </span>
+                    <div className="admin-input-nome-wrapper">
+                      <input 
+                        className="admin-input-nome"
+                        value={p.nome} 
+                        onChange={(e) => updateLocalPlano(p.id, 'nome', e.target.value)}
+                        placeholder="Nome do Plano"
+                        title="Clique para editar o nome"
+                      />
+                    </div>
                   </div>
 
-                  <button 
-                    className="btn-trash-plano" 
-                    title="Excluir este plano"
-                    onClick={() => deletarPlano(p.id)}
-                  >
-                    <i className="fas fa-trash-alt"></i>
-                  </button>
-                </div>
-
-                {/* TÍTULO EDITÁVEL LIMPO */}
-                <div className="admin-card-header">
-                  <span className="admin-card-tipo">
-                    {isDestaque ? 'Custo-Benefício VIP' : 'Assinatura Mensal'}
-                  </span>
-                  <div className="admin-input-nome-wrapper">
+                  {/* PREÇO EDITÁVEL LIMPO */}
+                  <div className="admin-card-preco-box">
+                    <span className="moeda">R$</span>
                     <input 
-                      className="admin-input-nome"
-                      value={p.nome} 
-                      onChange={(e) => updateLocalPlano(p.id, 'nome', e.target.value)}
-                      placeholder="Nome do Plano"
-                      title="Clique para editar o nome"
+                      className="admin-input-preco"
+                      style={{ width: `${Math.max(5, String(p.preco || '').length) * 26 + 6}px` }}
+                      value={p.preco} 
+                      onChange={(e) => updateLocalPlano(p.id, 'preco', e.target.value)}
+                      placeholder="0,00"
+                      title="Clique para alterar o valor mensal"
                     />
+                    <span className="periodo">/mês</span>
+                  </div>
+
+                  {/* FAIXA DE METADADOS ELEGANTE */}
+                  <div className="admin-card-footer-strip">
+                    <span className="admin-card-features-tag">
+                      <i className="fas fa-check"></i> {numBeneficios} recursos
+                    </span>
+                    <span className="admin-card-status-tag">
+                      <i className="fas fa-circle"></i> Mercado Pago
+                    </span>
                   </div>
                 </div>
+              );
+            })}
+          </div>
 
-                {/* PREÇO EDITÁVEL LIMPO */}
-                <div className="admin-card-preco-box">
-                  <span className="moeda">R$</span>
-                  <input 
-                    className="admin-input-preco"
-                    style={{ width: `${Math.max(5, String(p.preco || '').length) * 26 + 6}px` }}
-                    value={p.preco} 
-                    onChange={(e) => updateLocalPlano(p.id, 'preco', e.target.value)}
-                    placeholder="0,00"
-                    title="Clique para alterar o valor mensal"
-                  />
-                  <span className="periodo">/mês</span>
-                </div>
-
-                {/* FAIXA DE METADADOS ELEGANTE */}
-                <div className="admin-card-footer-strip">
-                  <span className="admin-card-features-tag">
-                    <i className="fas fa-check"></i> {numBeneficios} recursos
-                  </span>
-                  <span className="admin-card-status-tag">
-                    <i className="fas fa-circle"></i> Mercado Pago
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+          {/* Flecha Lateral Direita Flutuante (Mobile) */}
+          <button 
+            type="button"
+            className="carousel-arrow-btn next"
+            onClick={() => setPlanoAtivoMobileIdx(prev => Math.min(planos.length - 1, prev + 1))}
+            disabled={planoAtivoMobileIdx === planos.length - 1}
+            title="Ver próximo plano"
+            aria-label="Próximo plano"
+          >
+            <i className="fas fa-chevron-right"></i>
+          </button>
         </div>
 
         {/* MATRIZ COMPARATIVA DETALHADA E EDITÁVEL */}

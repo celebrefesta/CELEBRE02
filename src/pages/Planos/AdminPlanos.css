@@ -86,106 +86,107 @@
 }
 
 /* --------------------------------------------------------------------------
-   1. HERO SECTION DO EDITOR
+   1. HERO CABEÇALHO CELEBRE (PADRÃO LUXURY EXECUTIVE)
    -------------------------------------------------------------------------- */
-.admin-planos-wrapper .admin-planos-hero {
-  width: 100%;
-  max-width: 100%;
-  margin: 0 0 28px 0;
-  text-align: center;
-  position: relative;
-  padding-top: 4px;
-}
-
-.admin-planos-wrapper .admin-hero-top-nav {
+.admin-planos-wrapper .admin-planos-hero-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
   gap: 16px;
-  margin-bottom: 20px;
 }
 
-.admin-planos-wrapper .btn-voltar-master,
-.admin-planos-wrapper .btn-ver-publico {
-  padding: 8px 16px;
-  background: var(--ap-card-bg);
-  color: var(--ap-text-main);
-  border: 1px solid var(--ap-card-border);
-  border-radius: 10px;
-  font-weight: 700;
-  font-size: 13px;
-  cursor: pointer;
-  display: inline-flex;
+.admin-planos-wrapper .header-title-row {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+  gap: 16px;
 }
 
-.admin-planos-wrapper .btn-voltar-master:hover,
-.admin-planos-wrapper .btn-ver-publico:hover {
-  border-color: var(--ap-gold);
-  color: var(--ap-gold);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(197, 160, 89, 0.15);
-}
-
-.admin-planos-wrapper .admin-hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--ap-gold-light);
-  color: #926f2d;
-  padding: 6px 16px;
-  border-radius: 30px;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  border: 1px solid var(--ap-gold-border);
-}
-
-[data-theme^='dark'] .admin-planos-wrapper .admin-hero-badge {
-  color: #dfb76c;
-}
-
-.admin-planos-wrapper .admin-hero-badge i {
-  color: var(--ap-gold);
-  font-size: 12px;
-}
-
-.admin-planos-wrapper .admin-hero-title {
-  font-size: 28px;
-  line-height: 1.25;
-  font-weight: 800;
-  color: var(--ap-text-main);
-  letter-spacing: -0.5px;
-  margin: 0 0 8px 0;
-}
-
-.admin-planos-wrapper .admin-hero-subtitle {
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--ap-text-muted);
-  max-width: 680px;
-  margin: 0 auto 22px auto;
-}
-
-.admin-planos-wrapper .admin-hero-actions {
+.admin-planos-wrapper .header-icon-badge {
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--ap-gold, #c5a059) 0%, #a4803c 100%);
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
+.admin-planos-wrapper .welcome-text h1 {
+  font-size: 1.75rem;
+  font-weight: 850;
+  color: var(--ap-text-main);
+  letter-spacing: -0.6px;
+  margin: 0 0 4px 0;
+}
+
+.admin-planos-wrapper .welcome-text p {
+  font-size: 0.88rem;
+  color: var(--ap-text-muted);
+  margin: 0;
+  font-weight: 500;
+}
+
+.admin-planos-wrapper .header-actions {
+  display: flex;
+  align-items: center;
   gap: 12px;
+}
+
+.admin-planos-wrapper .btn-secondary-celebre {
+  background: var(--ap-card-bg);
+  color: var(--ap-text-main);
+  padding: 11px 20px;
+  border-radius: 30px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  border: 1px solid var(--ap-card-border);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+  transition: all 0.25s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.admin-planos-wrapper .btn-secondary-celebre:hover {
+  border-color: var(--ap-gold);
+  color: var(--ap-gold);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(197, 160, 89, 0.18);
+}
+
+/* --------------------------------------------------------------------------
+   TOOLBAR DE AÇÕES OPERACIONAIS
+   -------------------------------------------------------------------------- */
+.admin-planos-wrapper .admin-planos-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
   flex-wrap: wrap;
 }
 
-.admin-planos-wrapper .btn-action-add,
-.admin-planos-wrapper .btn-action-add-rec {
+.admin-planos-wrapper .toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-planos-wrapper .btn-toolbar-action {
   padding: 10px 18px;
   background: var(--ap-card-bg);
   color: var(--ap-text-main);
   border: 1px solid var(--ap-card-border);
-  border-radius: 10px;
+  border-radius: 12px;
   font-weight: 700;
   font-size: 13px;
   cursor: pointer;
@@ -196,19 +197,18 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
 }
 
-.admin-planos-wrapper .btn-action-add:hover,
-.admin-planos-wrapper .btn-action-add-rec:hover {
+.admin-planos-wrapper .btn-toolbar-action:hover {
   border-color: var(--ap-gold);
   color: var(--ap-gold);
   transform: translateY(-1px);
 }
 
-.admin-planos-wrapper .btn-action-save {
-  padding: 10px 22px;
+.admin-planos-wrapper .btn-toolbar-save {
+  padding: 11px 24px;
   background: var(--ap-gold-gradient);
   color: #0f172a;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   font-weight: 800;
   font-size: 13px;
   letter-spacing: 0.5px;
@@ -220,13 +220,13 @@
   box-shadow: 0 4px 14px rgba(197, 160, 89, 0.35);
 }
 
-.admin-planos-wrapper .btn-action-save:hover {
+.admin-planos-wrapper .btn-toolbar-save:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(197, 160, 89, 0.45);
   filter: brightness(1.05);
 }
 
-.admin-planos-wrapper .btn-action-save:disabled {
+.admin-planos-wrapper .btn-toolbar-save:disabled {
   opacity: 0.7;
   cursor: not-allowed;
   transform: none;
@@ -235,6 +235,11 @@
 /* --------------------------------------------------------------------------
    2. CARDS EDITÁVEIS (PADRÃO LUXURY BOUTIQUE)
    -------------------------------------------------------------------------- */
+.admin-planos-wrapper .admin-carousel-nav-wrapper,
+.admin-planos-wrapper .carousel-arrow-btn {
+  display: none;
+}
+
 .admin-planos-wrapper .admin-cards-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -950,61 +955,267 @@
     padding: 16px 12px 60px 12px;
   }
 
-  .admin-planos-wrapper .admin-hero-top-nav {
+  .admin-planos-wrapper .admin-planos-hero-header {
     flex-direction: column;
-    gap: 10px;
     align-items: stretch;
-  }
-
-  .admin-planos-wrapper .btn-voltar-master,
-  .admin-planos-wrapper .btn-ver-publico {
-    width: 100%;
-    justify-content: center;
-    font-size: 12.5px;
-    padding: 9px 14px;
-  }
-
-  .admin-planos-wrapper .admin-hero-badge {
-    align-self: center;
-  }
-
-  .admin-planos-wrapper .admin-hero-title {
-    font-size: 22px;
-    line-height: 1.3;
-  }
-
-  .admin-planos-wrapper .admin-hero-subtitle {
-    font-size: 13px;
+    gap: 14px;
     margin-bottom: 18px;
   }
 
-  .admin-planos-wrapper .admin-hero-actions {
-    flex-direction: column;
-    width: 100%;
-    gap: 8px;
+  .admin-planos-wrapper .header-title-row {
+    gap: 12px;
   }
 
-  .admin-planos-wrapper .btn-action-add,
-  .admin-planos-wrapper .btn-action-add-rec,
-  .admin-planos-wrapper .btn-action-save {
+  .admin-planos-wrapper .header-icon-badge {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    font-size: 18px;
+    border-radius: 12px;
+  }
+
+  .admin-planos-wrapper .welcome-text h1 {
+    font-size: 1.25rem;
+    line-height: 1.25;
+  }
+
+  .admin-planos-wrapper .welcome-text p {
+    font-size: 0.78rem;
+    line-height: 1.4;
+  }
+
+  .admin-planos-wrapper .header-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .admin-planos-wrapper .btn-secondary-celebre {
     width: 100%;
     justify-content: center;
-    font-size: 13px;
-    padding: 10px 16px;
-    height: 42px;
+    padding: 0 8px;
+    height: 38px;
+    font-size: 0.72rem;
     box-sizing: border-box;
   }
 
-  /* Grid de Cards no Celular */
-  .admin-planos-wrapper .admin-cards-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
+  .admin-planos-wrapper .admin-planos-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .admin-planos-wrapper .toolbar-left {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .admin-planos-wrapper .btn-toolbar-action {
+    width: 100%;
+    justify-content: center;
+    height: 40px;
+    font-size: 12px;
+    padding: 0 6px;
+    box-sizing: border-box;
+  }
+
+  .admin-planos-wrapper .toolbar-right {
+    width: 100%;
+  }
+
+  .admin-planos-wrapper .btn-toolbar-save {
+    width: 100%;
+    justify-content: center;
+    height: 44px;
+    font-size: 12.5px;
+    box-sizing: border-box;
+  }
+
+  /* 📱 CONTROLE DE NAVEGAÇÃO LATERAL MOBILE (FLECHAS INDICATIVAS & ABAS RÁPIDAS) */
+  .admin-planos-wrapper .admin-carousel-nav-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 16px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .admin-planos-wrapper .admin-carousel-nav-arrow {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    border-radius: 10px;
+    background: var(--ap-card-bg);
+    border: 1.5px solid color-mix(in srgb, var(--ap-gold) 40%, var(--ap-card-border));
+    color: var(--ap-gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+
+  .admin-planos-wrapper .admin-carousel-nav-arrow:hover {
+    background: color-mix(in srgb, var(--ap-gold) 12%, var(--ap-card-bg));
+    border-color: var(--ap-gold);
+    transform: scale(1.05);
+  }
+
+  .admin-planos-wrapper .admin-carousel-nav-arrow:active {
+    transform: scale(0.95);
+  }
+
+  .admin-planos-wrapper .admin-carousel-nav-arrow:disabled {
+    opacity: 0.2;
+    cursor: not-allowed;
+    border-color: var(--ap-card-border);
+    color: var(--ap-text-muted);
+    transform: none;
+    box-shadow: none;
+  }
+
+  .admin-planos-wrapper .admin-carousel-pills-track {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex: 1;
+    background: var(--ap-table-header-bg);
+    padding: 4px;
+    border-radius: 12px;
+    border: 1px solid var(--ap-card-border);
+    box-sizing: border-box;
+  }
+
+  .admin-planos-wrapper .admin-carousel-pill-item {
+    flex: 1;
+    padding: 7px 6px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--ap-text-muted);
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  .admin-planos-wrapper .admin-carousel-pill-item .pill-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ap-card-border);
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .admin-planos-wrapper .admin-carousel-pill-item.active {
+    background: var(--ap-card-bg);
+    color: var(--ap-text-main);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .admin-planos-wrapper .admin-carousel-pill-item.active .pill-dot {
+    background: var(--ap-gold);
+    transform: scale(1.2);
+  }
+
+  .admin-planos-wrapper .admin-carousel-pill-item .pill-star {
+    color: var(--ap-gold);
+    font-size: 11px;
+    margin-left: 2px;
+  }
+
+  /* Carrossel de Cards no Celular (1 Card por vez + Flechas Laterais Flutuantes) */
+  .admin-planos-wrapper .admin-cards-carousel-wrapper {
+    position: relative;
+    width: 100%;
     margin-bottom: 24px;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  .admin-planos-wrapper .admin-cards-grid {
+    display: block;
+    width: 100%;
+    margin: 0;
   }
 
   .admin-planos-wrapper .admin-card {
-    padding: 20px 16px 16px 16px;
-    border-radius: 16px;
+    display: none;
+    padding: 22px 18px 18px 18px;
+    border-radius: 20px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .admin-planos-wrapper .admin-card.is-active-mobile {
+    display: flex;
+    animation: fadeInCard 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Flechas Laterais Flutuantes no Celular */
+  .admin-planos-wrapper .carousel-arrow-btn {
+    display: flex;
+    position: absolute;
+    top: 48%;
+    transform: translateY(-50%);
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--ap-card-bg);
+    border: 1.5px solid color-mix(in srgb, var(--ap-gold) 45%, transparent);
+    color: var(--ap-gold);
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    z-index: 25;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter: blur(8px);
+  }
+
+  .admin-planos-wrapper .carousel-arrow-btn.prev {
+    left: 4px;
+  }
+
+  .admin-planos-wrapper .carousel-arrow-btn.next {
+    right: 4px;
+  }
+
+  .admin-planos-wrapper .carousel-arrow-btn:hover {
+    background: color-mix(in srgb, var(--ap-gold) 14%, var(--ap-card-bg));
+    border-color: var(--ap-gold);
+    transform: translateY(-50%) scale(1.08);
+  }
+
+  .admin-planos-wrapper .carousel-arrow-btn:active {
+    transform: translateY(-50%) scale(0.95);
+  }
+
+  .admin-planos-wrapper .carousel-arrow-btn:disabled {
+    opacity: 0.18;
+    cursor: not-allowed;
+    border-color: var(--ap-card-border);
+    color: var(--ap-text-muted);
+    transform: translateY(-50%);
+    box-shadow: none;
   }
 
   .admin-planos-wrapper .admin-input-nome {

@@ -270,7 +270,11 @@ const Login = () => {
       }
       await finalizarLogin(userCredential.user);
     } catch (error) {
-      console.error("Erro no login:", error);
+      if (error.code !== 'auth/invalid-credential' && error.code !== 'auth/wrong-password') {
+        console.error("Erro no login:", error);
+      } else {
+        console.warn("Tentativa de login requer validação adicional:", error.code);
+      }
       const code = error.code || '';
       if (code === 'auth/user-not-found') {
         setErro('Nenhuma conta cadastrada foi encontrada com este e-mail no Celebre.');
@@ -293,7 +297,57 @@ const Login = () => {
           if (resp.ok) {
             const data = await resp.json();
             if (data.isGoogleOnly) {
-              setErro('Esta conta foi cadastrada com o Google. Clique no botão "Entrar com o Google" abaixo.');
+              setErro(
+                <div style={{ textAlign: 'left', lineHeight: '1.45', padding: '2px 0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', fontWeight: 800 }}>
+                    <i className="fab fa-google" style={{ color: '#ea4335', fontSize: '1rem' }}></i>
+                    <span>Conta cadastrada via Google</span>
+                  </div>
+                  <p style={{ margin: '0 0 10px 0', fontSize: '0.8rem', fontWeight: 500, opacity: 0.9 }}>
+                    Esta conta foi criada com o Google e ainda não possui senha direta no Celebre.
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleGoogleLogin()}
+                      style={{
+                        width: '100%',
+                        background: '#ffffff',
+                        border: '1.5px solid #cbd5e1',
+                        borderRadius: '8px',
+                        padding: '8px 12px',
+                        fontSize: '0.82rem',
+                        fontWeight: 700,
+                        color: '#0f172a',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+                      }}
+                    >
+                      <i className="fab fa-google" style={{ color: '#ea4335' }}></i>
+                      Entrar agora com o Google
+                    </button>
+                    <Link
+                      to={`/redefinir-senha?email=${encodeURIComponent(emailLimpo)}`}
+                      state={{ email: emailLimpo }}
+                      style={{
+                        display: 'block',
+                        textAlign: 'center',
+                        color: 'inherit',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        textDecoration: 'underline',
+                        padding: '4px'
+                      }}
+                    >
+                      🔑 Ou crie uma senha para acessar das duas formas
+                    </Link>
+                  </div>
+                </div>
+              );
               return;
             }
           }
