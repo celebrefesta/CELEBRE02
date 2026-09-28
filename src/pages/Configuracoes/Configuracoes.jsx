@@ -17,6 +17,7 @@ import AbaBackup from './AbaBackup';
 import AbaNotificacoes from './AbaNotificacoes';
 import { calcularPeriodoTeste, verificarAssinaturaAtiva, formatarDataExibicao, obterMelhorContaPorEmail } from '../../utils/periodoTesteUtils';
 import { aplicarCorDestaqueGlobal } from '../../utils/themeUtils';
+import { obterLimitePlano, buscarDadosPlano } from '../../utils/planoUtils';
 
 const Configuracoes = () => {
   const navigate = useNavigate();
@@ -336,14 +337,12 @@ const Configuracoes = () => {
 
                 if (cData.planoId) {
                     try {
-                        const planoSnap = await getDoc(doc(db, "planos", cData.planoId));
-                        if (planoSnap && planoSnap.exists()) {
-                            const pData = planoSnap.data();
-                            if (pData.nome) nomeDoPlano = pData.nome;
-                            if (pData.preco) precoDoPlano = String(pData.preco).replace('.', ',');
-                            else if (pData.precoMensal) precoDoPlano = String(pData.precoMensal).replace('.', ',');
-                            if (nomeDoPlano.toLowerCase().includes('premium')) limiteAtual = 3;
-                            else if (nomeDoPlano.toLowerCase().includes('pro') || nomeDoPlano.toLowerCase().includes('plus')) limiteAtual = 5;
+                        const dadosPlano = await buscarDadosPlano(cData.planoId);
+                        if (dadosPlano) {
+                            if (dadosPlano.nome) nomeDoPlano = dadosPlano.nome;
+                            if (dadosPlano.preco) precoDoPlano = String(dadosPlano.preco).replace('.', ',');
+                            // 🔗 Le o limite REAL do campo limites["Usuarios"] do plano
+                            limiteAtual = await obterLimitePlano(cData.planoId, 'Usuários', false, testeAtivo);
                         }
                     } catch (ePlano) {
                         console.warn("Aviso ao buscar plano no Firestore:", ePlano);

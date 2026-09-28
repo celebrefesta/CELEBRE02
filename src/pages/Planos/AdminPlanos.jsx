@@ -4,9 +4,12 @@ import { db } from '../../firebaseConfig';
 import { collection, getDocs, doc, updateDoc, addDoc, deleteDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import './AdminPlanos.css';
+import { invalidarCachePlano } from '../../utils/planoUtils';
+import { notificarClientesAfetados } from '../../utils/planoComunicadoService';
 
 const AdminPlanos = () => {
   const [planos, setPlanos] = useState([]);
+  const [planosSnapshot, setPlanosSnapshot] = useState([]); // snapshot antes de editar
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [recursos, setRecursos] = useState([]);
@@ -126,6 +129,8 @@ const AdminPlanos = () => {
 
       setRecursos(Array.from(recursosEncontrados));
       setPlanos(planosCarregados);
+      // Guarda snapshot IMUTAVEL do estado atual para detectar mudancas ao salvar
+      setPlanosSnapshot(JSON.parse(JSON.stringify(planosCarregados)));
       const destaqueIdx = planosCarregados.findIndex(p => String(p.destaque) === "true");
       if (destaqueIdx !== -1) {
         setPlanoAtivoMobileIdx(destaqueIdx);
@@ -288,6 +293,17 @@ const AdminPlanos = () => {
       }
 
       await registrarLog("ATUALIZAÇÃO DE MATRIZ DE PLANOS", `Salvou alterações nos preços, limites ou recursos dos planos.`);
+      // 🔗 Invalida o cache para que todos os componentes leiam os novos valores imediatamente
+      invalidarCachePlano();
+
+      // 📧 Detecta mudancas e notifica clientes afetados por e-mail + banner in-app
+      notificarClientesAfetados(planosSnapshot, planos)
+        .then(r => console.log(`[AdminPlanos] Comunicados: ${r.mudancas} mudancas, ${r.clientesNotificados} clientes notificados.`))
+        .catch(e => console.warn('[AdminPlanos] Aviso ao enviar comunicados:', e));
+
+      // Atualiza o snapshot para refletir o estado salvo
+      setPlanosSnapshot(JSON.parse(JSON.stringify(planos)));
+
       alert("✅ Matriz de Planos atualizada com sucesso! Os novos valores e recursos já estão ativos na página pública de planos e no checkout.");
     } catch (e) {
       console.error("Erro ao salvar:", e);
@@ -733,31 +749,23 @@ const AdminPlanos = () => {
 
                             return (
                               <div key={`${catIdx}-${itemIdx}`} className={`admin-mobile-feature-card ${temBeneficio ? 'is-active-item' : ''}`}>
-                                <div className="mobile-feature-header-row">
+                                <div className="mobile-feature-name-col">
                                   <input 
                                     className="mobile-feature-name-field"
                                     defaultValue={rec}
                                     onBlur={(e) => atualizarNomeRecurso(rec, e.target.value)}
                                     placeholder="Nome do Recurso"
+                                    title="Toque para editar o nome da funcionalidade"
                                   />
-                                  <button 
-                                    type="button"
-                                    className="btn-delete-feature-mobile" 
-                                    title="Remover recurso"
-                                    onClick={() => deletarRecurso(rec)}
-                                  >
-                                    <i className="fas fa-trash-alt"></i>
-                                  </button>
                                 </div>
 
-                                <div className="mobile-feature-body-row">
+                                <div className="mobile-feature-actions-col">
                                   {numerico ? (
                                     <div className="mobile-limit-input-group">
-                                      <span className="mobile-limit-tag">Limite:</span>
                                       <input 
                                         type="text" 
                                         className="mobile-limit-text-input"
-                                        placeholder="Ex: Ilimitado, 1.000, 3 modelos..."
+                                        placeholder="Ilimitado"
                                         value={valorLimite}
                                         title={valorLimite || "Ilimitado"}
                                         onChange={(e) => atualizarLimite(planoAtual.id, rec, e.target.value)}
@@ -768,15 +776,25 @@ const AdminPlanos = () => {
                                       type="button"
                                       className={`mobile-switch-button ${temBeneficio ? 'status-enabled' : 'status-disabled'}`}
                                       onClick={() => toggleBeneficio(planoAtual.id, rec)}
+                                      title={temBeneficio ? "Incluso no plano (toque para desativar)" : "Não incluso (toque para ativar)"}
                                     >
                                       <span className="switch-dot">
                                         <i className={`fas ${temBeneficio ? 'fa-check' : 'fa-times'}`}></i>
                                       </span>
                                       <span className="switch-text">
-                                        {temBeneficio ? 'Incluso no Plano' : 'Não Incluso'}
+                                        {temBeneficio ? 'Incluso' : 'Não'}
                                       </span>
                                     </button>
                                   )}
+
+                                  <button 
+                                    type="button"
+                                    className="btn-delete-feature-mobile" 
+                                    title="Remover recurso da matriz"
+                                    onClick={() => deletarRecurso(rec)}
+                                  >
+                                    <i className="fas fa-trash-alt"></i>
+                                  </button>
                                 </div>
                               </div>
                             );

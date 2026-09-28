@@ -13,6 +13,7 @@ import './App.css';
 import './styles/design-lock.css'; /* 🔒 DESIGN LOCK — importado por último, vence toda a cascata */
 import { aplicarCorDestaqueGlobal } from './utils/themeUtils';
 import { calcularPeriodoTeste, verificarAssinaturaAtiva, parseDataGenerica } from './utils/periodoTesteUtils';
+import BannerAvisoSistema from './components/BannerAvisoSistema';
 
 import RotaPrivada from './components/RotaPrivada'; 
 import RotaAdmin from './components/RotaAdmin'; 
@@ -719,6 +720,8 @@ const AppContent = () => {
           </div>
         )}
         {showNavbar && <Topbar />}
+        {/* 📢 BANNER DE AVISOS DO SISTEMA (mudancas de plano, comunicados importantes) */}
+        {showNavbar && <BannerAvisoSistema />}
 
         <Suspense fallback={
           <div style={{ height: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c5a059', fontWeight: '500' }}>

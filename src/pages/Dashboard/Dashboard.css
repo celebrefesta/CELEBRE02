@@ -2496,3 +2496,425 @@
   .bi-chip-pct { font-size: 0.6rem; padding: 1px 3px; }
   .bi-chip-val { font-size: 0.72rem; }
 }
+
+/* =========================================
+   🚚 WIDGET OPERACIONAL DO DIA (GALPÃO & LOGÍSTICA)
+   ========================================= */
+
+.dash-wide-container .dash-operacao-hoje-card {
+  background: var(--fundo-card, #ffffff);
+  border: 1px solid var(--borda, #e2e8f0);
+  border-radius: 16px;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme^='dark'] .dash-wide-container .dash-operacao-hoje-card {
+  background: #18181b !important;
+  border-color: #27272a !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dash-wide-container .dash-op-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dash-wide-container .dash-op-title-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dash-wide-container .dash-op-icon-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.12) 0%, rgba(37, 99, 235, 0.04) 100%);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  flex-shrink: 0;
+}
+
+[data-theme^='dark'] .dash-wide-container .dash-op-icon-badge {
+  background: rgba(37, 99, 235, 0.2) !important;
+  border-color: rgba(37, 99, 235, 0.4) !important;
+}
+
+.dash-wide-container .dash-op-title-texts h4 {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 850;
+  color: var(--texto-principal, #0f172a);
+  letter-spacing: -0.3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dash-wide-container .dash-op-date-sub {
+  margin: 2px 0 0 0;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--texto-secundario, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dash-wide-container .dash-op-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dash-wide-container .btn-ir-logistica-dash {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff !important;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+  transition: all 0.2s ease;
+}
+
+.dash-wide-container .btn-ir-logistica-dash:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(2, 132, 199, 0.35);
+}
+
+.dash-wide-container .btn-toggle-op-hoje {
+  background: none;
+  border: 1px solid var(--borda, #cbd5e1);
+  color: var(--texto-secundario, #64748b);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.dash-wide-container .btn-toggle-op-hoje:hover {
+  background: var(--fundo-secundario, #f1f5f9);
+  color: var(--texto-principal, #0f172a);
+}
+
+/* GRID DOS 3 CARDS/PÍLULAS */
+.dash-wide-container .dash-op-pills-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.dash-wide-container .dash-op-pill-btn {
+  background: var(--fundo-card, #ffffff);
+  border: 1.5px solid var(--borda, #e2e8f0);
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  position: relative;
+}
+
+[data-theme^='dark'] .dash-wide-container .dash-op-pill-btn {
+  background: #202023;
+  border-color: #2e2e32;
+}
+
+.dash-wide-container .dash-op-pill-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.dash-wide-container .dash-op-pill-btn.active-saidas {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%);
+  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.15);
+}
+
+.dash-wide-container .dash-op-pill-btn.active-devolucoes {
+  border-color: #10b981;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%);
+  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.15);
+}
+
+.dash-wide-container .dash-op-pill-btn.active-atrasadas {
+  border-color: #ef4444;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.02) 100%);
+  box-shadow: 0 3px 10px rgba(239, 68, 68, 0.15);
+}
+
+.dash-wide-container .dash-op-pill-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dash-wide-container .dash-op-pill-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--texto-secundario, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dash-wide-container .dash-op-pill-count {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: var(--texto-principal, #0f172a);
+  line-height: 1.1;
+}
+
+.dash-wide-container .dash-op-pill-sub {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--texto-secundario, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* LISTA EXPANSÍVEL DE ITENS DO DIA */
+.dash-wide-container .dash-op-details-box {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--borda, #e2e8f0);
+}
+
+.dash-wide-container .dash-op-empty-message {
+  text-align: center;
+  padding: 16px 12px;
+  color: var(--texto-secundario, #64748b);
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: var(--fundo-secundario, #f8fafc);
+  border-radius: 10px;
+}
+
+[data-theme^='dark'] .dash-wide-container .dash-op-empty-message {
+  background: #202023;
+}
+
+.dash-wide-container .dash-op-orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.dash-wide-container .dash-op-order-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: var(--fundo-secundario, #f8fafc);
+  border: 1px solid var(--borda, #e2e8f0);
+  transition: all 0.15s ease;
+  gap: 10px;
+}
+
+[data-theme^='dark'] .dash-wide-container .dash-op-order-item {
+  background: #202023;
+  border-color: #27272a;
+}
+
+.dash-wide-container .dash-op-order-item:hover {
+  border-color: var(--dourado, #c5a059);
+  background: var(--fundo-card, #ffffff);
+}
+
+.dash-wide-container .dash-op-order-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.dash-wide-container .dash-op-order-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #c5a059 0%, #a8843c 100%);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dash-wide-container .dash-op-order-info {
+  min-width: 0;
+}
+
+.dash-wide-container .dash-op-order-client {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--texto-principal, #0f172a);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-wide-container .dash-op-order-meta {
+  font-size: 0.68rem;
+  color: var(--texto-secundario, #64748b);
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dash-wide-container .dash-op-order-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.dash-wide-container .dash-op-status-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.dash-wide-container .dash-op-status-badge.status-confirmado {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.dash-wide-container .dash-op-status-badge.status-separacao {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.dash-wide-container .dash-op-status-badge.status-entregue {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.dash-wide-container .dash-op-status-badge.status-atrasado {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.dash-wide-container .btn-op-zap {
+  background: #25d366;
+  color: #ffffff !important;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.15s ease;
+}
+
+.dash-wide-container .btn-op-zap:hover {
+  transform: scale(1.1);
+}
+
+.dash-wide-container .btn-op-detalhes {
+  background: var(--fundo-card, #ffffff);
+  border: 1px solid var(--borda, #cbd5e1);
+  color: var(--texto-principal, #0f172a);
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 0.68rem;
+  font-weight: 750;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dash-wide-container .btn-op-detalhes:hover {
+  border-color: var(--dourado, #c5a059);
+  color: var(--dourado, #c5a059);
+}
+
+@media (max-width: 768px) {
+  .dash-wide-container .dash-operacao-hoje-card {
+    padding: 12px 14px;
+    border-radius: 14px;
+  }
+  .dash-wide-container .dash-op-icon-badge {
+    width: 34px;
+    height: 34px;
+    font-size: 16px;
+    border-radius: 10px;
+  }
+  .dash-wide-container .dash-op-title-texts h4 {
+    font-size: 0.86rem;
+  }
+  .dash-wide-container .dash-op-date-sub {
+    font-size: 0.68rem;
+  }
+  .dash-wide-container .dash-op-pills-row {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .dash-wide-container .dash-op-pill-btn {
+    padding: 8px 8px;
+    border-radius: 10px;
+  }
+  .dash-wide-container .dash-op-pill-label {
+    font-size: 0.62rem;
+  }
+  .dash-wide-container .dash-op-pill-count {
+    font-size: 1rem;
+  }
+  .dash-wide-container .dash-op-pill-sub {
+    font-size: 0.6rem;
+  }
+  .dash-wide-container .dash-op-order-item {
+    padding: 8px 10px;
+  }
+  .dash-wide-container .dash-op-order-client {
+    font-size: 0.76rem;
+  }
+}

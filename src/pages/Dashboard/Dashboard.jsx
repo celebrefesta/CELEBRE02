@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './Dashboard.css';
 import { useNavigate, Link } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
@@ -214,6 +214,25 @@ const Dashboard = () => {
   const [erroCarregamento, setErroCarregamento] = useState(null);
   const [isFuncionarioEquipe, setIsFuncionarioEquipe] = useState(false);
   const [dadosEmpresaState, setDadosEmpresaState] = useState(null);
+
+  // 🚚 OPERAÇÃO DO DIA (SAÍDAS E DEVOLUÇÕES DO GALPÃO)
+  const [abaOpHoje, setAbaOpHoje] = useState('saidas'); // 'saidas' | 'devolucoes' | 'atrasadas'
+  const [opHojeExpandida, setOpHojeExpandida] = useState(() => {
+    try {
+      const salvo = localStorage.getItem('celebre_dash_show_op_hoje');
+      return salvo !== null ? JSON.parse(salvo) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleOpHoje = () => {
+    setOpHojeExpandida(prev => {
+      const next = !prev;
+      try { localStorage.setItem('celebre_dash_show_op_hoje', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!usuarioLogado) {
@@ -1230,6 +1249,90 @@ const Dashboard = () => {
   const totalFatPeriodo = dataFaturamentoBar.reduce((a, b) => a + (Number(b.faturamento) || 0), 0);
   const totalGastosPeriodo = dataFaturamentoBar.reduce((a, b) => a + (Number(b.gastos) || 0), 0);
 
+  // 🚚 CÁLCULO INTELIGENTE DA OPERAÇÃO DE HOJE (SAÍDAS E DEVOLUÇÕES DO GALPÃO)
+  const operacaoHoje = useMemo(() => {
+    const hoje = new Date();
+    const anoH = hoje.getFullYear();
+    const mesH = hoje.getMonth();
+    const diaH = hoje.getDate();
+
+    const ehMesmoDia = (dateVal) => {
+      if (!dateVal) return false;
+      const d = parseFirestoreDate(dateVal);
+      if (!d || isNaN(d.getTime())) return false;
+      return d.getDate() === diaH && d.getMonth() === mesH && d.getFullYear() === anoH;
+    };
+
+    const ehPassado = (dateVal) => {
+      if (!dateVal) return false;
+      const d = parseFirestoreDate(dateVal);
+      if (!d || isNaN(d.getTime())) return false;
+      const dZero = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const hojeZero = new Date(anoH, mesH, diaH);
+      return dZero < hojeZero;
+    };
+
+    const saidasHoje = todasLocacoes.filter(l => {
+      const s = (l.status || '').toLowerCase().trim();
+      if (['cancelado', 'lixeira', 'deletado', 'orcamento', 'orçamento'].includes(s)) return false;
+      return ehMesmoDia(l.dataRetirada || l.dataEvento);
+    });
+
+    const devolucoesHoje = todasLocacoes.filter(l => {
+      const s = (l.status || '').toLowerCase().trim();
+      if (['cancelado', 'lixeira', 'deletado', 'finalizado', 'orcamento', 'orçamento'].includes(s)) return false;
+      return ehMesmoDia(l.dataDevolucao);
+    });
+
+    const devolucoesAtrasadas = todasLocacoes.filter(l => {
+      const s = (l.status || '').toLowerCase().trim();
+      if (['cancelado', 'lixeira', 'deletado', 'finalizado', 'orcamento', 'orçamento'].includes(s)) return false;
+      return ehPassado(l.dataDevolucao);
+    });
+
+    let pecasSaida = 0;
+    saidasHoje.forEach(l => {
+      if (Array.isArray(l.itens)) {
+        l.itens.forEach(it => { pecasSaida += (Number(it.qtd) || 1); });
+      }
+    });
+
+    let pecasDevolucao = 0;
+    devolucoesHoje.forEach(l => {
+      if (Array.isArray(l.itens)) {
+        l.itens.forEach(it => { pecasDevolucao += (Number(it.qtd) || 1); });
+      }
+    });
+
+    const saidasEntregues = saidasHoje.filter(l => ['entregue', 'finalizado'].includes((l.status || '').toLowerCase().trim())).length;
+    const saidasPendentes = saidasHoje.length - saidasEntregues;
+
+    return {
+      saidasHoje,
+      devolucoesHoje,
+      devolucoesAtrasadas,
+      pecasSaida,
+      pecasDevolucao,
+      saidasEntregues,
+      saidasPendentes,
+      totalAcoes: saidasHoje.length + devolucoesHoje.length + devolucoesAtrasadas.length
+    };
+  }, [todasLocacoes]);
+
+  const dataHojeFormatada = useMemo(() => {
+    try {
+      const hoje = new Date();
+      const str = new Intl.DateTimeFormat('pt-BR', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long' 
+      }).format(hoje);
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    } catch {
+      return 'Hoje';
+    }
+  }, []);
+
   return (
     <div className="dash-wide-container fade-in">
       {!isSuperAdmin && !assinaturaAtiva && statusConta !== 'bloqueado' && statusConta !== 'excluido' && statusConta !== 'suspenso' && diasRestantes > 0 && (
@@ -1422,6 +1525,225 @@ const Dashboard = () => {
         );
       })()}
 
+      {/* 🚚 WIDGET OPERACIONAL DO DIA: SAÍDAS E DEVOLUÇÕES DO GALPÃO */}
+      <section className="dash-operacao-hoje-card fade-in">
+        <div className="dash-op-header">
+          <div className="dash-op-title-box">
+            <div className="dash-op-icon-badge">
+              <i className="fas fa-truck-loading" style={{ color: '#2563eb' }}></i>
+            </div>
+            <div className="dash-op-title-texts">
+              <h4>
+                Operação de Hoje
+                {operacaoHoje.devolucoesAtrasadas.length > 0 && (
+                  <span className="dash-op-status-badge status-atrasado" title="Devoluções pendentes de dias anteriores">
+                    ⚠️ {operacaoHoje.devolucoesAtrasadas.length} pendência{operacaoHoje.devolucoesAtrasadas.length > 1 ? 's' : ''}
+                  </span>
+                )}
+              </h4>
+              <p className="dash-op-date-sub">
+                <i className="far fa-calendar-alt"></i> {dataHojeFormatada}
+              </p>
+            </div>
+          </div>
+
+          <div className="dash-op-header-actions">
+            <button
+              type="button"
+              className="btn-ir-logistica-dash"
+              onClick={() => navigate('/logistica')}
+              title="Abrir Central de Logística e Kanban do Galpão"
+            >
+              <i className="fas fa-boxes"></i> Logística <i className="fas fa-arrow-right"></i>
+            </button>
+            <button
+              type="button"
+              className="btn-toggle-op-hoje"
+              onClick={toggleOpHoje}
+              title={opHojeExpandida ? "Recolher detalhes" : "Expandir detalhes"}
+            >
+              <i className={`fas fa-chevron-${opHojeExpandida ? 'up' : 'down'}`}></i>
+            </button>
+          </div>
+        </div>
+
+        {/* 3 PÍLULAS INTERATIVAS */}
+        <div className="dash-op-pills-row">
+          <button
+            type="button"
+            className={`dash-op-pill-btn ${abaOpHoje === 'saidas' ? 'active-saidas' : ''}`}
+            onClick={() => { setAbaOpHoje('saidas'); if (!opHojeExpandida) setOpHojeExpandida(true); }}
+            title="Ver saídas agendadas para hoje"
+          >
+            <div className="dash-op-pill-top">
+              <span className="dash-op-pill-label">
+                <i className="fas fa-arrow-up" style={{ color: '#3b82f6' }}></i> Saídas
+              </span>
+              <strong className="dash-op-pill-count" style={{ color: '#2563eb' }}>
+                {operacaoHoje.saidasHoje.length}
+              </strong>
+            </div>
+            <span className="dash-op-pill-sub">
+              {operacaoHoje.saidasHoje.length > 0
+                ? `${operacaoHoje.pecasSaida} peças • ${operacaoHoje.saidasEntregues} entregues`
+                : 'Nenhuma saída'}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className={`dash-op-pill-btn ${abaOpHoje === 'devolucoes' ? 'active-devolucoes' : ''}`}
+            onClick={() => { setAbaOpHoje('devolucoes'); if (!opHojeExpandida) setOpHojeExpandida(true); }}
+            title="Ver devoluções previstas para hoje"
+          >
+            <div className="dash-op-pill-top">
+              <span className="dash-op-pill-label">
+                <i className="fas fa-arrow-down" style={{ color: '#10b981' }}></i> Devoluções
+              </span>
+              <strong className="dash-op-pill-count" style={{ color: '#059669' }}>
+                {operacaoHoje.devolucoesHoje.length}
+              </strong>
+            </div>
+            <span className="dash-op-pill-sub">
+              {operacaoHoje.devolucoesHoje.length > 0
+                ? `${operacaoHoje.pecasDevolucao} peças previstas`
+                : 'Nenhum retorno'}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className={`dash-op-pill-btn ${abaOpHoje === 'atrasadas' ? 'active-atrasadas' : ''}`}
+            onClick={() => { setAbaOpHoje('atrasadas'); if (!opHojeExpandida) setOpHojeExpandida(true); }}
+            title="Ver devoluções com prazo expirado"
+          >
+            <div className="dash-op-pill-top">
+              <span className="dash-op-pill-label">
+                <i className="fas fa-exclamation-triangle" style={{ color: operacaoHoje.devolucoesAtrasadas.length > 0 ? '#ef4444' : '#10b981' }}></i> Atrasadas
+              </span>
+              <strong className="dash-op-pill-count" style={{ color: operacaoHoje.devolucoesAtrasadas.length > 0 ? '#dc2626' : '#10b981' }}>
+                {operacaoHoje.devolucoesAtrasadas.length}
+              </strong>
+            </div>
+            <span className="dash-op-pill-sub">
+              {operacaoHoje.devolucoesAtrasadas.length > 0 ? 'Exigem cobrança' : '100% em dia'}
+            </span>
+          </button>
+        </div>
+
+        {/* DETALHES EXPANSÍVEIS DA ABA ATIVA */}
+        {opHojeExpandida && (
+          <div className="dash-op-details-box fade-in">
+            {(() => {
+              const listaAtiva = abaOpHoje === 'saidas'
+                ? operacaoHoje.saidasHoje
+                : abaOpHoje === 'devolucoes'
+                  ? operacaoHoje.devolucoesHoje
+                  : operacaoHoje.devolucoesAtrasadas;
+
+              if (listaAtiva.length === 0) {
+                return (
+                  <div className="dash-op-empty-message">
+                    {abaOpHoje === 'saidas' && '✨ Nenhuma saída agendada para hoje. Todas as entregas estão em dia!'}
+                    {abaOpHoje === 'devolucoes' && '✨ Nenhuma devolução prevista para hoje no galpão.'}
+                    {abaOpHoje === 'atrasadas' && '🟢 Nenhuma devolução em atraso. O acervo está 100% regularizado!'}
+                  </div>
+                );
+              }
+
+              return (
+                <div className="dash-op-orders-list">
+                  {listaAtiva.map((loc) => {
+                    const nomeCliente = loc.clienteNome || loc.cliente?.nome || loc.razaoSocial || 'Cliente';
+                    const foneLimpo = (loc.clienteCelular || loc.clientePhone || loc.cliente?.celular || '').replace(/\D/g, '');
+                    const totalItens = Array.isArray(loc.itens) 
+                      ? loc.itens.reduce((acc, it) => acc + (Number(it.qtd) || 1), 0)
+                      : 0;
+                    const cidadeBairro = loc.logistica?.bairro || loc.logistica?.cidade || 'Retirada no Galpão';
+
+                    // Mensagem WhatsApp inteligente conforme a aba
+                    let msgZap = '';
+                    if (abaOpHoje === 'saidas') {
+                      msgZap = encodeURIComponent(`Olá ${nomeCliente}! 🎉 Seu pedido de locação #${loc.numeroPedido || loc.id.substring(0, 5).toUpperCase()} já está preparado no galpão da Celebre. Deseja confirmar o horário de retirada/entrega? 📦✨`);
+                    } else if (abaOpHoje === 'devolucoes') {
+                      msgZap = encodeURIComponent(`Olá ${nomeCliente}! Lembramos que a devolução do acervo do pedido #${loc.numeroPedido || loc.id.substring(0, 5).toUpperCase()} está agendada para hoje. Podemos agendar o recebimento no galpão? 🚚`);
+                    } else {
+                      const dataPrev = loc.dataDevolucao ? loc.dataDevolucao.split('-').reverse().join('/') : 'dias anteriores';
+                      msgZap = encodeURIComponent(`Olá ${nomeCliente}! Verificamos que a devolução do pedido #${loc.numeroPedido || loc.id.substring(0, 5).toUpperCase()} estava prevista para ${dataPrev}. Poderia nos posicionar sobre o retorno das peças? ⚠️`);
+                    }
+
+                    const zapUrl = foneLimpo ? `https://wa.me/55${foneLimpo}?text=${msgZap}` : null;
+                    const statusStr = (loc.status || 'confirmado').toLowerCase().trim();
+
+                    return (
+                      <div key={loc.id} className="dash-op-order-item">
+                        <div className="dash-op-order-left">
+                          <div className="dash-op-order-avatar">
+                            {nomeCliente.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="dash-op-order-info">
+                            <p className="dash-op-order-client" title={nomeCliente}>
+                              {nomeCliente}
+                            </p>
+                            <div className="dash-op-order-meta">
+                              <span><i className="fas fa-box"></i> {totalItens} peça{totalItens !== 1 ? 's' : ''}</span>
+                              <span>•</span>
+                              <span><i className="fas fa-map-marker-alt"></i> {cidadeBairro}</span>
+                              {loc.horaRetirada && (
+                                <>
+                                  <span>•</span>
+                                  <span><i className="far fa-clock"></i> {loc.horaRetirada}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="dash-op-order-right">
+                          {statusStr === 'entregue' && (
+                            <span className="dash-op-status-badge status-entregue">Entregue</span>
+                          )}
+                          {(statusStr === 'preparacao' || statusStr === 'separacao') && (
+                            <span className="dash-op-status-badge status-separacao">Separação</span>
+                          )}
+                          {statusStr === 'confirmado' && (
+                            <span className="dash-op-status-badge status-confirmado">Confirmado</span>
+                          )}
+                          {abaOpHoje === 'atrasadas' && (
+                            <span className="dash-op-status-badge status-atrasado">Atrasado</span>
+                          )}
+
+                          {zapUrl && (
+                            <a
+                              href={zapUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn-op-zap"
+                              title="Falar no WhatsApp"
+                            >
+                              <i className="fab fa-whatsapp"></i>
+                            </a>
+                          )}
+
+                          <button
+                            type="button"
+                            className="btn-op-detalhes"
+                            onClick={() => navigate(`/locacoes/editar/${loc.id}`)}
+                            title="Abrir detalhes da locação"
+                          >
+                            <i className="fas fa-eye"></i> Ver
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+      </section>
+
       {/* GRID PRINCIPAL: 2 COLUNAS */}
       <div className="dash-main-grid-wide">
 
@@ -1447,7 +1769,14 @@ const Dashboard = () => {
                 <BarChart data={dataFaturamentoBar} margin={{ top: 8, right: 8, left: -10, bottom: 2 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--borda, #e2e8f0)" />
                   <XAxis dataKey="semana" tick={{ fontSize: 9.5, fill: 'var(--texto-secundario, #64748b)' }} axisLine={false} tickLine={false} dy={2} />
-                  <YAxis tick={{ fontSize: 9.5, fill: 'var(--texto-secundario, #64748b)' }} axisLine={false} tickLine={false} tickFormatter={(val) => `R$${val >= 1000 ? (val/1000).toFixed(0) + 'k' : val}`} />
+                  <YAxis 
+                    tick={{ fontSize: 9.5, fill: 'var(--texto-secundario, #64748b)' }} 
+                    axisLine={false} 
+                    tickLine={false} 
+                    domain={[0, (dataMax) => dataMax > 0 ? Math.ceil(dataMax * 1.15) : 1000]} 
+                    ticks={totalFatPeriodo === 0 && totalGastosPeriodo === 0 ? [0, 500, 1000] : undefined}
+                    tickFormatter={(val) => `R$${val >= 1000 ? (val/1000).toFixed(0) + 'k' : val}`} 
+                  />
                   <Tooltip content={<CustomTooltipFat />} />
                   <Bar dataKey="faturamento" name="Faturamento" fill="#2563eb" radius={[3, 3, 0, 0]} barSize={12} />
                   <Bar dataKey="gastos" name="Gastos" fill="#ef4444" radius={[3, 3, 0, 0]} barSize={12} />

@@ -1145,7 +1145,7 @@
   .admin-planos-wrapper .admin-cards-carousel-wrapper {
     position: relative;
     width: 100%;
-    margin-bottom: 24px;
+    margin-bottom: 18px;
     padding: 0;
     box-sizing: border-box;
   }
@@ -1158,8 +1158,8 @@
 
   .admin-planos-wrapper .admin-card {
     display: none;
-    padding: 22px 18px 18px 18px;
-    border-radius: 20px;
+    padding: 16px 16px 14px 16px;
+    border-radius: 16px;
     width: 100%;
     box-sizing: border-box;
   }
@@ -1336,16 +1336,16 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 16px;
+    padding: 10px 14px;
     background: var(--ap-card-bg);
     border: 1.5px solid var(--ap-card-border);
-    border-radius: 14px;
-    margin-bottom: 16px;
+    border-radius: 12px;
+    margin-bottom: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
   }
 
   .admin-planos-wrapper .banner-subtitle {
-    font-size: 10px;
+    font-size: 9.5px;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.8px;
@@ -1356,7 +1356,7 @@
 
   .admin-planos-wrapper .banner-title {
     margin: 0;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 800;
     color: var(--ap-text-main);
     text-transform: uppercase;
@@ -1364,20 +1364,20 @@
   }
 
   .admin-planos-wrapper .banner-currency {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 800;
     color: var(--ap-text-main);
     margin-right: 2px;
   }
 
   .admin-planos-wrapper .banner-price {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 800;
     color: var(--ap-gold);
   }
 
   .admin-planos-wrapper .banner-period {
-    font-size: 11px;
+    font-size: 10.5px;
     color: var(--ap-text-light);
     margin-left: 2px;
   }
@@ -1386,7 +1386,7 @@
   .admin-planos-wrapper .admin-mobile-categories-stack {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
   }
 
   .admin-planos-wrapper .admin-mobile-cat-block {
@@ -1394,120 +1394,112 @@
   }
 
   .admin-planos-wrapper .admin-mobile-cat-banner {
-    padding: 9px 12px;
+    padding: 7px 10px;
     background: var(--ap-table-header-bg);
-    border-radius: 9px;
+    border-radius: 8px;
     border-left: 3px solid var(--ap-gold);
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 800;
     text-transform: uppercase;
     color: var(--ap-text-main);
     letter-spacing: 0.5px;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
 
-  /* Lista de Recursos (Cards 100% de Largura) */
+  /* Lista de Recursos (Linhas Compactas Luxury) */
   .admin-planos-wrapper .admin-mobile-features-group {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 5px;
   }
 
   .admin-planos-wrapper .admin-mobile-feature-card {
-    background: var(--ap-card-bg);
-    border: 1px solid var(--ap-card-border);
-    border-radius: 12px;
-    padding: 12px 14px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
-    transition: all 0.2s ease;
-  }
-
-  .admin-planos-wrapper .admin-mobile-feature-card.is-active-item {
-    border-color: rgba(16, 185, 129, 0.4);
-    background: var(--ap-card-bg);
-  }
-
-  /* Topo do Recurso: Nome e Botão de Deletar */
-  .admin-planos-wrapper .mobile-feature-header-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    margin-bottom: 10px;
+    background: var(--ap-card-bg);
+    border: 1px solid var(--ap-card-border);
+    border-radius: 10px;
+    padding: 5px 8px 5px 12px;
+    min-height: 42px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-sizing: border-box;
+  }
+
+  .admin-planos-wrapper .admin-mobile-feature-card.is-active-item {
+    border-color: rgba(16, 185, 129, 0.35);
+    background: var(--ap-card-bg);
+    border-left: 3px solid #10b981;
+  }
+
+  /* Coluna Esquerda: Nome do Recurso */
+  .admin-planos-wrapper .mobile-feature-name-col {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
   }
 
   .admin-planos-wrapper .mobile-feature-name-field {
-    flex: 1;
-    font-size: 13.5px;
-    font-weight: 700;
+    width: 100%;
+    font-size: 12.5px;
+    font-weight: 650;
     color: var(--ap-text-main);
     border: 1px solid transparent;
     background: transparent;
-    padding: 4px 6px;
-    border-radius: 6px;
+    padding: 3px 4px;
+    border-radius: 5px;
     font-family: inherit;
     outline: none;
     transition: all 0.2s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .admin-planos-wrapper .mobile-feature-name-field:focus {
     background: var(--ap-table-header-bg);
     border-color: var(--ap-gold);
+    white-space: normal;
   }
 
-  .admin-planos-wrapper .btn-delete-feature-mobile {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--ap-text-light);
-    border: none;
+  /* Coluna Direita: Controles e Ações */
+  .admin-planos-wrapper .mobile-feature-actions-col {
     display: flex;
     align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 12px;
-    transition: all 0.2s ease;
-    opacity: 0.6;
+    gap: 5px;
     flex-shrink: 0;
   }
 
-  .admin-planos-wrapper .btn-delete-feature-mobile:hover {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
-    opacity: 1;
-  }
-
-  /* Base do Recurso: Controles */
-  .admin-planos-wrapper .mobile-feature-body-row {
-    padding-top: 8px;
-    border-top: 1px dashed var(--ap-row-border);
-  }
-
-  /* Botão Toggle Switch Ativo / Inativo */
+  /* Botão Toggle Switch Compacto (Pill Luxury) */
   .admin-planos-wrapper .mobile-switch-button {
-    width: 100%;
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: 700;
+    gap: 5px;
+    height: 30px;
+    padding: 0 9px 0 6px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 750;
     cursor: pointer;
     border: 1px solid transparent;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     font-family: inherit;
+    white-space: nowrap;
   }
 
   .admin-planos-wrapper .mobile-switch-button.status-enabled {
-    background: rgba(16, 185, 129, 0.1);
-    border-color: rgba(16, 185, 129, 0.3);
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.32);
     color: #059669;
   }
 
   [data-theme^='dark'] .admin-planos-wrapper .mobile-switch-button.status-enabled {
+    background: rgba(16, 185, 129, 0.16);
     color: #34d399;
+    border-color: rgba(52, 211, 153, 0.4);
   }
 
   .admin-planos-wrapper .mobile-switch-button.status-disabled {
@@ -1517,13 +1509,14 @@
   }
 
   .admin-planos-wrapper .mobile-switch-button .switch-dot {
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
+    font-size: 8.5px;
+    flex-shrink: 0;
   }
 
   .admin-planos-wrapper .mobile-switch-button.status-enabled .switch-dot {
@@ -1536,39 +1529,63 @@
     color: var(--ap-text-light);
   }
 
-  /* Campo de Limite Numérico */
+  .admin-planos-wrapper .mobile-switch-button .switch-text {
+    line-height: 1;
+    letter-spacing: 0.2px;
+  }
+
+  /* Campo de Limite Numérico Compacto */
   .admin-planos-wrapper .mobile-limit-input-group {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-  }
-
-  .admin-planos-wrapper .mobile-limit-tag {
-    font-size: 11.5px;
-    font-weight: 700;
-    color: var(--ap-text-muted);
-    white-space: nowrap;
   }
 
   .admin-planos-wrapper .mobile-limit-text-input {
-    flex: 1;
-    padding: 8px 12px;
+    width: 88px;
+    height: 30px;
+    padding: 0 8px;
     border: 1px solid var(--ap-card-border);
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: 700;
+    border-radius: 7px;
+    font-size: 11.5px;
+    font-weight: 750;
+    text-align: center;
     color: var(--ap-text-main);
     background: var(--ap-table-header-bg);
     outline: none;
     font-family: inherit;
     transition: all 0.2s ease;
+    box-sizing: border-box;
   }
 
   .admin-planos-wrapper .mobile-limit-text-input:focus {
     border-color: var(--ap-gold);
     background: var(--ap-card-bg);
     box-shadow: 0 0 0 2px rgba(197, 160, 89, 0.2);
+  }
+
+  /* Botão Deletar Recurso */
+  .admin-planos-wrapper .btn-delete-feature-mobile {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--ap-text-light);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 11.5px;
+    transition: all 0.2s ease;
+    opacity: 0.45;
+    flex-shrink: 0;
+  }
+
+  .admin-planos-wrapper .btn-delete-feature-mobile:hover,
+  .admin-planos-wrapper .btn-delete-feature-mobile:active {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    opacity: 1;
   }
 
   /* Dock de Ações no Rodapé Mobile */

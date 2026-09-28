@@ -3315,18 +3315,53 @@ a.btn-primary-celebre {
   .admin-planos-wrapper .admin-mobile-categories-stack {
     display: flex !important;
     flex-direction: column !important;
-    gap: 16px !important;
+    gap: 12px !important;
     width: 100% !important;
   }
 
+  .admin-planos-wrapper .admin-mobile-cat-banner {
+    padding: 7px 10px !important;
+    font-size: 11px !important;
+    margin-bottom: 6px !important;
+    border-radius: 8px !important;
+  }
+
+  .admin-planos-wrapper .admin-mobile-features-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 5px !important;
+  }
+
   .admin-planos-wrapper .admin-mobile-feature-card {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
     width: 100% !important;
+    min-height: 42px !important;
+    padding: 5px 8px 5px 12px !important;
+    border-radius: 10px !important;
     box-sizing: border-box !important;
+  }
+
+  .admin-planos-wrapper .mobile-feature-name-col {
+    flex: 1 !important;
+    min-width: 0 !important;
+    display: flex !important;
+    align-items: center !important;
   }
 
   .admin-planos-wrapper .mobile-feature-name-field {
     width: 100% !important;
+    font-size: 12.5px !important;
     box-sizing: border-box !important;
+  }
+
+  .admin-planos-wrapper .mobile-feature-actions-col {
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    flex-shrink: 0 !important;
   }
 
   .admin-planos-wrapper .admin-mobile-actions-dock {

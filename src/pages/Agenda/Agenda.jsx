@@ -6,6 +6,7 @@ import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, query, 
 import { getAuth } from 'firebase/auth'; 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { abrirGoogleAgenda, baixarArquivoICS } from '../../utils/calendarSyncUtils';
 import './Agenda.css';
 
 const TIPOS = {
@@ -20,7 +21,7 @@ const TIPOS = {
 
 const FORM_VAZIO = {
   id: null, titulo: '', clienteId: '', clienteNome: '', tipo: 'reuniao',
-  dataISO: '', horario: '', local: '', observacoes: '', recorrencia: 'nenhuma', 
+  dataISO: '', horario: '', local: '', responsavel: '', observacoes: '', recorrencia: 'nenhuma', 
   status: 'pendente', origem: 'manual',
 };
 
@@ -85,6 +86,7 @@ const Agenda = () => {
   const [clientes, setClientes]   = useState([]);
   const [locacoes, setLocacoes]   = useState([]);
   const [eventosManual, setEventosManual] = useState([]);
+  const [equipe, setEquipe] = useState([]);
   const [dadosEmpresa, setDadosEmpresa] = useState({ nomeEmpresa: 'Celebre Festa', logotipo: '' });
 
   const [loadingFB, setLoadingFB] = useState(true);
@@ -97,21 +99,34 @@ const Agenda = () => {
   const [buscaClienteModal, setBuscaClienteModal] = useState('');
   const [mostrarDropdownModal, setMostrarDropdownModal] = useState(false);
   const [modoClienteModal, setModoClienteModal] = useState('cadastrado'); // 'cadastrado' | 'avulso'
-
-  // 📱 CONTROLE DE EXIBIÇÃO OPCIONAL DE CARDS KPI NO CELULAR (RECOLHER / EXPANDIR)
-  const [mostrarKpiMobile, setMostrarKpiMobile] = useState(() => {
+  const [menuExportarAberto, setMenuExportarAberto] = useState(false);
+  const [sincronizarAoSalvar, setSincronizarAoSalvar] = useState(() => {
     try {
-      const salvo = localStorage.getItem('celebre_agenda_show_kpi_mobile');
+      const salvo = localStorage.getItem('celebre_agenda_sync_on_save');
       return salvo !== null ? JSON.parse(salvo) : false;
     } catch {
       return false;
     }
   });
 
-  const toggleKpiMobile = () => {
-    setMostrarKpiMobile(prev => {
+  // 📱💻 CONTROLE DE RECOLHER / EXPANDIR CARDS KPI (DESKTOP E MOBILE)
+  const [mostrarKpi, setMostrarKpi] = useState(() => {
+    try {
+      const salvo = localStorage.getItem('celebre_agenda_show_kpi');
+      if (salvo !== null) return JSON.parse(salvo);
+      const salvoMobile = localStorage.getItem('celebre_agenda_show_kpi_mobile');
+      if (salvoMobile !== null) return JSON.parse(salvoMobile);
+      return true; // Padrão: expandido
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleKpi = () => {
+    setMostrarKpi(prev => {
       const next = !prev;
       try {
+        localStorage.setItem('celebre_agenda_show_kpi', JSON.stringify(next));
         localStorage.setItem('celebre_agenda_show_kpi_mobile', JSON.stringify(next));
       } catch (e) {
         console.error(e);
@@ -150,6 +165,7 @@ const Agenda = () => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(''), 3500); 
   };
+
 
   useEffect(() => {
     if (!usuarioLogado) {
@@ -191,6 +207,12 @@ const Agenda = () => {
           });
         }
       } catch (e) { console.error('Erro ao buscar dados da Empresa:', e); }
+
+      try {
+        const qEquipe = query(collection(db, "equipe"), where("empresaId", "==", tenantId));
+        const snapEq = await getDocs(qEquipe);
+        setEquipe(snapEq.docs.map(d => ({ id: d.id, ...d.data() })));
+      } catch (e) { console.error('Erro ao buscar Equipe:', e); }
 
       setLoadingFB(false);
     };
@@ -362,7 +384,7 @@ const Agenda = () => {
       setEventoSelecionado(ev);
       const anoEv = ev.ano || dataAtual.getFullYear();
       const mesEv = ev.mes !== undefined ? ev.mes : dataAtual.getMonth();
-      setFormData({ ...FORM_VAZIO, ...ev, dataISO: dmaParaISO(ev.dia, mesEv, anoEv) });
+      setFormData({ ...FORM_VAZIO, ...ev, responsavel: ev.responsavel || '', dataISO: dmaParaISO(ev.dia, mesEv, anoEv) });
       setBuscaClienteModal(ev.clienteNome || '');
       if (ev.clienteId) {
         setModoClienteModal('cadastrado');
@@ -373,7 +395,7 @@ const Agenda = () => {
       }
     } else {
       setEventoSelecionado(null);
-      setFormData({ ...FORM_VAZIO, dataISO: dmaParaISO(d, dataAtual.getMonth(), dataAtual.getFullYear()) });
+      setFormData({ ...FORM_VAZIO, dataISO: dmaParaISO(d, dataAtual.getMonth(), dataAtual.getFullYear()), responsavel: '' });
       setBuscaClienteModal('');
       setModoClienteModal('cadastrado');
     }
@@ -617,6 +639,7 @@ const Agenda = () => {
       tipo: formData.tipo, 
       horario: formData.horario, 
       local: formData.local || '', 
+      responsavel: (formData.responsavel || '').trim(),
       status: formData.status || 'pendente', 
       observacoes: formData.observacoes, 
       origem: 'manual',
@@ -651,6 +674,10 @@ const Agenda = () => {
         mostrarToast('✨ Novo compromisso salvo!');
       }
       setModalFormAberto(false);
+      if (sincronizarAoSalvar) {
+        abrirGoogleAgenda(evParaSalvar, dadosEmpresa.nomeEmpresa);
+        mostrarToast(eventoSelecionado ? '✅ Atualizado e abrindo Google Agenda...' : '✨ Salvo e abrindo Google Agenda...');
+      }
     } catch (err) {
       console.error(err);
       const novaLista = eventoSelecionado 
@@ -688,6 +715,62 @@ const Agenda = () => {
       const isLink = endereco.startsWith('http://') || endereco.startsWith('https://');
       const url = isLink ? endereco : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`;
       window.open(url, '_blank');
+  };
+
+  const obterTelefoneClienteEvento = (ev) => {
+    if (!ev) return '';
+    if (ev.clienteId) {
+      const cli = clientes.find(c => c.id === ev.clienteId);
+      if (cli) return cli.celular || cli.whatsapp || cli.telefone || '';
+    }
+    if (ev.locacaoId) {
+      const loc = locacoes.find(l => l.id === ev.locacaoId);
+      if (loc?.clienteTelefone) return loc.clienteTelefone;
+      if (loc?.clienteId) {
+        const cli = clientes.find(c => c.id === loc.clienteId);
+        if (cli) return cli.celular || cli.whatsapp || cli.telefone || '';
+      }
+    }
+    if (ev.clienteNome) {
+      const cli = clientes.find(c => (c.nome || c.nomeFantasia || c.razaoSocial || '').toLowerCase() === ev.clienteNome.toLowerCase());
+      if (cli) return cli.celular || cli.whatsapp || cli.telefone || '';
+    }
+    return '';
+  };
+
+  const montarMensagemWhatsApp = (ev, nomeEmpresa = 'Celebre Festas') => {
+    const nomeCli = ev.clienteNome || 'Cliente';
+    const tipoLabel = TIPOS[ev.tipo]?.label || 'Compromisso';
+    let dataStr = '';
+    if (ev.dataISO) {
+      const [ano, mes, dia] = ev.dataISO.split('-');
+      dataStr = `${dia}/${mes}/${ano}`;
+    } else if (ev.dia && ev.mes !== undefined && ev.ano) {
+      dataStr = `${String(ev.dia).padStart(2, '0')}/${String(ev.mes + 1).padStart(2, '0')}/${ev.ano}`;
+    }
+    const horaStr = ev.horario ? ` às ${ev.horario}` : '';
+    const localStr = ev.local ? `\n📍 *Local:* ${ev.local}` : '';
+    const respStr = ev.responsavel ? `\n👤 *Responsável:* ${ev.responsavel}` : '';
+    
+    const msg = `Olá, *${nomeCli}*! 👋\n\n` +
+      `Confirmamos seu agendamento de *${tipoLabel}*:\n` +
+      `📌 *${ev.titulo || tipoLabel}*\n` +
+      `📅 *Data:* ${dataStr}${horaStr}${localStr}${respStr}\n\n` +
+      `Qualquer dúvida ou alteração, estamos à disposição!\n\n` +
+      `*${nomeEmpresa}* ✨`;
+
+    return encodeURIComponent(msg);
+  };
+
+  const abrirWhatsApp = (telefone, ev) => {
+    if (!telefone) {
+      mostrarToast('⚠️ Nenhum telefone/WhatsApp cadastrado para este cliente.');
+      return;
+    }
+    const numLimpo = String(telefone).replace(/\D/g, '');
+    const comDDI = numLimpo.startsWith('55') ? numLimpo : `55${numLimpo}`;
+    const texto = montarMensagemWhatsApp(ev, dadosEmpresa.nomeEmpresa);
+    window.open(`https://api.whatsapp.com/send?phone=${comDDI}&text=${texto}`, '_blank');
   };
 
   const exportarPDF = () => {
@@ -792,6 +875,47 @@ const Agenda = () => {
     } catch (error) { mostrarToast('❌ Erro ao gerar o arquivo PDF.'); }
   };
 
+  const exportarICS = () => {
+    try {
+      let eventosFiltrados = [];
+      let tituloRelatorio = '';
+      
+      if (viewPrincipal === 'calendario' || (viewPrincipal === 'lista' && viewLista === 'mes')) {
+        eventosFiltrados = eventosMesAtual.filter(eventoVisivel);
+        tituloRelatorio = `Agenda_Mensal_${nomeMes}`;
+      } else if (viewPrincipal === 'lista' && viewLista === 'semana') {
+        const diaSemana = dataAtual.getDay();
+        const inicio = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), dataAtual.getDate() - diaSemana);
+        const fim = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + 6);
+        
+        eventosFiltrados = todosEventos.filter(e => {
+          if (!eventoVisivel(e)) return false;
+          const dataEv = new Date(e.ano, e.mes, e.dia);
+          dataEv.setHours(0,0,0,0); inicio.setHours(0,0,0,0); fim.setHours(23,59,59,999);
+          return dataEv >= inicio && dataEv <= fim;
+        });
+        tituloRelatorio = `Agenda_Semanal_${inicio.getDate()}_a_${fim.getDate()}`;
+      } else {
+        eventosFiltrados = todosEventos.filter(e => {
+          if (!eventoVisivel(e)) return false;
+          return e.ano === dataAtual.getFullYear() && e.mes === dataAtual.getMonth() && e.dia === dataAtual.getDate();
+        });
+        tituloRelatorio = `Agenda_Diaria_${dataAtual.getDate()}_${dataAtual.getMonth() + 1}_${dataAtual.getFullYear()}`;
+      }
+
+      if (eventosFiltrados.length === 0) {
+        mostrarToast('⚠️ Nenhum compromisso no filtro para exportar.');
+        return;
+      }
+
+      baixarArquivoICS(eventosFiltrados, dadosEmpresa.nomeEmpresa || 'Celebre Festas', tituloRelatorio);
+      mostrarToast(`📅 ${eventosFiltrados.length} compromisso(s) exportado(s) em .ics!`);
+    } catch (error) {
+      console.error('Erro ao exportar ICS:', error);
+      mostrarToast('❌ Erro ao gerar arquivo de calendário.');
+    }
+  };
+
   const mudarAno = (dir) => { const d = new Date(dataAtual); d.setFullYear(dataAtual.getFullYear() + dir); setDataAtual(d); };
   const mudarMes = (dir) => { const d = new Date(dataAtual); d.setMonth(dataAtual.getMonth() + dir); setDataAtual(d); };
   const mudarDia = (dir) => { const d = new Date(dataAtual); d.setDate(dataAtual.getDate() + dir); setDataAtual(d); };
@@ -799,6 +923,8 @@ const Agenda = () => {
 
   const renderCardEvento = (ev) => {
     const saldo = ev.origem === 'locacao' ? Number(ev.valorTotal || 0) - Number(ev.valorPago || 0) : null;
+    const telCli = obterTelefoneClienteEvento(ev);
+
     return (
       <div key={ev.id} className={`list-item-card${ev.origem === 'locacao' ? ' card-locacao' : ''}`} onClick={() => abrirModalForm(ev.dia, ev)}>
         <div className={`list-left-bar bar-${ev.tipo}`} />
@@ -813,6 +939,11 @@ const Agenda = () => {
             {ev.origem === 'locacao' && <span className="badge-locacao-origem">🔗 Locação</span>}
           </div>
           {ev.clienteNome && <span className="list-cliente">👤 {ev.clienteNome}</span>}
+          {ev.responsavel && (
+            <span className="badge-responsavel-agenda" title={`Responsável: ${ev.responsavel}`}>
+              <i className="fas fa-user-tag"></i> {ev.responsavel}
+            </span>
+          )}
           
           {ev.local && (
               <span className="link-maps-card" onClick={(e) => { e.stopPropagation(); abrirGoogleMaps(ev.local); }}>
@@ -823,44 +954,104 @@ const Agenda = () => {
           {ev.tipoServico  && <span className="list-obs">📦 {ev.tipoServico}</span>}
           {ev.observacoes  && <span className="list-obs">📝 {ev.observacoes}</span>}
        
-          {saldo !== null && Number(ev.valorTotal) > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
+          {saldo !== null && Number(ev.valorTotal) > 0 ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
               <span className="list-financeiro">
                 💰 R$ {Number(ev.valorTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ·{' '}
                 {saldo > 0 ? <span className="saldo-devedor">Falta R$ {saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span> : <span className="saldo-pago">✅ Pago</span>}
               </span>
 
-              {saldo > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <button
                   type="button"
-                  className="btn-quick-receber-agenda"
+                  className="btn-quick-gcal-agenda"
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate('/novo-lancamento', {
-                      state: {
-                        locacaoId: ev.locacaoId || ev.id,
-                        clienteNome: ev.clienteNome,
-                        tipo: 'entrada'
-                      }
-                    });
+                    abrirGoogleAgenda(ev, dadosEmpresa.nomeEmpresa);
+                    mostrarToast('🌐 Abrindo Google Agenda...');
                   }}
-                  style={{
-                    padding: '4px 10px',
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '0.72rem',
-                    fontWeight: '800',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    boxShadow: '0 2px 5px rgba(16,185,129,0.25)'
-                  }}
-                  title="Lançar Recebimento deste pedido no Financeiro"
+                  title="Sincronizar com o Google Agenda"
                 >
-                  💰 Receber Saldo
+                  <i className="fab fa-google"></i> Google Agenda
+                </button>
+
+                {telCli && (
+                  <button
+                    type="button"
+                    className="btn-quick-whatsapp-agenda"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      abrirWhatsApp(telCli, ev);
+                      mostrarToast('💬 Abrindo WhatsApp...');
+                    }}
+                    title="Enviar confirmação por WhatsApp"
+                  >
+                    <i className="fab fa-whatsapp"></i> WhatsApp
+                  </button>
+                )}
+
+                {saldo > 0 && (
+                  <button
+                    type="button"
+                    className="btn-quick-receber-agenda"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/novo-lancamento', {
+                        state: {
+                          locacaoId: ev.locacaoId || ev.id,
+                          clienteNome: ev.clienteNome,
+                          tipo: 'entrada'
+                        }
+                      });
+                    }}
+                    style={{
+                      padding: '4px 10px',
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.72rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      boxShadow: '0 2px 5px rgba(16,185,129,0.25)'
+                    }}
+                    title="Lançar Recebimento deste pedido no Financeiro"
+                  >
+                    💰 Receber Saldo
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', marginTop: '6px' }}>
+              <button
+                type="button"
+                className="btn-quick-gcal-agenda"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  abrirGoogleAgenda(ev, dadosEmpresa.nomeEmpresa);
+                  mostrarToast('🌐 Abrindo Google Agenda...');
+                }}
+                title="Sincronizar com o Google Agenda"
+              >
+                <i className="fab fa-google"></i> Google Agenda
+              </button>
+
+              {telCli && (
+                <button
+                  type="button"
+                  className="btn-quick-whatsapp-agenda"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    abrirWhatsApp(telCli, ev);
+                    mostrarToast('💬 Abrindo WhatsApp...');
+                  }}
+                  title="Enviar confirmação por WhatsApp"
+                >
+                  <i className="fab fa-whatsapp"></i> WhatsApp
                 </button>
               )}
             </div>
@@ -1081,6 +1272,7 @@ const Agenda = () => {
               {eventos.map(ev => {
                 const saldo = ev.origem === 'locacao' ? Number(ev.valorTotal || 0) - Number(ev.valorPago || 0) : null;
                 const isBloqueio = ev.tipo === 'bloqueio';
+                const telCli = obterTelefoneClienteEvento(ev);
 
                 return (
                   <div
@@ -1127,6 +1319,13 @@ const Agenda = () => {
                         <div className="side-meta-item">
                           <i className="far fa-user"></i>
                           <span>{ev.clienteNome}</span>
+                        </div>
+                      )}
+
+                      {ev.responsavel && (
+                        <div className="side-meta-item side-resp-item">
+                          <i className="fas fa-user-tag"></i>
+                          <span>Resp: <strong>{ev.responsavel}</strong></span>
                         </div>
                       )}
 
@@ -1185,6 +1384,33 @@ const Agenda = () => {
                     )}
 
                     <div className="side-card-actions-bar">
+                      <button
+                        type="button"
+                        className="btn-side-action btn-gcal"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          abrirGoogleAgenda(ev, dadosEmpresa.nomeEmpresa);
+                          mostrarToast('🌐 Abrindo Google Agenda...');
+                        }}
+                        title="Adicionar este compromisso ao Google Agenda"
+                      >
+                        <i className="fab fa-google"></i> Google Agenda
+                      </button>
+
+                      {telCli && (
+                        <button
+                          type="button"
+                          className="btn-side-action btn-whatsapp"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            abrirWhatsApp(telCli, ev);
+                            mostrarToast('💬 Abrindo WhatsApp...');
+                          }}
+                          title="Enviar confirmação por WhatsApp"
+                        >
+                          <i className="fab fa-whatsapp"></i> WhatsApp
+                        </button>
+                      )}
                       {ev.origem === 'locacao' ? (
                         <button
                           type="button"
@@ -1394,6 +1620,7 @@ const Agenda = () => {
     const ehLocacao = formData.origem === 'locacao';
     const saldo = ehLocacao ? Number(formData.valorTotal || 0) - Number(formData.valorPago || 0) : 0;
     const clienteVinculado = formData.clienteId ? clientes.find(c => c.id === formData.clienteId) : null;
+    const telClienteModal = obterTelefoneClienteEvento(formData);
     
     return createPortal(
       <div className="agenda-container modal-overlay agenda-modal-overlay" onClick={() => !salvando && setModalFormAberto(false)}>
@@ -1486,6 +1713,32 @@ const Agenda = () => {
                 >
                   📋 Ver em Locações
                 </button>
+
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    abrirGoogleAgenda(formData, dadosEmpresa.nomeEmpresa);
+                    mostrarToast('🌐 Abrindo Google Agenda...');
+                  }}
+                  className="btn-modal-gcal"
+                  title="Sincronizar esta locação com o Google Agenda"
+                >
+                  <i className="fab fa-google"></i> Google Agenda
+                </button>
+
+                {telClienteModal && (
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      abrirWhatsApp(telClienteModal, formData);
+                      mostrarToast('💬 Abrindo WhatsApp...');
+                    }}
+                    className="btn-modal-whatsapp"
+                    title="Enviar confirmação desta locação via WhatsApp"
+                  >
+                    <i className="fab fa-whatsapp"></i> WhatsApp
+                  </button>
+                )}
               </div>
 
               <p className="locacao-aviso" style={{ marginTop: '12px' }}>⚠️ Entregas e Devoluções são sincronizadas com a tela de Locações.</p>
@@ -1560,54 +1813,68 @@ const Agenda = () => {
                 )}
               </div>
 
-              <div className="form-row-2col">
-                <div className="form-group cliente-form-group">
-                  <div className="cliente-label-header">
-                    <label className="form-label-clean">👤 CLIENTE <span className="label-hint-inline">(opcional)</span></label>
-                    <div className="cliente-mode-segmented">
-                      <button
-                        type="button"
-                        className={`btn-cli-seg ${modoClienteModal === 'cadastrado' ? 'active' : ''}`}
-                        onClick={() => setModoClienteModal('cadastrado')}
-                        title="Buscar cliente salvo no cadastro (gera histórico)"
-                      >
-                        <i className="fas fa-user-check"></i> Cadastrado
-                      </button>
-                      <button
-                        type="button"
-                        className={`btn-cli-seg ${modoClienteModal === 'avulso' ? 'active' : ''}`}
-                        onClick={() => {
-                          setModoClienteModal('avulso');
-                          setFormData(prev => ({ ...prev, clienteId: '' }));
-                        }}
-                        title="Registrar possível cliente / contato avulso"
-                      >
-                        <i className="fas fa-sparkles"></i> Lead / Avulso
-                      </button>
-                    </div>
+              {/* 👤 CLIENTE EM LARGURA TOTAL (ALINHAMENTO PERFEITO SEM QUEBRA) */}
+              <div className="form-group cliente-form-group">
+                <div className="cliente-label-header">
+                  <label className="form-label-clean">👤 CLIENTE <span className="label-hint-inline">(opcional)</span></label>
+                  <div className="cliente-mode-segmented">
+                    <button
+                      type="button"
+                      className={`btn-cli-seg ${modoClienteModal === 'cadastrado' ? 'active' : ''}`}
+                      onClick={() => setModoClienteModal('cadastrado')}
+                      title="Buscar cliente salvo no cadastro (gera histórico)"
+                    >
+                      <i className="fas fa-user-check"></i> Cadastrado
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn-cli-seg ${modoClienteModal === 'avulso' ? 'active' : ''}`}
+                      onClick={() => {
+                        setModoClienteModal('avulso');
+                        setFormData(prev => ({ ...prev, clienteId: '' }));
+                      }}
+                      title="Registrar possível cliente / contato avulso"
+                    >
+                      <i className="fas fa-sparkles"></i> Lead / Avulso
+                    </button>
                   </div>
+                </div>
 
-                  {modoClienteModal === 'cadastrado' ? (
-                    formData.clienteId ? (
-                      <div className="cliente-vinculado-card">
-                        <div className="cli-vinc-info">
-                          <span className="cli-vinc-status-pill">
-                            <i className="fas fa-check-circle"></i> Vinculado ao Sistema
+                {modoClienteModal === 'cadastrado' ? (
+                  formData.clienteId ? (
+                    <div className="cliente-vinculado-card">
+                      <div className="cli-vinc-info">
+                        <span className="cli-vinc-status-pill">
+                          <i className="fas fa-check-circle"></i> Vinculado ao Sistema
+                        </span>
+                        <strong className="cli-vinc-nome">
+                          {clienteVinculado?.nome || clienteVinculado?.nomeFantasia || clienteVinculado?.razaoSocial || formData.clienteNome || 'Cliente Vinculado'}
+                        </strong>
+                        {(clienteVinculado?.celular || clienteVinculado?.telefone || clienteVinculado?.whatsapp) && (
+                          <span className="cli-vinc-sub">
+                            <i className="fab fa-whatsapp"></i> {formatarTelefone(clienteVinculado?.celular || clienteVinculado?.telefone || clienteVinculado?.whatsapp)}
                           </span>
-                          <strong className="cli-vinc-nome">
-                            {clienteVinculado?.nome || clienteVinculado?.nomeFantasia || clienteVinculado?.razaoSocial || formData.clienteNome || 'Cliente Vinculado'}
-                          </strong>
-                          {(clienteVinculado?.celular || clienteVinculado?.telefone || clienteVinculado?.whatsapp) && (
-                            <span className="cli-vinc-sub">
-                              <i className="fab fa-whatsapp"></i> {formatarTelefone(clienteVinculado?.celular || clienteVinculado?.telefone || clienteVinculado?.whatsapp)}
-                            </span>
-                          )}
-                          {clienteVinculado && (clienteVinculado.logradouro || clienteVinculado.endereco) && (
-                            <span className="cli-vinc-sub">
-                              <i className="fas fa-map-marker-alt"></i> {[clienteVinculado.logradouro ? `${clienteVinculado.logradouro}${clienteVinculado.numero ? ', ' + clienteVinculado.numero : ''}` : clienteVinculado.endereco, clienteVinculado.bairro, clienteVinculado.cidade].filter(Boolean).join(' - ')}
-                            </span>
-                          )}
-                        </div>
+                        )}
+                        {clienteVinculado && (clienteVinculado.logradouro || clienteVinculado.endereco) && (
+                          <span className="cli-vinc-sub">
+                            <i className="fas fa-map-marker-alt"></i> {[clienteVinculado.logradouro ? `${clienteVinculado.logradouro}${clienteVinculado.numero ? ', ' + clienteVinculado.numero : ''}` : clienteVinculado.endereco, clienteVinculado.bairro, clienteVinculado.cidade].filter(Boolean).join(' - ')}
+                          </span>
+                        )}
+                      </div>
+                      <div className="cli-vinc-actions-col">
+                        {telClienteModal && (
+                          <button
+                            type="button"
+                            className="btn-whatsapp-pill-quick"
+                            onClick={() => {
+                              abrirWhatsApp(telClienteModal, formData);
+                              mostrarToast('💬 Abrindo WhatsApp...');
+                            }}
+                            title="Enviar confirmação por WhatsApp agora"
+                          >
+                            <i className="fab fa-whatsapp"></i> WhatsApp
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="btn-desvincular-cli"
@@ -1620,110 +1887,138 @@ const Agenda = () => {
                           <i className="fas fa-sync-alt"></i> Trocar
                         </button>
                       </div>
-                    ) : (
-                      <div className="custom-autocomplete-container">
-                        <input
-                          type="text"
-                          placeholder="Buscar por nome, WhatsApp ou CPF..."
-                          value={buscaClienteModal}
-                          onFocus={() => setMostrarDropdownModal(true)}
-                          onChange={(e) => {
-                            setBuscaClienteModal(e.target.value);
-                            if (e.target.value === '') setFormData(prev => ({ ...prev, clienteId: '', clienteNome: '' }));
-                          }}
-                          disabled={salvando}
-                        />
-                        {mostrarDropdownModal && (
-                          <ul className="autocomplete-results">
-                            {clientes
-                              .filter(c => {
-                                const termo = buscaClienteModal.toLowerCase().trim();
-                                if (!termo) return true;
-                                const nome = (c.nome || c.nomeFantasia || c.razaoSocial || '').toLowerCase();
-                                const tel = String(c.celular || c.telefone || c.whatsapp || '').replace(/\D/g, '');
-                                const docNum = String(c.cpf || c.cnpj || c.cpfCnpj || '').replace(/\D/g, '');
-                                const termoNum = termo.replace(/\D/g, '');
-                                return nome.includes(termo) || (termoNum && (tel.includes(termoNum) || docNum.includes(termoNum)));
-                              })
-                              .slice(0, 15)
-                              .map(c => {
-                                const endCli = c.logradouro
-                                  ? `${c.logradouro}${c.numero ? ', ' + c.numero : ''}${c.bairro ? ' - ' + c.bairro : ''}${c.cidade ? ' (' + c.cidade + ')' : ''}`
-                                  : (c.endereco || '');
-
-                                return (
-                                  <li
-                                    key={c.id}
-                                    className="autocomplete-item-pro"
-                                    onClick={() => {
-                                      setFormData(prev => ({
-                                        ...prev,
-                                        clienteId: c.id,
-                                        clienteNome: c.nome || c.nomeFantasia || c.razaoSocial,
-                                        local: prev.local ? prev.local : endCli
-                                      }));
-                                      setBuscaClienteModal(c.nome || c.nomeFantasia || c.razaoSocial);
-                                      setMostrarDropdownModal(false);
-                                    }}
-                                  >
-                                    <div className="auto-item-main">
-                                      <span className="auto-item-nome">{c.nome || c.nomeFantasia || c.razaoSocial}</span>
-                                      {(c.celular || c.telefone || c.whatsapp) && (
-                                        <span className="auto-item-sub">
-                                          <i className="fab fa-whatsapp"></i> {formatarTelefone(c.celular || c.telefone || c.whatsapp)}
-                                        </span>
-                                      )}
-                                      {endCli && (
-                                        <span className="auto-item-sub">
-                                          <i className="fas fa-map-marker-alt"></i> {endCli}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <span className="auto-item-badge">Cadastrado</span>
-                                  </li>
-                                );
-                              })}
-
-                            {buscaClienteModal.trim().length > 0 && (
-                              <li
-                                className="autocomplete-lead-action"
-                                onClick={() => {
-                                  setModoClienteModal('avulso');
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    clienteId: '',
-                                    clienteNome: buscaClienteModal.trim()
-                                  }));
-                                  setMostrarDropdownModal(false);
-                                }}
-                              >
-                                <div className="auto-lead-content">
-                                  <i className="fas fa-magic"></i>
-                                  <span>Usar "<strong>{buscaClienteModal.trim()}</strong>" como Possível Cliente</span>
-                                </div>
-                                <span className="auto-lead-tag">Lead</span>
-                              </li>
-                            )}
-                          </ul>
-                        )}
-                        {mostrarDropdownModal && <div className="autocomplete-overlay" onClick={() => setMostrarDropdownModal(false)} />}
-                      </div>
-                    )
+                    </div>
                   ) : (
-                    <div className="lead-input-container">
+                    <div className="custom-autocomplete-container">
                       <input
                         type="text"
-                        placeholder="Ex: Mariana Noiva (Instagram / WhatsApp)"
-                        value={formData.clienteNome || ''}
-                        onChange={(e) => setFormData(prev => ({ ...prev, clienteNome: e.target.value, clienteId: '' }))}
+                        placeholder="Buscar por nome, WhatsApp ou CPF..."
+                        value={buscaClienteModal}
+                        onFocus={() => setMostrarDropdownModal(true)}
+                        onChange={(e) => {
+                          setBuscaClienteModal(e.target.value);
+                          if (e.target.value === '') setFormData(prev => ({ ...prev, clienteId: '', clienteNome: '' }));
+                        }}
                         disabled={salvando}
-                        className="input-lead-agenda"
                       />
-                      <div className="lead-hint-tag">
-                        <i className="fas fa-info-circle"></i> <span>Possível cliente (não cadastrado). Ficará registrado neste compromisso.</span>
-                      </div>
+                      {mostrarDropdownModal && (
+                        <ul className="autocomplete-results">
+                          {clientes
+                            .filter(c => {
+                              const termo = buscaClienteModal.toLowerCase().trim();
+                              if (!termo) return true;
+                              const nome = (c.nome || c.nomeFantasia || c.razaoSocial || '').toLowerCase();
+                              const tel = String(c.celular || c.telefone || c.whatsapp || '').replace(/\D/g, '');
+                              const docNum = String(c.cpf || c.cnpj || c.cpfCnpj || '').replace(/\D/g, '');
+                              const termoNum = termo.replace(/\D/g, '');
+                              return nome.includes(termo) || (termoNum && (tel.includes(termoNum) || docNum.includes(termoNum)));
+                            })
+                            .slice(0, 15)
+                            .map(c => {
+                              const endCli = c.logradouro
+                                ? `${c.logradouro}${c.numero ? ', ' + c.numero : ''}${c.bairro ? ' - ' + c.bairro : ''}${c.cidade ? ' (' + c.cidade + ')' : ''}`
+                                : (c.endereco || '');
+
+                              return (
+                                <li
+                                  key={c.id}
+                                  className="autocomplete-item-pro"
+                                  onClick={() => {
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      clienteId: c.id,
+                                      clienteNome: c.nome || c.nomeFantasia || c.razaoSocial,
+                                      local: prev.local ? prev.local : endCli
+                                    }));
+                                    setBuscaClienteModal(c.nome || c.nomeFantasia || c.razaoSocial);
+                                    setMostrarDropdownModal(false);
+                                  }}
+                                >
+                                  <div className="auto-item-main">
+                                    <span className="auto-item-nome">{c.nome || c.nomeFantasia || c.razaoSocial}</span>
+                                    {(c.celular || c.telefone || c.whatsapp) && (
+                                      <span className="auto-item-sub">
+                                        <i className="fab fa-whatsapp"></i> {formatarTelefone(c.celular || c.telefone || c.whatsapp)}
+                                      </span>
+                                    )}
+                                    {endCli && (
+                                      <span className="auto-item-sub">
+                                        <i className="fas fa-map-marker-alt"></i> {endCli}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="auto-item-badge">Cadastrado</span>
+                                </li>
+                              );
+                            })}
+
+                          {buscaClienteModal.trim().length > 0 && (
+                            <li
+                              className="autocomplete-lead-action"
+                              onClick={() => {
+                                setModoClienteModal('avulso');
+                                setFormData(prev => ({
+                                  ...prev,
+                                  clienteId: '',
+                                  clienteNome: buscaClienteModal.trim()
+                                }));
+                                setMostrarDropdownModal(false);
+                              }}
+                            >
+                              <div className="auto-lead-content">
+                                <i className="fas fa-magic"></i>
+                                <span>Usar "<strong>{buscaClienteModal.trim()}</strong>" como Possível Cliente</span>
+                              </div>
+                              <span className="auto-lead-tag">Lead</span>
+                            </li>
+                          )}
+                        </ul>
+                      )}
+                      {mostrarDropdownModal && <div className="autocomplete-overlay" onClick={() => setMostrarDropdownModal(false)} />}
                     </div>
-                  )}
+                  )
+                ) : (
+                  <div className="lead-input-container">
+                    <input
+                      type="text"
+                      placeholder="Ex: Mariana Noiva (Instagram / WhatsApp)"
+                      value={formData.clienteNome || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, clienteNome: e.target.value, clienteId: '' }))}
+                      disabled={salvando}
+                      className="input-lead-agenda"
+                    />
+                    <div className="lead-hint-tag">
+                      <i className="fas fa-info-circle"></i> <span>Possível cliente (não cadastrado). Ficará registrado neste compromisso.</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 👥 RESPONSÁVEL E 📍 LOCAL EM 2 COLUNAS PERFEITAMENTE SIMÉTRICAS */}
+              <div className="form-row-2col form-row-resp-local">
+                <div className="form-group">
+                  <label className="form-label-clean">
+                    👥 RESPONSÁVEL <span className="label-hint-inline">(opcional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    list="lista-responsaveis-agenda"
+                    value={formData.responsavel || ''}
+                    onChange={e => setFormData({ ...formData, responsavel: e.target.value })}
+                    placeholder="Ex: Camila, João ou Toda a Equipe"
+                    disabled={salvando}
+                  />
+                  <datalist id="lista-responsaveis-agenda">
+                    {usuarioLogado?.displayName && (
+                      <option value={usuarioLogado.displayName}>{usuarioLogado.displayName} (Você)</option>
+                    )}
+                    {equipe.map(membro => (
+                      <option key={membro.id} value={membro.nome}>
+                        {membro.cargo ? `${membro.nome} (${membro.cargo})` : membro.nome}
+                      </option>
+                    ))}
+                    <option value="Toda a Equipe" />
+                  </datalist>
                 </div>
 
                 <div className="form-group">
@@ -1761,8 +2056,55 @@ const Agenda = () => {
                   disabled={salvando}
                 />
               </div>
-              
+
+              {/* ⚡ OPÇÃO DE AUTOMAÇÃO: ABRIR NO GOOGLE AGENDA AO SALVAR (1 CLIQUE) */}
+              <div className="gcal-sync-option-row">
+                <label className="toggle-gcal-auto-sync">
+                  <input
+                    type="checkbox"
+                    checked={sincronizarAoSalvar}
+                    onChange={e => {
+                      setSincronizarAoSalvar(e.target.checked);
+                      try { localStorage.setItem('celebre_agenda_sync_on_save', JSON.stringify(e.target.checked)); } catch {}
+                    }}
+                  />
+                  <span className="toggle-gcal-custom-box">
+                    <i className="fas fa-check check-icon"></i>
+                  </span>
+                  <span className="toggle-gcal-text">
+                    <i className="fab fa-google"></i>
+                    Abrir no <strong>Google Agenda</strong> automaticamente ao salvar
+                  </span>
+                </label>
+              </div>
+
               <div className="modal-actions">
+                <button 
+                  type="button" 
+                  className="btn-gcal-modal" 
+                  onClick={() => {
+                    abrirGoogleAgenda(formData, dadosEmpresa.nomeEmpresa);
+                    mostrarToast('🌐 Abrindo Google Agenda...');
+                  }}
+                  title="Abrir formulário no Google Agenda"
+                >
+                  <i className="fab fa-google"></i> Google Agenda
+                </button>
+
+                {telClienteModal && (
+                  <button
+                    type="button"
+                    className="btn-modal-whatsapp"
+                    onClick={() => {
+                      abrirWhatsApp(telClienteModal, formData);
+                      mostrarToast('💬 Abrindo WhatsApp...');
+                    }}
+                    title={`Enviar confirmação via WhatsApp para ${formData.clienteNome || 'o cliente'}`}
+                  >
+                    <i className="fab fa-whatsapp"></i> WhatsApp
+                  </button>
+                )}
+
                 {eventoSelecionado && <button type="button" className="btn-excluir-modal" onClick={excluirEvento} disabled={salvando}>Apagar</button>}
                 <button type="button" className="btn-cancelar-modal" onClick={() => setModalFormAberto(false)} disabled={salvando}>Cancelar</button>
                 <button type="submit" className="btn-salvar-modal" disabled={salvando}>{salvando ? 'Salvando...' : (eventoSelecionado ? 'Atualizar' : 'Salvar Compromisso')}</button>
@@ -1981,14 +2323,81 @@ const Agenda = () => {
             <i className="fas fa-lock"></i> BLOQUEAR DATA
           </button>
 
-          <button
-            type="button"
-            className="btn-secondary-celebre"
-            onClick={exportarPDF}
-            title="Exportar Relatório em PDF"
-          >
-            <i className="fas fa-file-pdf"></i> EXPORTAR
-          </button>
+          <div className="exportar-dropdown-wrapper">
+            <button
+              type="button"
+              className={`btn-secondary-celebre btn-exportar-trigger ${menuExportarAberto ? 'is-open' : ''}`}
+              onClick={() => setMenuExportarAberto(prev => !prev)}
+              aria-expanded={menuExportarAberto}
+              title="Exportar dados e sincronizar agenda"
+            >
+              <i className="fas fa-file-export"></i> EXPORTAR <i className={`fas fa-chevron-${menuExportarAberto ? 'up' : 'down'} caret-icon`}></i>
+            </button>
+
+            {menuExportarAberto && (
+              <>
+                <div className="exportar-dropdown-backdrop" onClick={() => setMenuExportarAberto(false)} />
+                <div className="exportar-dropdown-menu fade-in">
+                  <div className="exportar-menu-header">
+                    <i className="fas fa-calendar-alt"></i> EXPORTAR & SINCRONIZAR
+                  </div>
+
+                  <button
+                    type="button"
+                    className="exportar-menu-item"
+                    onClick={() => {
+                      setMenuExportarAberto(false);
+                      exportarPDF();
+                    }}
+                  >
+                    <div className="exportar-item-icon icon-pdf">
+                      <i className="fas fa-file-pdf"></i>
+                    </div>
+                    <div className="exportar-item-text">
+                      <strong>Relatório em PDF</strong>
+                      <small>Tabela operacional formatada</small>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="exportar-menu-item"
+                    onClick={() => {
+                      setMenuExportarAberto(false);
+                      exportarICS();
+                    }}
+                  >
+                    <div className="exportar-item-icon icon-ics">
+                      <i className="fas fa-calendar-check"></i>
+                    </div>
+                    <div className="exportar-item-text">
+                      <strong>Google / Apple Agenda (.ics)</strong>
+                      <small>Sincronização universal para PC e celular</small>
+                    </div>
+                  </button>
+
+                  <div className="exportar-menu-divider" />
+
+                  <button
+                    type="button"
+                    className="exportar-menu-item"
+                    onClick={() => {
+                      setMenuExportarAberto(false);
+                      window.open('https://calendar.google.com', '_blank', 'noopener,noreferrer');
+                    }}
+                  >
+                    <div className="exportar-item-icon icon-gcal">
+                      <i className="fab fa-google"></i>
+                    </div>
+                    <div className="exportar-item-text">
+                      <strong>Acessar Google Agenda</strong>
+                      <small>Abrir painel web oficial do Google</small>
+                    </div>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
 
           <button
             type="button"
@@ -2000,18 +2409,18 @@ const Agenda = () => {
         </div>
       </header>
 
-      {/* 📱 CONTROLE OPCIONAL DE CARDS KPI NO CELULAR (RECOLHER / EXPANDIR) */}
+      {/* 📱💻 CONTROLE DE RECOLHER / EXPANDIR CARDS KPI (DESKTOP E MOBILE) */}
       <div className="kpi-mobile-toggle-wrapper">
         <button 
           type="button" 
-          className={`btn-toggle-kpi-mobile ${!mostrarKpiMobile ? 'is-collapsed' : ''}`}
-          onClick={toggleKpiMobile}
-          aria-expanded={mostrarKpiMobile}
-          title={mostrarKpiMobile ? "Recolher cards de indicadores no celular" : "Expandir cards de indicadores no celular"}
+          className={`btn-toggle-kpi-mobile ${!mostrarKpi ? 'is-collapsed' : ''}`}
+          onClick={toggleKpi}
+          aria-expanded={mostrarKpi}
+          title={mostrarKpi ? "Recolher cards de indicadores" : "Expandir cards de indicadores"}
         >
           <div className="toggle-kpi-left">
             <span className="toggle-kpi-icon">📊</span>
-            {mostrarKpiMobile ? (
+            {mostrarKpi ? (
               <span className="toggle-kpi-title">Resumo Operacional da Agenda</span>
             ) : (
               <span className="toggle-kpi-summary">
@@ -2020,7 +2429,7 @@ const Agenda = () => {
             )}
           </div>
           <span className="toggle-kpi-badge">
-            {mostrarKpiMobile ? (
+            {mostrarKpi ? (
               <>Ocultar <i className="fas fa-chevron-up"></i></>
             ) : (
               <>Expandir <i className="fas fa-chevron-down"></i></>
@@ -2030,53 +2439,55 @@ const Agenda = () => {
       </div>
 
       {/* ── CARDS DE DASHBOARD KPI (PADRÃO OFICIAL CELEBRE - OPERAÇÃO LOGÍSTICA) ── */}
-      <div className={`clientes-stats-grid ${!mostrarKpiMobile ? 'kpi-hidden-mobile' : ''}`}>
-        <div className="stat-card-pro border-blue">
-          <div className="stat-icon-wrapper icon-blue">
-            <i className="fas fa-truck"></i>
+      {mostrarKpi && (
+        <div className="clientes-stats-grid fade-in">
+          <div className="stat-card-pro border-blue">
+            <div className="stat-icon-wrapper icon-blue">
+              <i className="fas fa-truck"></i>
+            </div>
+            <div className="stat-content">
+              <span className="stat-title">ENTREGAS NO MÊS</span>
+              <span className="stat-value">{contadores.entrega}</span>
+              <span className="stat-sub">Saídas programadas</span>
+            </div>
           </div>
-          <div className="stat-content">
-            <span className="stat-title">ENTREGAS NO MÊS</span>
-            <span className="stat-value">{contadores.entrega}</span>
-            <span className="stat-sub">Saídas programadas</span>
-          </div>
-        </div>
 
-        <div className="stat-card-pro border-orange">
-          <div className="stat-icon-wrapper icon-orange">
-            <i className="fas fa-undo-alt"></i>
+          <div className="stat-card-pro border-orange">
+            <div className="stat-icon-wrapper icon-orange">
+              <i className="fas fa-undo-alt"></i>
+            </div>
+            <div className="stat-content">
+              <span className="stat-title">DEVOLUÇÕES NO MÊS</span>
+              <span className="stat-value">{contadores.devolucao}</span>
+              <span className="stat-sub">Retornos previstos</span>
+            </div>
           </div>
-          <div className="stat-content">
-            <span className="stat-title">DEVOLUÇÕES NO MÊS</span>
-            <span className="stat-value">{contadores.devolucao}</span>
-            <span className="stat-sub">Retornos previstos</span>
-          </div>
-        </div>
 
-        <div className="stat-card-pro border-purple">
-          <div className="stat-icon-wrapper icon-purple">
-            <i className="fas fa-handshake"></i>
+          <div className="stat-card-pro border-purple">
+            <div className="stat-icon-wrapper icon-purple">
+              <i className="fas fa-handshake"></i>
+            </div>
+            <div className="stat-content">
+              <span className="stat-title">VISITAS & REUNIÕES</span>
+              <span className="stat-value">{(contadores.visita || 0) + (contadores.reuniao || 0)}</span>
+              <span className="stat-sub">Atendimentos no mês</span>
+            </div>
           </div>
-          <div className="stat-content">
-            <span className="stat-title">VISITAS & REUNIÕES</span>
-            <span className="stat-value">{(contadores.visita || 0) + (contadores.reuniao || 0)}</span>
-            <span className="stat-sub">Atendimentos no mês</span>
-          </div>
-        </div>
 
-        <div className="stat-card-pro border-red">
-          <div className="stat-icon-wrapper icon-red">
-            <i className="fas fa-exclamation-triangle"></i>
-          </div>
-          <div className="stat-content">
-            <span className="stat-title">CONFLITOS</span>
-            <span className="stat-value" style={{ color: statsKPI.conflitos > 0 ? '#dc2626' : 'inherit' }}>
-              {statsKPI.conflitos}
-            </span>
-            <span className="stat-sub">Sobreposição de horários</span>
+          <div className="stat-card-pro border-red">
+            <div className="stat-icon-wrapper icon-red">
+              <i className="fas fa-exclamation-triangle"></i>
+            </div>
+            <div className="stat-content">
+              <span className="stat-title">CONFLITOS</span>
+              <span className="stat-value" style={{ color: statsKPI.conflitos > 0 ? '#dc2626' : 'inherit' }}>
+                {statsKPI.conflitos}
+              </span>
+              <span className="stat-sub">Sobreposição de horários</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ── PAINEL DE FILTROS E BUSCA (PADRÃO OFICIAL CELEBRE) ── */}
       <div className="advanced-filter-bar agenda-filter-bar">

@@ -11,6 +11,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { CATEGORIAS_FISICAS } from '../../catalogoDeTemas'; 
 import { calcularPeriodoTeste, verificarAssinaturaAtiva } from '../../utils/periodoTesteUtils'; 
+import { obterLimitePlano } from '../../utils/planoUtils';
 
 // Page component for Estoque Management
 const Estoque = () => {
@@ -198,31 +199,13 @@ const Estoque = () => {
           // Se está no teste grátis, acesso total com limite máximo
           if (testeAtivo) {
               acessoLiberado = true;
-              limiteMaximo = 10000; // Acesso completo durante o teste
+              // 🔗 Lê o limite REAL do Firestore (campo limites["Variedade Produtos"] do plano)
+              limiteMaximo = await obterLimitePlano(userData.planoId, 'Variedade Produtos', false, true);
           } else if (infoAssinatura.ativa) {
               // Teste acabou, mas a empresa pagou um plano
               acessoLiberado = true;
-              limiteMaximo = 1000; // Assume Básico como padrão
-
-              if (userData.planoId) {
-                  try {
-                      const planoSnap = await getDoc(doc(db, "planos", userData.planoId));
-                      if (planoSnap.exists()) {
-                          const nomePlano = planoSnap.data().nome?.toLowerCase() || '';
-                          if (nomePlano.includes('premium')) {
-                              limiteMaximo = 5000;
-                          } else if (nomePlano.includes('pro')) {
-                              limiteMaximo = 10000;
-                          } else {
-                              limiteMaximo = 1000; // Básico
-                          }
-                      } else if (userData.planoId === "gGRLzfUfHNUurTw3ppqQ") {
-                          limiteMaximo = 1000; // Fallback caso plano seja apagado
-                      }
-                  } catch (err) {
-                      console.error("Erro ao buscar nome do plano:", err);
-                  }
-              }
+              // 🔗 Lê o limite REAL do Firestore (campo limites["Variedade Produtos"] do plano)
+              limiteMaximo = await obterLimitePlano(userData.planoId, 'Variedade Produtos', false, false);
           }
           } // fim do else do super admin
       }

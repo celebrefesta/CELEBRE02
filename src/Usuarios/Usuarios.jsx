@@ -5,6 +5,7 @@ import { db } from '../firebaseConfig';
 import { collection, getDocs, doc, query, where, getDoc, setDoc, updateDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { calcularPeriodoTeste, verificarAssinaturaAtiva } from '../utils/periodoTesteUtils';
+import { obterLimitePlano } from '../utils/planoUtils';
 
 const Usuarios = () => {
   const navigate = useNavigate();
@@ -105,14 +106,10 @@ const Usuarios = () => {
           setIsContaExpirada(true);
           acessoLiberado = false;
         } else if (assinaturaAtiva) {
-          if (userData.planoId) {
-            const planoSnap = await getDoc(doc(db, "planos", userData.planoId));
-            if (planoSnap.exists()) {
-              const nomePlano = planoSnap.data().nome?.toLowerCase() || '';
-              if (nomePlano.includes('premium')) { limite = 3; acessoLiberado = true; planoEhPro = false; } 
-              else if (nomePlano.includes('pro')) { limite = 5; acessoLiberado = true; planoEhPro = true; }
-            }
-          }
+          // 🔗 Lê o limite REAL do Firestore (campo limites["Usuários"] do plano)
+          limite = await obterLimitePlano(userData.planoId, 'Usuários', false, false);
+          acessoLiberado = true;
+          planoEhPro = limite >= 5;
         }
       }
 
