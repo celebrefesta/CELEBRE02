@@ -3,7 +3,7 @@
 > **Plataforma SaaS Multi-Tenant Especializada em Gestão de Locação de Acervo, Decoração e Pegue & Monte**  
 > *Documento Executivo e Técnico Definitivo cobrindo Arquitetura, Módulos, Segurança, Workflows Operacionais, Blindagem de UI/UX e Histórico de Evolução.*  
 > **Tecnologias**: React 19 / 18 + Vite 7 · Firebase Firestore & Auth · Mercado Pago SDK · Vanilla CSS Luxury Design System (`#c5a059`, Glassmorphism, Dark/Light Mode)  
-> **Data de Referência**: 24 de Setembro / 2026  
+> **Data de Referência**: 28 de Setembro / 2026  
 
 ---
 
@@ -56,6 +56,7 @@ O sistema centraliza e otimiza todo o ciclo operacional de uma locadora:
 | **Pagamentos & Pix** | Mercado Pago SDK + Pix | Gateway multi-tenant permitindo integração direta da conta bancária da locadora |
 | **Assinatura Digital** | React Signature Canvas | Coleta de assinatura digital na tela (Touch/Mouse) vinculada ao contrato |
 | **Relatórios & PDF** | jsPDF + AutoTable + Recharts | Emissão de comprovantes, romaneios, DRE gerencial e mapas de separação em PDF |
+| **Sincronização de Calendários** | Google Calendar URL Generator + iCalendar RFC 5545 (`calendarSyncUtils.js`) | Sincronização 1-clique com Google Agenda, Apple Calendar e Outlook via arquivos `.ics` e links dinâmicos |
 | **Estilização** | Vanilla CSS Luxury Design System | Paleta sofisticada Dourado Celebre (`#c5a059`), Glassmorphism, Light e Dark Modes |
 | **Auditoria & Logs** | Firestore Audit Ledger | Registro centralizado (`logs_atividades`) para rastreamento de ações críticas e equipe |
 
@@ -200,7 +201,14 @@ graph TD
 
 
 ### 🚚 6.9. Logística, Roteiro de Galpão & Vistoria de Campo (`/src/pages/Logistica/`, `/Agenda/`)
-- **Agenda de Eventos (`Agenda.jsx`)**: Calendário interativo (Mês, Semana, Dia) diferenciando saídas (🚚), eventos (🎉) e recolhes (📦).
+- **Agenda Operacional Integrada & Sincronização Inteligente (`Agenda.jsx`, `Agenda.css`, `calendarSyncUtils.js`)**:
+  - **Calendário Multi-Visão & Painel do Dia**: Visualizações por Mês e por Lista com contadores reativos, gaveta de filtros mobile inline e chips de categoria desktop (Entregas 🚚, Devoluções 📦, Reuniões 🤝, Visitas Técnicas 📍, Cobranças 💰, Tarefas 📌 e Bloqueios 🚫).
+  - **Sincronização 1-Clique com o Google Agenda**: Alternador inteligente *"Abrir no Google Agenda automaticamente ao salvar"* persistido em `localStorage`, gerando links diretos pré-preenchidos em UTC sem burocracia de OAuth.
+  - **Exportação Universal `.ics` (RFC 5545)**: Motor de geração e download de arquivos de calendário universais para importação em lote no iPhone/Mac (Apple Agenda), Android e Outlook.
+  - **Confirmação Instantânea via WhatsApp**: Disparo direto nos modais, nos cards de evento da grade mensal e no painel lateral diário, gerando mensagem com data, hora, local, responsável e assinatura da empresa.
+  - **Atribuição de Responsável da Equipe**: Seleção dinâmica integrada aos colaboradores do Firestore (`equipe`), ao usuário autenticado e a nomes avulsos, com exibição de badges na grade e na listagem.
+  - **Ergonomia e Simetria de Formulários**: Seletor de clientes em largura total com alternador segmentado `[ 👤 Cadastrado | ✨ Lead / Avulso ]` e linha simétrica em 2 colunas para Responsável e Local (`📍 Maps`).
+  - **Controle de Visualização KPI**: Alternador de expansão/recolhimento dos cards de indicadores com persistência local, estritamente blindados em 1 linha horizontal no Desktop e 2 colunas no Mobile (Regras 1 e 2 do AGENTS.md).
 - **Esteira Operacional de Galpão em 4 Etapas (`Logistica.jsx`, `Logistica.css`)**:
   - `1. A Separar`: Pedidos confirmados e aprovados aguardando início da conferência de saída.
   - `2. Em Separação`: Separação ativa no acervo com checklist de conferência e bipagem de código de barras.
@@ -365,6 +373,30 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 ---
 
 ## 📅 9. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
+
+### 🗓️ Sessão: 28/09/2026 — 14h20 às 15h10 (BRT)
+- ✅ **📅 Agenda Operacional — Sincronização Google Agenda, Automação 1-Clique, WhatsApp & Atribuição de Equipe (`Agenda.jsx`, `Agenda.css`, `calendarSyncUtils.js`)**:
+  - **Refinamento Visual & Simetria de Formulário**:
+    - Grupo `👤 CLIENTE` posicionado em linha de largura total (100%), permitindo que o seletor segmentado `[ 👤 Cadastrado | ✨ Lead / Avulso ]` fique perfeitamente alinhado ao rótulo sem quebrar linha.
+    - Campos `👥 RESPONSÁVEL` e `📍 LOCAL / ENDEREÇO` dispostos lado a lado em 2 colunas simétricas (`1fr 1fr`), com mesma altura e adaptação em 1 coluna no mobile (`.form-row-resp-local`).
+  - **Automação de 1-Clique no Google Agenda**:
+    - Checkbox estilizado com preferência persistida em `localStorage` para abrir a guia oficial do Google Agenda já preenchida no ato de salvar o compromisso.
+    - Utilitário universal `calendarSyncUtils.js` com conversão de datas para o padrão UTC `YYYYMMDDTHHmmssZ`.
+  - **Exportação Universal de Calendário (`.ics`)**:
+    - Geração de arquivos `.ics` no padrão iCalendar RFC 5545 para sincronização em lote com Apple Agenda, Outlook e Google Calendar.
+    - Menu dropdown no topo com opções de Relatório PDF, Arquivo `.ics` e acesso direto ao painel web do Google Agenda.
+  - **Disparo de Confirmação via WhatsApp**:
+    - Botões rápidos de WhatsApp no rodapé do modal, no card de cliente vinculado, nos cards de evento da grade do calendário e no painel lateral de detalhes do dia.
+    - Gerador de mensagem profissional com formatação automática de data, horário, local, responsável e nome da empresa.
+  - **Campo "Responsável / Atribuído a"**:
+    - Integração de `datalist` carregando membros da coleção `equipe` do Firestore do tenant, o usuário logado atualmente e suporte a digitação livre.
+    - Exibição de badge com o nome do responsável nos cards da grade e no painel lateral.
+  - **Controle Dinâmico de Cards KPI**:
+    - Botão de expansão/recolhimento dos cards de indicadores com persistência em `localStorage: celebre_agenda_kpi_visible`.
+    - Blindagem em 1 linha horizontal no Desktop e 2 colunas no Mobile (Regras 1 e 2 do AGENTS.md).
+- ✅ **🔒 Blindagem e Isolamento CSS**:
+  - Estilos rigorosamente escopados sob `.agenda-container` e `.agenda-modal-overlay` em `Agenda.css`, com suporte nativo a Dark Mode (`[data-theme^='dark']`).
+- ✅ **Build de Produção Verificado**: `npm run build` aprovado com **0 erros** (`✓ built in 13.50s`).
 
 ### 🗓️ Sessão: 25/09/2026 — 15h15 às 16h55 (BRT)
 - ✅ **📱 Google Play Store — Estratégia de Migração para Conta Organizacional (CNPJ) & D-U-N-S**:
@@ -783,5 +815,5 @@ Para testar e homologar a última versão do Catálogo e do Painel Minha Vitrine
 
 ---
 
-> **⏱️ Última atualização:** 24/09/2026 — 16h35 (BRT)  
+> **⏱️ Última atualização:** 28/09/2026 — 15h10 (BRT)  
 > **✍️ Consolidação e Fusão Executiva por:** Antigravity AI — Workspace CELEBRE02  
