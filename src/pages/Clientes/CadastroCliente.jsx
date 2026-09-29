@@ -5,6 +5,7 @@ import { db } from '../../firebaseConfig';
 import { collection, addDoc, updateDoc, doc, query, getDocs, getDoc, where, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { validarCPF, validarCNPJ } from '../../utils/validadores';
+import { consultarCNPJ } from '../../utils/consultaCnpj';
 
 const formatarNomeCapitalizado = (nomeBruto) => {
   if (!nomeBruto) return '';
@@ -15,6 +16,13 @@ const formatarNomeCapitalizado = (nomeBruto) => {
       if (index > 0 && conectores.includes(palavra)) return palavra;
       return palavra.charAt(0).toUpperCase() + palavra.slice(1);
   }).join(' ');
+};
+
+const capitalizarPalavrasAoDigitar = (texto) => {
+  if (!texto || typeof texto !== 'string') return '';
+  return texto.replace(/(^|[\s])([a-z\u00C0-\u00FF])/g, (match, sep, char) => {
+    return sep + char.toUpperCase();
+  });
 };
 
 const getTagIcon = (tag) => {
@@ -145,6 +153,7 @@ const CadastroCliente = () => {
   const [totalGasto, setTotalGasto] = useState(0);
   const [tagSugeridaAuto, setTagSugeridaAuto] = useState('NOVO');
   const [buscandoCnpj, setBuscandoCnpj] = useState(false);
+  const [statusCnpjReceita, setStatusCnpjReceita] = useState(null);
   const [fotoBase64, setFotoBase64] = useState('');
   const [posicaoFoto, setPosicaoFoto] = useState({ x: 50, y: 50 });
   const [dragging, setDragging] = useState(false);
@@ -324,7 +333,9 @@ const CadastroCliente = () => {
     const { name, value } = e.target;
     let newValue = value;
 
-    if (name === 'cpf') newValue = maskCPF(value);
+    if (['nome', 'razaoSocial', 'nomeFantasia', 'nomeContato', 'logradouro', 'bairro', 'cidade'].includes(name)) {
+      newValue = capitalizarPalavrasAoDigitar(value);
+    } else if (name === 'cpf') newValue = maskCPF(value);
     else if (name === 'cnpj') newValue = maskCNPJ(value);
     else if (name === 'celular' || name === 'telefoneFixo') newValue = maskPhone(value);
     else if (name === 'email') newValue = value.toLowerCase();
@@ -356,85 +367,36 @@ const CadastroCliente = () => {
     }
 
     setBuscandoCnpj(true);
-    let dados = null;
+    setStatusCnpjReceita(null);
 
     try {
-      try {
-        const resp1 = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjLimpo}`);
-        if (resp1.ok) {
-          dados = await resp1.json();
-        }
-      } catch (err1) {}
+      const res = await consultarCNPJ(cnpjLimpo);
 
-      if (!dados) {
-        try {
-          const resp2 = await fetch(`https://minhareceita.org/${cnpjLimpo}`);
-          if (resp2.ok) {
-            dados = await resp2.json();
-          }
-        } catch (err2) {}
-      }
-
-      if (!dados) {
-        try {
-          const resp3 = await fetch(`https://publica.cnpj.ws/cnpj/${cnpjLimpo}`);
-          if (resp3.ok) {
-            const res3 = await resp3.json();
-            dados = {
-              razao_social: res3.razao_social,
-              nome_fantasia: res3.estabelecimento?.nome_fantasia || res3.razao_social,
-              logradouro: res3.estabelecimento?.logradouro,
-              numero: res3.estabelecimento?.numero,
-              complemento: res3.estabelecimento?.complemento || '',
-              bairro: res3.estabelecimento?.bairro,
-              municipio: res3.estabelecimento?.cidade?.nome,
-              uf: res3.estabelecimento?.estado?.sigla,
-              cep: res3.estabelecimento?.cep,
-              ddd_telefone_1: (res3.estabelecimento?.ddd1 || '') + (res3.estabelecimento?.telefone1 || ''),
-              email: res3.estabelecimento?.email
-            };
-          }
-        } catch (err3) {}
-      }
-
-      if (dados) {
-        const rawRSocial = dados.razao_social || dados.nome_razao_social || '';
-        const rawNFantasia = dados.nome_fantasia || rawRSocial;
-
-        const rSocial = formatarNomeCapitalizado(rawRSocial);
-        let nFantasiaLimpo = rawNFantasia.replace(/^[\d\.\/-]+\s*/, '').trim();
-        const nFantasia = formatarNomeCapitalizado(nFantasiaLimpo || rawRSocial);
-
-        const logr = formatarNomeCapitalizado(dados.logradouro || '');
-        const num = dados.numero || '';
-        const comp = formatarNomeCapitalizado(dados.complemento || '');
-        const brm = formatarNomeCapitalizado(dados.bairro || '');
-        const cid = formatarNomeCapitalizado(dados.municipio || dados.localidade || '');
-        const ufSigla = (dados.uf || '').toUpperCase();
-        const cepFmt = dados.cep ? dados.cep.replace(/\D/g, '').replace(/^(\d{5})(\d)/, "$1-$2").substring(0, 9) : '';
-        const telFmt = dados.ddd_telefone_1 ? maskPhone(dados.ddd_telefone_1) : (dados.telefone ? maskPhone(dados.telefone) : '');
-        const emailFmt = (dados.email || '').toLowerCase();
-        
-        const nomeProprietarioContato = formatarNomeCapitalizado(rawRSocial.replace(/^[\d\.\/-]+\s*/, '').trim());
+      if (res.sucesso) {
+        setStatusCnpjReceita({
+          situacao: res.situacaoCadastral,
+          isAtiva: res.isAtiva,
+          provedor: res.provedor
+        });
 
         setFormData(prev => ({
           ...prev,
-          cnpj: maskCNPJ(cnpjLimpo),
-          razaoSocial: rSocial || prev.razaoSocial,
-          nomeFantasia: nFantasia || prev.nomeFantasia,
-          nomeContato: prev.nomeContato || nomeProprietarioContato,
-          logradouro: logr || prev.logradouro,
-          numero: num || prev.numero,
-          complemento: comp || prev.complemento,
-          bairro: brm || prev.bairro,
-          cidade: cid || prev.cidade,
-          uf: ufSigla || prev.uf,
-          cep: cepFmt || prev.cep,
-          celular: prev.celular || telFmt,
-          email: prev.email || emailFmt
+          cnpj: res.cnpj,
+          razaoSocial: res.razaoSocial || prev.razaoSocial,
+          nomeFantasia: res.nomeFantasia || prev.nomeFantasia,
+          nomeContato: prev.nomeContato || res.nomeResponsavelSugerido,
+          logradouro: res.logradouro || prev.logradouro,
+          numero: res.numero || prev.numero,
+          complemento: res.complemento || prev.complemento,
+          bairro: res.bairro || prev.bairro,
+          cidade: res.cidade || prev.cidade,
+          uf: res.uf || prev.uf,
+          cep: res.cep || prev.cep,
+          celular: prev.celular || res.telefone,
+          email: prev.email || res.email
         }));
       } else {
-        alert("⚠️ CNPJ não localizado nas consultas públicas da Receita Federal. Verifique se os números foram digitados corretamente.");
+        alert(`⚠️ ${res.erro}`);
       }
     } catch (err) {
       console.error("Erro na busca de CNPJ:", err);
@@ -980,7 +942,7 @@ const CadastroCliente = () => {
                     <label htmlFor="nome">NOME COMPLETO *</label>
                     <div className="input-icon-wrapper">
                       <span className="input-left-icon"><i className="far fa-user"></i></span>
-                      <input id="nome" type="text" name="nome" autoComplete="name" value={formData.nome} onChange={handleChange} onBlur={handleBlurCapitalize} required placeholder="Ex: Rosa Maria Vichinhsk" />
+                      <input id="nome" type="text" name="nome" autoComplete="name" autoCapitalize="words" style={{ textTransform: 'capitalize' }} value={formData.nome} onChange={handleChange} onBlur={handleBlurCapitalize} required placeholder="Ex: Rosa Maria Vichinhsk" />
                     </div>
                   </div>
                   <div className="form-group span-2 col-mobile-half">
@@ -1050,17 +1012,36 @@ const CadastroCliente = () => {
                   <div className="form-group span-2">
                     <label htmlFor="cnpj" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span>CNPJ {buscandoCnpj ? <span style={{color: '#c5a059', fontWeight: 'bold', fontSize: '0.68rem', marginLeft: '6px'}}>⏳ Buscando...</span> : null}</span>
-                      {(() => {
-                        const cLimpo = (formData.cnpj || '').replace(/\D/g, '');
-                        if (cLimpo.length === 14) {
-                          return validarCNPJ(cLimpo) ? (
-                            <span style={{ color: '#16a34a', fontWeight: '800', fontSize: '0.62rem' }}>✓ VÁLIDO</span>
-                          ) : (
-                            <span style={{ color: '#ef4444', fontWeight: '800', fontSize: '0.62rem' }}>✗ INVÁLIDO</span>
-                          );
-                        }
-                        return null;
-                      })()}
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        {statusCnpjReceita && (
+                          <span 
+                            style={{ 
+                              color: statusCnpjReceita.isAtiva ? '#16a34a' : '#ef4444', 
+                              backgroundColor: statusCnpjReceita.isAtiva ? 'rgba(22, 163, 74, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                              border: `1px solid ${statusCnpjReceita.isAtiva ? 'rgba(22, 163, 74, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                              fontWeight: '800', 
+                              fontSize: '0.62rem',
+                              letterSpacing: '0.5px'
+                            }}
+                            title={`Situação Cadastral: ${statusCnpjReceita.situacao} (Fonte: ${statusCnpjReceita.provedor})`}
+                          >
+                            {statusCnpjReceita.isAtiva ? '✓' : '⚠️'} {statusCnpjReceita.situacao}
+                          </span>
+                        )}
+                        {(() => {
+                          const cLimpo = (formData.cnpj || '').replace(/\D/g, '');
+                          if (cLimpo.length === 14) {
+                            return validarCNPJ(cLimpo) ? (
+                              <span style={{ color: '#16a34a', fontWeight: '800', fontSize: '0.62rem' }}>✓ VÁLIDO</span>
+                            ) : (
+                              <span style={{ color: '#ef4444', fontWeight: '800', fontSize: '0.62rem' }}>✗ INVÁLIDO</span>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
                     </label>
                     <div className="input-icon-wrapper">
                       <span className="input-left-icon"><i className="fas fa-building"></i></span>
@@ -1087,11 +1068,11 @@ const CadastroCliente = () => {
                   </div>
                   <div className="form-group span-2">
                     <label htmlFor="nomeFantasia">NOME FANTASIA *</label>
-                    <input id="nomeFantasia" type="text" name="nomeFantasia" autoComplete="organization" value={formData.nomeFantasia} onChange={handleChange} onBlur={handleBlurCapitalize} required placeholder="Nome de exibição da empresa" />
+                    <input id="nomeFantasia" type="text" name="nomeFantasia" autoComplete="organization" autoCapitalize="words" style={{ textTransform: 'capitalize' }} value={formData.nomeFantasia} onChange={handleChange} onBlur={handleBlurCapitalize} required placeholder="Nome de exibição da empresa" />
                   </div>
                   <div className="form-group span-2">
                     <label htmlFor="razaoSocial">RAZÃO SOCIAL</label>
-                    <input id="razaoSocial" type="text" name="razaoSocial" autoComplete="organization" value={formData.razaoSocial} onChange={handleChange} onBlur={handleBlurCapitalize} placeholder="Razão Social completa" />
+                    <input id="razaoSocial" type="text" name="razaoSocial" autoComplete="organization" autoCapitalize="words" style={{ textTransform: 'capitalize' }} value={formData.razaoSocial} onChange={handleChange} onBlur={handleBlurCapitalize} placeholder="Razão Social completa" />
                   </div>
                   <div className="form-group span-2">
                     <label htmlFor="inscricaoEstadual">INSCRIÇÃO ESTADUAL</label>
@@ -1099,7 +1080,7 @@ const CadastroCliente = () => {
                   </div>
                   <div className="form-group span-2">
                     <label htmlFor="nomeContato">NOME DO CONTATO</label>
-                    <input id="nomeContato" type="text" name="nomeContato" autoComplete="name" value={formData.nomeContato} onChange={handleChange} onBlur={handleBlurCapitalize} placeholder="Pessoa de contato" />
+                    <input id="nomeContato" type="text" name="nomeContato" autoComplete="name" autoCapitalize="words" style={{ textTransform: 'capitalize' }} value={formData.nomeContato} onChange={handleChange} onBlur={handleBlurCapitalize} placeholder="Pessoa de contato" />
                   </div>
                   <div className="form-group span-2">
                     <label htmlFor="cargo">CARGO / DEPTO</label>

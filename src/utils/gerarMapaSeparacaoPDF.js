@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import QRCode from 'qrcode';
+import { gerarLinkPublico } from './urlUtils';
 import logoCelebreMarcaDagua from '../assets/LOGO_CELEBRE.png';
 
 /**
@@ -419,8 +420,7 @@ export const gerarMapaSeparacaoPDF = async (
         // ── GERAR QR CODE DO PEDIDO PARA LEITURA NO CELULAR / COLETOR ──
         let qrDataUrl = null;
         try {
-          const urlBase = typeof window !== 'undefined' ? window.location.origin : 'https://app.celebre.com';
-          const qrLink = `${urlBase}/locacoes?pedido=${loc.numeroPedido || loc.id}`;
+          const qrLink = gerarLinkPublico(`/locacoes?pedido=${loc.numeroPedido || loc.id}`);
           qrDataUrl = await QRCode.toDataURL(qrLink, {
             margin: 1,
             width: 80,

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 import { formatCpfCnpj, formatCEP, formatTelefone, validarCpfCnpj } from '../../utils/mascaras';
+import { consultarCNPJ } from '../../utils/consultaCnpj';
 
 const AbaEmpresa = ({ 
   config, 
@@ -16,6 +17,8 @@ const AbaEmpresa = ({
   salvandoTudo,
   dataCriacaoConta
 }) => {
+  const [buscandoCnpj, setBuscandoCnpj] = useState(false);
+  const [statusCnpjReceita, setStatusCnpjReceita] = useState(null);
   const atualizarEnderecoCompleto = (overrideObj = {}) => {
     const r = overrideObj.rua !== undefined ? overrideObj.rua : (config.rua || '');
     const num = overrideObj.numero !== undefined ? overrideObj.numero : (config.numero || '');
@@ -37,6 +40,99 @@ const AbaEmpresa = ({
     const completo = partes.join(', ');
     handleConfigChange('endereco', completo);
     salvarConfigTextual('endereco', completo);
+  };
+
+  const consultarCnpjEmpresa = async (cnpjInput) => {
+    const cnpjLimpo = String(cnpjInput || '').replace(/\D/g, '');
+    if (cnpjLimpo.length !== 14) {
+      alert("⚠️ Digite os 14 números do CNPJ para buscar na Receita Federal.");
+      return;
+    }
+    setBuscandoCnpj(true);
+    setStatusCnpjReceita(null);
+    try {
+      const res = await consultarCNPJ(cnpjLimpo);
+      if (res.sucesso) {
+        setStatusCnpjReceita({
+          situacao: res.situacaoCadastral,
+          isAtiva: res.isAtiva,
+          provedor: res.provedor
+        });
+
+        const confirmar = window.confirm(
+          `🏢 Dados encontrados na Receita Federal (${res.provedor}):\n\n` +
+          `• Razão Social: ${res.razaoSocial}\n` +
+          `• Fantasia: ${res.nomeFantasia}\n` +
+          `• Endereço: ${res.logradouro}, ${res.numero || 'S/N'} - ${res.bairro}, ${res.cidade}/${res.uf}\n` +
+          `• Situação: ${res.situacaoCadastral}\n\n` +
+          `Deseja preencher automaticamente o nome da empresa e endereço oficial?`
+        );
+
+        if (confirmar) {
+          if (res.nomeFantasia) {
+            handleConfigChange('nomeEmpresa', res.nomeFantasia);
+            salvarConfigTextual('nomeEmpresa', res.nomeFantasia);
+          }
+          if (res.razaoSocial) {
+            handleConfigChange('razaoSocial', res.razaoSocial);
+            salvarConfigTextual('razaoSocial', res.razaoSocial);
+          }
+          if (res.cep) {
+            handleConfigChange('cep', res.cep);
+            salvarConfigTextual('cep', res.cep);
+          }
+          if (res.logradouro) {
+            handleConfigChange('rua', res.logradouro);
+            salvarConfigTextual('rua', res.logradouro);
+          }
+          if (res.numero) {
+            handleConfigChange('numero', res.numero);
+            salvarConfigTextual('numero', res.numero);
+          }
+          if (res.complemento) {
+            handleConfigChange('complemento', res.complemento);
+            salvarConfigTextual('complemento', res.complemento);
+          }
+          if (res.bairro) {
+            handleConfigChange('bairro', res.bairro);
+            salvarConfigTextual('bairro', res.bairro);
+          }
+          if (res.cidade) {
+            handleConfigChange('cidade', res.cidade);
+            salvarConfigTextual('cidade', res.cidade);
+          }
+          if (res.uf) {
+            handleConfigChange('uf', res.uf);
+            salvarConfigTextual('uf', res.uf);
+          }
+          if (res.telefone && !config.telefone) {
+            handleConfigChange('telefone', res.telefone);
+            salvarConfigTextual('telefone', res.telefone);
+          }
+          if (res.email && !config.email) {
+            handleConfigChange('email', res.email);
+            salvarConfigTextual('email', res.email);
+          }
+          
+          atualizarEnderecoCompleto({
+            rua: res.logradouro,
+            numero: res.numero,
+            complemento: res.complemento,
+            bairro: res.bairro,
+            cidade: res.cidade,
+            uf: res.uf,
+            cep: res.cep
+          });
+        }
+      } else {
+        alert(`⚠️ ${res.erro}`);
+      }
+    } catch (err) {
+      console.error("Erro na consulta de CNPJ da empresa:", err);
+      alert("⚠️ Falha de conexão ao consultar a Receita Federal.");
+    } finally {
+      setBuscandoCnpj(false);
+    }
   };
 
   const handleBuscarCep = async (cepInput) => {
@@ -163,20 +259,46 @@ const AbaEmpresa = ({
         {/* CNPJ / CPF */}
         <div className="f-group" style={{ marginTop: '12px' }}>
           <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span><i className="fas fa-id-card"></i> CNPJ / CPF</span>
-            {(() => {
-              const c = (config.cnpj || '').replace(/\D/g, '');
-              if (c.length === 11 || c.length === 14) {
-                return validarCpfCnpj(c) ? (
-                  <span style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.72rem' }}>✓ Válido</span>
-                ) : (
-                  <span style={{ color: '#ef4444', fontWeight: '600', fontSize: '0.72rem' }}>✗ Inválido</span>
-                );
-              }
-              return null;
-            })()}
+            <span>
+              <i className="fas fa-id-card"></i> CNPJ / CPF
+              {buscandoCnpj && (
+                <span style={{ color: '#c5a059', fontWeight: 'bold', fontSize: '0.68rem', marginLeft: '6px' }}>
+                  ⏳ Consultando Receita...
+                </span>
+              )}
+            </span>
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              {statusCnpjReceita && (
+                <span 
+                  style={{ 
+                    color: statusCnpjReceita.isAtiva ? '#16a34a' : '#ef4444', 
+                    backgroundColor: statusCnpjReceita.isAtiva ? 'rgba(22, 163, 74, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                    border: `1px solid ${statusCnpjReceita.isAtiva ? 'rgba(22, 163, 74, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                    padding: '1px 6px',
+                    borderRadius: '4px',
+                    fontWeight: '800', 
+                    fontSize: '0.62rem',
+                    letterSpacing: '0.5px'
+                  }}
+                  title={`Situação Cadastral: ${statusCnpjReceita.situacao} (Fonte: ${statusCnpjReceita.provedor})`}
+                >
+                  {statusCnpjReceita.isAtiva ? '✓' : '⚠️'} {statusCnpjReceita.situacao}
+                </span>
+              )}
+              {(() => {
+                const c = (config.cnpj || '').replace(/\D/g, '');
+                if (c.length === 11 || c.length === 14) {
+                  return validarCpfCnpj(c) ? (
+                    <span style={{ color: '#16a34a', fontWeight: '600', fontSize: '0.72rem' }}>✓ Válido</span>
+                  ) : (
+                    <span style={{ color: '#ef4444', fontWeight: '600', fontSize: '0.72rem' }}>✗ Inválido</span>
+                  );
+                }
+                return null;
+              })()}
+            </div>
           </label>
-          <div className="input-with-icon">
+          <div className="input-with-icon" style={{ position: 'relative' }}>
             <i className="fas fa-file-invoice input-icon"></i>
             <input 
               type="text" 
@@ -195,7 +317,37 @@ const AbaEmpresa = ({
                 salvarConfigTextual('cnpj', val);
               }} 
               placeholder="00.000.000/0001-00 ou 000.000.000-00" 
+              style={(config.cnpj || '').replace(/\D/g, '').length === 14 ? { paddingRight: '120px' } : {}}
             />
+            {(config.cnpj || '').replace(/\D/g, '').length === 14 && (
+              <button
+                type="button"
+                onClick={() => consultarCnpjEmpresa(config.cnpj)}
+                disabled={buscandoCnpj}
+                style={{
+                  position: 'absolute',
+                  right: '6px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'linear-gradient(135deg, #c5a059 0%, #9e7a3b 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '5px 9px',
+                  fontSize: '0.72rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  boxShadow: '0 2px 5px rgba(197, 160, 89, 0.3)',
+                  zIndex: 2
+                }}
+                title="Puxar dados oficiais da empresa na Receita Federal"
+              >
+                {buscandoCnpj ? <i className="fas fa-spinner fa-spin"></i> : <><i className="fas fa-search"></i> Puxar Dados</>}
+              </button>
+            )}
           </div>
           {/* 📧 ALERTA ANTI-SPAM CNPJ */}
           <div style={{

@@ -26,7 +26,11 @@ const SininhoNotificacoes = () => {
       }
     };
     document.addEventListener("mousedown", handleClickFora);
-    return () => document.removeEventListener("mousedown", handleClickFora);
+    document.addEventListener("touchstart", handleClickFora);
+    return () => {
+      document.removeEventListener("mousedown", handleClickFora);
+      document.removeEventListener("touchstart", handleClickFora);
+    };
   }, []);
 
   // 1. SENSOR QUE BUSCA TUDO O QUE ESTÁ PENDENTE NO BANCO (AGORA COM BLINDAGEM!)

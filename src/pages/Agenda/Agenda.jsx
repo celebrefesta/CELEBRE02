@@ -1126,8 +1126,10 @@ const Agenda = () => {
         {/* Grade do Calendário */}
         <div className="cal-grid-outer">
           <div className="cal-weekdays-row">
-            {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => (
-              <div key={d} className="cal-weekday-name">{d}</div>
+            {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((d, idx) => (
+              <div key={d} className={`cal-weekday-name${idx === 0 || idx === 6 ? ' is-weekend' : ''}`}>
+                {d}
+              </div>
             ))}
           </div>
 
@@ -1145,17 +1147,30 @@ const Agenda = () => {
               const isHoje = hojeD.getDate() === dia && hojeD.getMonth() === dataAtual.getMonth() && hojeD.getFullYear() === dataAtual.getFullYear();
               const isSelecionado = diaSelecionado === dia;
               const temConflito = statsKPI.diasComConflito.has(dia);
+              const diaSemanaIndex = (diaInicio + dia - 1) % 7;
+              const isFimDeSemana = diaSemanaIndex === 0 || diaSemanaIndex === 6;
               const extra = evsDia.length - MAX;
 
               return (
                 <div
                   key={`cur-${dia}`}
-                  className={`cal-day-cell${isHoje ? ' is-today' : ''}${isSelecionado ? ' is-selected' : ''}${temConflito ? ' has-conflict' : ''}`}
+                  className={`cal-day-cell${isHoje ? ' is-today' : ''}${isSelecionado ? ' is-selected' : ''}${temConflito ? ' has-conflict' : ''}${isFimDeSemana ? ' is-weekend' : ''}`}
                   onClick={() => handleDiaClick(dia)}
                 >
                   <div className="cal-day-cell-top">
                     <span className="cal-day-num">{dia}</span>
-                    {temConflito && <span className="cal-conflict-tag" title="Conflito de horários nesta data">⚠️</span>}
+                    <div className="cal-cell-badges-top">
+                      {temConflito && (
+                        <span className="cal-conflict-tag" title="Conflito de horários nesta data">
+                          <i className="fas fa-exclamation-triangle"></i>
+                        </span>
+                      )}
+                      {evsDia.length > 0 && (
+                        <span className="cal-day-count-badge" title={`${evsDia.length} compromisso${evsDia.length > 1 ? 's' : ''}`}>
+                          {evsDia.length}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Tags compactas no desktop */}
@@ -1164,7 +1179,7 @@ const Agenda = () => {
                       <div
                         key={ev.id}
                         className={`cal-event-pill type-${ev.tipo}${ev.origem === 'locacao' ? ' from-locacao' : ''}`}
-                        title={`${ev.horario ? ev.horario + ' - ' : ''}${ev.titulo}`}
+                        title={`${ev.horario ? ev.horario + ' - ' : ''}${ev.titulo}${ev.responsavel ? ' | Resp: ' + ev.responsavel : ''}${ev.clienteNome ? ' | Cli: ' + ev.clienteNome : ''}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDiaClick(dia);
@@ -1176,11 +1191,27 @@ const Agenda = () => {
                         }}
                       >
                         {ev.tipo === 'bloqueio' && <i className="fas fa-lock pill-lock-icon"></i>}
+                        {ev.horario && <span className="pill-horario">{ev.horario}</span>}
                         <span className="pill-text">{ev.titulo}</span>
+                        {ev.responsavel && (
+                          <span className="pill-resp-icon" title={`Responsável: ${ev.responsavel}`}>
+                            <i className="fas fa-user-circle"></i>
+                          </span>
+                        )}
                       </div>
                     ))}
                     {extra > 0 && (
-                      <span className="cal-more-pill">+{extra} mais</span>
+                      <button
+                        type="button"
+                        className="cal-more-pill"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDiaClick(dia);
+                        }}
+                        title={`Ver mais ${extra} compromisso(s)`}
+                      >
+                        +{extra} mais
+                      </button>
                     )}
                   </div>
 
@@ -1192,6 +1223,7 @@ const Agenda = () => {
                           key={idx} 
                           className="cal-dot-micro" 
                           style={{ background: TIPOS[ev.tipo]?.cor || '#3b82f6' }}
+                          title={ev.titulo}
                         />
                       ))}
                       {evsDia.length > 4 && <span className="cal-dot-more">+{evsDia.length - 4}</span>}
@@ -2491,27 +2523,80 @@ const Agenda = () => {
 
       {/* ── PAINEL DE FILTROS E BUSCA (PADRÃO OFICIAL CELEBRE) ── */}
       <div className="advanced-filter-bar agenda-filter-bar">
-        <div className="filter-top-row">
+        {/* 🔍 LINHA 1: CAMPO DE BUSCA ESCRITA EXCLUSIVO (100% LARGURA) */}
+        <div className="filter-search-row">
           <div className="search-input-box">
             <i className="fas fa-search search-box-icon"></i>
             <input
               type="text"
-              placeholder="Buscar por evento, cliente ou local..."
+              placeholder="Buscar por evento, cliente, local ou responsável..."
               value={busca}
               onChange={e => setBusca(e.target.value)}
               className="search-input-field"
             />
             {busca && (
-              <button type="button" className="btn-clear-input" onClick={() => setBusca('')}>✕</button>
+              <button type="button" className="btn-clear-input" onClick={() => setBusca('')} title="Limpar busca">✕</button>
             )}
           </div>
+        </div>
 
-          <div className="filter-controls-group">
+        {/* 🎛️ LINHA 2: CATEGORIA + [ CALENDÁRIO | LISTA ] NA MESMA LINHA */}
+        <div className="filter-controls-row">
+          {/* Mobile / Tablet: Seletor de Categoria em Gaveta */}
+          <div className="mobile-filter-accordion-box">
+            <button
+              type="button"
+              className={`btn-trigger-gaveta-filtros ${gavetaFiltrosAberta ? 'aberta' : ''}`}
+              onClick={() => setGavetaFiltrosAberta(!gavetaFiltrosAberta)}
+              aria-expanded={gavetaFiltrosAberta}
+            >
+              <div className="trigger-gaveta-left">
+                <span className={`trigger-icon-circle type-${filtroAtivo}`}>
+                  <i className={LISTA_FILTROS_AGENDA.find(f => f.id === filtroAtivo)?.icon || 'fas fa-layer-group'}></i>
+                </span>
+                <div className="trigger-text-group">
+                  <span className="trigger-subtitle">Categoria</span>
+                  <span className="trigger-current-name">
+                    {LISTA_FILTROS_AGENDA.find(f => f.id === filtroAtivo)?.label || 'Todos'}
+                  </span>
+                </div>
+              </div>
+              <div className="trigger-gaveta-right">
+                <span className="trigger-chevron">
+                  <i className={`fas fa-chevron-${gavetaFiltrosAberta ? 'up' : 'down'}`}></i>
+                </span>
+              </div>
+            </button>
+          </div>
+
+          {/* Desktop: Pílulas de Categoria */}
+          <div className="desktop-pills-only custom-scrollbar">
+            {LISTA_FILTROS_AGENDA.map(f => (
+              <button
+                key={f.id}
+                type="button"
+                className={`agenda-filter-chip type-${f.id} ${filtroAtivo === f.id ? 'active' : ''}`}
+                onClick={() => setFiltroAtivo(f.id)}
+              >
+                <span className="chip-icon-box">
+                  <i className={f.icon}></i>
+                </span>
+                <span className="chip-label">{f.label}</span>
+                <span className={`chip-badge ${(contadores[f.id] || 0) > 0 ? 'has-items' : ''}`}>
+                  {contadores[f.id] || 0}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Alternador de Visualização: Calendário | Lista */}
+          <div className="filter-view-toggle-wrapper">
             <div className="view-toggle-group">
               <button
                 type="button"
                 className={`btn-view-toggle ${viewPrincipal === 'calendario' ? 'active' : ''}`}
                 onClick={() => setViewPrincipal('calendario')}
+                title="Visualização em Calendário"
               >
                 <span className="toggle-view-icon">📅</span>
                 <span className="toggle-view-text">Calendário</span>
@@ -2520,6 +2605,7 @@ const Agenda = () => {
                 type="button"
                 className={`btn-view-toggle ${viewPrincipal === 'lista' ? 'active' : ''}`}
                 onClick={() => setViewPrincipal('lista')}
+                title="Visualização em Lista"
               >
                 <span className="toggle-view-icon">📋</span>
                 <span className="toggle-view-text">Lista</span>
@@ -2528,108 +2614,58 @@ const Agenda = () => {
           </div>
         </div>
 
-        {/* 📱 GAVETA DE FILTROS INLINE NO PRÓPRIO LOCAL (EXCLUSIVO MOBILE) */}
-        <div className="mobile-filter-accordion-box">
-          <button
-            type="button"
-            className={`btn-trigger-gaveta-filtros ${gavetaFiltrosAberta ? 'aberta' : ''}`}
-            onClick={() => setGavetaFiltrosAberta(!gavetaFiltrosAberta)}
-            aria-expanded={gavetaFiltrosAberta}
-          >
-            <div className="trigger-gaveta-left">
-              <span className={`trigger-icon-circle type-${filtroAtivo}`}>
-                <i className={LISTA_FILTROS_AGENDA.find(f => f.id === filtroAtivo)?.icon || 'fas fa-layer-group'}></i>
-              </span>
-              <div className="trigger-text-group">
-                <span className="trigger-subtitle">Filtrar Categoria</span>
-                <span className="trigger-current-name">
-                  {LISTA_FILTROS_AGENDA.find(f => f.id === filtroAtivo)?.label || 'Todos'}
-                </span>
-              </div>
-            </div>
-            <div className="trigger-gaveta-right">
-              <span className={`trigger-count-badge ${(contadores[filtroAtivo] || 0) > 0 ? 'has-items' : ''}`}>
-                {contadores[filtroAtivo] || 0}
-              </span>
-              <span className="trigger-chevron">
-                <i className={`fas fa-chevron-${gavetaFiltrosAberta ? 'up' : 'down'}`}></i>
-              </span>
-            </div>
-          </button>
-
-          {/* 📂 CONTEÚDO DA GAVETA EXPANSÍVEL NO PRÓPRIO LOCAL */}
-          {gavetaFiltrosAberta && (
-            <div className="agenda-inline-gaveta-panel fade-in">
-              <div className="agenda-inline-gaveta-grid">
-                {LISTA_FILTROS_AGENDA.map(f => {
-                  const isAtivo = filtroAtivo === f.id;
-                  const qtd = contadores[f.id] || 0;
-                  return (
-                    <button
-                      key={f.id}
-                      type="button"
-                      className={`agenda-inline-filter-btn type-${f.id} ${isAtivo ? 'ativo' : ''}`}
-                      onClick={() => {
-                        setFiltroAtivo(f.id);
-                        setGavetaFiltrosAberta(false);
-                      }}
-                    >
-                      <span className={`inline-btn-icon type-${f.id}`}>
-                        <i className={f.icon}></i>
-                      </span>
-                      <span className="inline-btn-label">{f.label}</span>
-                      <span className={`inline-btn-badge ${qtd > 0 ? 'has-items' : ''}`}>
-                        {qtd}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="agenda-inline-gaveta-actions">
-                {filtroAtivo !== 'todos' && (
+        {/* 📂 CONTEÚDO DA GAVETA EXPANSÍVEL NO PRÓPRIO LOCAL */}
+        {gavetaFiltrosAberta && (
+          <div className="agenda-inline-gaveta-panel fade-in">
+            <div className="agenda-inline-gaveta-grid">
+              {LISTA_FILTROS_AGENDA.map(f => {
+                const isAtivo = filtroAtivo === f.id;
+                const qtd = contadores[f.id] || 0;
+                return (
                   <button
+                    key={f.id}
                     type="button"
-                    className="btn-inline-limpar"
+                    className={`agenda-inline-filter-btn type-${f.id} ${isAtivo ? 'ativo' : ''}`}
                     onClick={() => {
-                      setFiltroAtivo('todos');
+                      setFiltroAtivo(f.id);
                       setGavetaFiltrosAberta(false);
                     }}
                   >
-                    <i className="fas fa-undo"></i> Mostrar Todos
+                    <span className={`inline-btn-icon type-${f.id}`}>
+                      <i className={f.icon}></i>
+                    </span>
+                    <span className="inline-btn-label">{f.label}</span>
+                    <span className={`inline-btn-badge ${qtd > 0 ? 'has-items' : ''}`}>
+                      {qtd}
+                    </span>
                   </button>
-                )}
+                );
+              })}
+            </div>
+
+            <div className="agenda-inline-gaveta-actions">
+              {filtroAtivo !== 'todos' && (
                 <button
                   type="button"
-                  className="btn-inline-fechar"
-                  onClick={() => setGavetaFiltrosAberta(false)}
+                  className="btn-inline-limpar"
+                  onClick={() => {
+                    setFiltroAtivo('todos');
+                    setGavetaFiltrosAberta(false);
+                  }}
                 >
-                  <i className="fas fa-chevron-up"></i> Recolher
+                  <i className="fas fa-undo"></i> Mostrar Todos
                 </button>
-              </div>
+              )}
+              <button
+                type="button"
+                className="btn-inline-fechar"
+                onClick={() => setGavetaFiltrosAberta(false)}
+              >
+                <i className="fas fa-chevron-up"></i> Recolher
+              </button>
             </div>
-          )}
-        </div>
-
-        {/* 💻 PÍLULAS DE FILTRO EXCLUSIVAS PARA DESKTOP */}
-        <div className="desktop-pills-only custom-scrollbar">
-          {LISTA_FILTROS_AGENDA.map(f => (
-            <button
-              key={f.id}
-              type="button"
-              className={`agenda-filter-chip type-${f.id} ${filtroAtivo === f.id ? 'active' : ''}`}
-              onClick={() => setFiltroAtivo(f.id)}
-            >
-              <span className="chip-icon-box">
-                <i className={f.icon}></i>
-              </span>
-              <span className="chip-label">{f.label}</span>
-              <span className={`chip-badge ${(contadores[f.id] || 0) > 0 ? 'has-items' : ''}`}>
-                {contadores[f.id] || 0}
-              </span>
-            </button>
-          ))}
-        </div>
+          </div>
+        )}
       </div>
 
 

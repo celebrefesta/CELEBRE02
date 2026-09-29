@@ -246,6 +246,65 @@
   text-transform: uppercase;
 }
 
+.autocadastro-luxury-wrapper .label-with-option-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+  width: 100%;
+}
+
+.autocadastro-luxury-wrapper .label-with-option-row label {
+  margin: 0;
+}
+
+.autocadastro-luxury-wrapper .btn-sugestao-nome-caps {
+  background: linear-gradient(135deg, rgba(197, 160, 89, 0.12) 0%, rgba(197, 160, 89, 0.22) 100%);
+  color: #854d0e;
+  border: 1px solid rgba(197, 160, 89, 0.45);
+  border-radius: 20px;
+  padding: 2px 10px;
+  font-size: 0.72rem;
+  font-weight: 750;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-transform: none;
+  letter-spacing: normal;
+  animation: fadeInSuggest 0.25s ease-out;
+}
+
+.autocadastro-luxury-wrapper .btn-sugestao-nome-caps:hover {
+  background: #c5a059;
+  color: #ffffff;
+  border-color: #b08d47;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(197, 160, 89, 0.35);
+}
+
+.autocadastro-luxury-wrapper .btn-sugestao-nome-caps i {
+  color: #c5a059;
+  font-size: 0.72rem;
+  transition: color 0.2s ease;
+}
+
+.autocadastro-luxury-wrapper .btn-sugestao-nome-caps:hover i {
+  color: #ffffff;
+}
+
+@keyframes fadeInSuggest {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .cep-loading-txt {
   color: #c5a059;
   font-weight: 700;
@@ -288,6 +347,13 @@
   border-color: #c5a059;
   background-color: #ffffff;
   box-shadow: 0 0 0 4px rgba(197, 160, 89, 0.15);
+}
+
+.autocadastro-luxury-wrapper input[name="nome"],
+.autocadastro-luxury-wrapper input[name="cidade"],
+.autocadastro-luxury-wrapper input[name="logradouro"],
+.autocadastro-luxury-wrapper input[name="bairro"] {
+  text-transform: capitalize !important;
 }
 
 /* BOTÃO PRINCIPAL LUXURY */
@@ -340,6 +406,38 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
+}
+
+/* BOTÃO CONSULTA CNPJ AUTO-CADASTRO */
+.autocadastro-luxury-wrapper .btn-autocadastro-cnpj {
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: linear-gradient(135deg, #c5a059 0%, #9e7a3b 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 5px 9px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 2px 6px rgba(197, 160, 89, 0.3);
+  transition: all 0.2s ease;
+  z-index: 2;
+}
+
+.autocadastro-luxury-wrapper .btn-autocadastro-cnpj:hover:not(:disabled) {
+  transform: translateY(-50%) scale(1.03);
+  box-shadow: 0 4px 10px rgba(197, 160, 89, 0.45);
+}
+
+.autocadastro-luxury-wrapper .btn-autocadastro-cnpj:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* RESPONSIVIDADE CELULAR */

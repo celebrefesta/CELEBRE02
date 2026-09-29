@@ -3719,3 +3719,34 @@
 [data-theme^='dark'] .contact-phone {
   color: #cbd5e1 !important;
 }
+
+/* =========================================
+   MODAL LINK DE AUTO-CADASTRO REAL
+   ========================================= */
+.modal-overlay-autocadastro {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(15, 23, 42, 0.75) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 999999 !important;
+  padding: 20px !important;
+}
+
+.modal-content-autocadastro {
+  animation: modalScaleUpAutoCad 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@keyframes modalScaleUpAutoCad {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

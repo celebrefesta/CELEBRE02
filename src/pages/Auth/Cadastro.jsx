@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'; // 🔥 IMPORTAÇÃO CORRIGIDA AQUI
-import { createUserWithEmailAndPassword, updateProfile, onAuthStateChanged } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { doc, setDoc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../firebaseConfig'; 
 import { validarCPF, validarCNPJ } from '../../utils/validadores';
@@ -82,6 +82,91 @@ const Cadastro = () => {
       }
     }
     setDocumento(valor);
+  };
+
+  const handleGoogleCadastro = async () => {
+    setErro('');
+    setLoading(true);
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      const emailLimpo = user.email ? user.email.toLowerCase().trim() : '';
+      const nomeGoogle = user.displayName || emailLimpo.split('@')[0] || 'Novo Assinante';
+      const fotoGoogle = user.photoURL || '';
+
+      const userDocRef = doc(db, 'usuarios', user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      const dataAtual = new Date();
+      const dataFimTeste = new Date(dataAtual);
+      dataFimTeste.setDate(dataFimTeste.getDate() + 7);
+
+      let tenantIdFinal = user.uid;
+      let nomeFinal = nomeGoogle;
+      let roleFinal = 'owner';
+
+      if (!userDocSnap.exists()) {
+        const dadosNovos = {
+          uid: user.uid,
+          tenantId: user.uid,
+          email: emailLimpo,
+          nomeCompleto: nomeGoogle,
+          nomeExibicao: nomeGoogle,
+          fotoUrl: fotoGoogle,
+          photoURL: fotoGoogle,
+          role: 'owner',
+          dataCadastro: dataAtual.toISOString(),
+          dataFimTeste: dataFimTeste.toISOString(),
+          planoId: planoEscolhido || 'plano_basico',
+          statusConta: 'ativo',
+          assinaturaAtiva: false,
+          authProvider: 'google.com',
+          criadoEm: serverTimestamp()
+        };
+
+        await setDoc(userDocRef, dadosNovos, { merge: true });
+
+        await setDoc(doc(db, "configuracoes_empresa", user.uid), {
+          nomeEmpresa: nomeGoogle,
+          emailContato: emailLimpo,
+          criadoEm: serverTimestamp()
+        }, { merge: true });
+
+        enviarEmailBoasVindasTeste({
+          email: emailLimpo,
+          nome: nomeGoogle
+        }).catch(errEmail => console.warn("Aviso ao enviar e-mail de boas-vindas do teste:", errEmail));
+      } else {
+        const existingData = userDocSnap.data();
+        tenantIdFinal = existingData.tenantId || user.uid;
+        nomeFinal = existingData.nomeExibicao || existingData.nomeCompleto || nomeGoogle;
+        roleFinal = existingData.role || 'owner';
+
+        if (fotoGoogle && (!existingData.fotoUrl || !existingData.photoURL)) {
+          await setDoc(userDocRef, {
+            fotoUrl: existingData.fotoUrl || fotoGoogle,
+            photoURL: existingData.photoURL || fotoGoogle,
+            authProvider: existingData.authProvider || 'google.com'
+          }, { merge: true });
+        }
+      }
+
+      localStorage.setItem('tenantId', tenantIdFinal);
+      localStorage.setItem('funcName', nomeFinal);
+      localStorage.setItem('userRole', roleFinal);
+
+      navigate('/dashboard', { replace: true });
+    } catch (error) {
+      console.error("Erro no cadastro com Google:", error);
+      if (error.code === 'auth/popup-closed-by-user') {
+        setErro('Cadastro com o Google cancelado.');
+      } else {
+        setErro('Erro ao cadastrar com o Google. Tente novamente.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCadastro = async (e) => {
@@ -201,6 +286,22 @@ const Cadastro = () => {
           <p>Rápido e fácil. 7 dias grátis com acesso TOTAL.</p>
           
           {erro && <div className="auth-erro">{erro}</div>}
+
+          {/* ⚡ BOTÃO OFICIAL CADASTRO COM GOOGLE EM 1 CLIQUE */}
+          <button 
+            type="button" 
+            onClick={handleGoogleCadastro} 
+            disabled={loading} 
+            className="btn-google"
+            style={{ width: '100%', marginBottom: '16px' }}
+          >
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo" />
+            Cadastrar com Google (1 Clique)
+          </button>
+
+          <div className="auth-divider" style={{ marginBottom: '16px' }}>
+            <span>ou cadastre com seu e-mail</span>
+          </div>
           
           <form onSubmit={handleCadastro} className="auth-form-elements">
             

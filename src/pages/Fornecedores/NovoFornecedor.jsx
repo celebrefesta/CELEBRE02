@@ -4,6 +4,7 @@ import { db } from '../../firebaseConfig';
 import { collection, addDoc, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
 import { formatCpfCnpj, formatTelefone } from '../../utils/mascaras';
+import { consultarCNPJ } from '../../utils/consultaCnpj';
 import './NovoFornecedor.css';
 
 const NovoFornecedor = () => {
@@ -23,12 +24,33 @@ const NovoFornecedor = () => {
   const [categoria, setCategoria] = useState('Estoque / Consumo');
   const [nome, setNome] = useState('');
   const [cnpj, setCnpj] = useState('');
+  const [buscandoCnpj, setBuscandoCnpj] = useState(false);
   const [prazo, setPrazo] = useState('');
   const [contato, setContato] = useState('');
   const [site, setSite] = useState('');
   const [pix, setPix] = useState('');
   const [endereco, setEndereco] = useState('');
   const [observacoes, setObservacoes] = useState('');
+
+  const buscarCnpjFornecedor = async (cnpjInput) => {
+    const limpo = String(cnpjInput || '').replace(/\D/g, '');
+    if (limpo.length !== 14) return;
+    setBuscandoCnpj(true);
+    try {
+      const res = await consultarCNPJ(limpo);
+      if (res.sucesso) {
+        if (!nome) setNome(res.nomeExibicao);
+        if (!contato && res.telefone) setContato(formatTelefone(res.telefone));
+        if (!endereco && res.logradouro) {
+          setEndereco(`${res.logradouro}, ${res.numero || 'S/N'}${res.bairro ? ` - ${res.bairro}` : ''}, ${res.cidade}/${res.uf}${res.cep ? ` (CEP: ${res.cep})` : ''}`);
+        }
+      }
+    } catch (err) {
+      console.error("Erro ao buscar CNPJ do fornecedor:", err);
+    } finally {
+      setBuscandoCnpj(false);
+    }
+  };
 
   // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE FORNECEDORES)
   const registrarLog = async (acao, detalhes) => {
@@ -222,9 +244,47 @@ const NovoFornecedor = () => {
                         <input type="text" placeholder=" " required value={nome} onChange={e => setNome(e.target.value)} />
                         <label>Nome do Fornecedor *</label>
                     </div>
-                    <div className="floating-label">
-                        <input type="text" placeholder=" " value={formatCpfCnpj(cnpj)} onChange={e => setCnpj(formatCpfCnpj(e.target.value))} />
-                        <label>CNPJ / CPF</label>
+                    <div className="floating-label" style={{ position: 'relative' }}>
+                        <input 
+                          type="text" 
+                          placeholder=" " 
+                          value={formatCpfCnpj(cnpj)} 
+                          onChange={e => {
+                            const val = formatCpfCnpj(e.target.value);
+                            setCnpj(val);
+                            const limpo = val.replace(/\D/g, '');
+                            if (limpo.length === 14) {
+                              buscarCnpjFornecedor(limpo);
+                            }
+                          }} 
+                          style={cnpj.replace(/\D/g, '').length === 14 ? { paddingRight: '80px' } : {}}
+                        />
+                        <label>CNPJ / CPF {buscandoCnpj && <span style={{ color: '#c5a059', fontSize: '0.7rem' }}>⏳ Buscando...</span>}</label>
+                        {cnpj.replace(/\D/g, '').length === 14 && (
+                          <button
+                            type="button"
+                            onClick={() => buscarCnpjFornecedor(cnpj)}
+                            disabled={buscandoCnpj}
+                            style={{
+                              position: 'absolute',
+                              right: '8px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: '#c5a059',
+                              color: '#ffffff',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '4px 8px',
+                              fontSize: '0.7rem',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              zIndex: 2
+                            }}
+                            title="Buscar na Receita Federal"
+                          >
+                            {buscandoCnpj ? <i className="fas fa-spinner fa-spin"></i> : <><i className="fas fa-search"></i> Buscar</>}
+                          </button>
+                        )}
                     </div>
                     <div className="floating-label">
                         <input type="text" placeholder=" " value={prazo} onChange={e => setPrazo(e.target.value)} />

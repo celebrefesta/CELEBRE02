@@ -171,6 +171,26 @@ const Dashboard = () => {
   const [filtroPeriodo, setFiltroPeriodo] = useState('mes_atual');
   const [loading, setLoading] = useState(!cacheInicial);
 
+  // 🚨 CONTROLE DE ESTOQUE & ALERTA DE CONFLITOS IMINENTES (PRÓXIMOS 5 DIAS)
+  const [listaEstoque, setListaEstoque] = useState(cacheInicial?.listaEstoque || []);
+  const [alertaConflitoExpandido, setAlertaConflitoExpandido] = useState(() => {
+    try {
+      const salvo = localStorage.getItem('celebre_dash_show_conflitos');
+      return salvo !== null ? JSON.parse(salvo) : true;
+    } catch {
+      return true;
+    }
+  });
+  const [simularDemonstracaoConflito, setSimularDemonstracaoConflito] = useState(false);
+
+  const toggleAlertaConflito = () => {
+    setAlertaConflitoExpandido(prev => {
+      const next = !prev;
+      try { localStorage.setItem('celebre_dash_show_conflitos', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
   // 🎨 PROJETOS DO MOODBOARD NO DASHBOARD
   const [projetosMoodboard, setProjetosMoodboard] = useState(cacheInicial?.projetosMoodboard || []);
   const [moodboardStats, setMoodboardStats] = useState(cacheInicial?.moodboardStats || { total: 0, aprovados: 0, emAnalise: 0, rascunhos: 0 });
@@ -232,6 +252,250 @@ const Dashboard = () => {
       try { localStorage.setItem('celebre_dash_show_op_hoje', JSON.stringify(next)); } catch {}
       return next;
     });
+  };
+
+  // 🚚 CÁLCULO INTELIGENTE DA OPERAÇÃO DE HOJE (SAÍDAS E DEVOLUÇÕES DO GALPÃO)
+  const operacaoHoje = useMemo(() => {
+    const hoje = new Date();
+    const anoH = hoje.getFullYear();
+    const mesH = hoje.getMonth();
+    const diaH = hoje.getDate();
+
+    const ehMesmoDia = (dateVal) => {
+      if (!dateVal) return false;
+      const d = parseFirestoreDate(dateVal);
+      if (!d || isNaN(d.getTime())) return false;
+      return d.getDate() === diaH && d.getMonth() === mesH && d.getFullYear() === anoH;
+    };
+
+    const ehPassado = (dateVal) => {
+      if (!dateVal) return false;
+      const d = parseFirestoreDate(dateVal);
+      if (!d || isNaN(d.getTime())) return false;
+      const dZero = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const hojeZero = new Date(anoH, mesH, diaH);
+      return dZero < hojeZero;
+    };
+
+    const saidasHoje = todasLocacoes.filter(l => {
+      const s = (l.status || '').toLowerCase().trim();
+      if (['cancelado', 'lixeira', 'deletado', 'orcamento', 'orçamento'].includes(s)) return false;
+      return ehMesmoDia(l.dataRetirada || l.dataEvento);
+    });
+
+    const devolucoesHoje = todasLocacoes.filter(l => {
+      const s = (l.status || '').toLowerCase().trim();
+      if (['cancelado', 'lixeira', 'deletado', 'finalizado', 'orcamento', 'orçamento'].includes(s)) return false;
+      return ehMesmoDia(l.dataDevolucao);
+    });
+
+    const devolucoesAtrasadas = todasLocacoes.filter(l => {
+      const s = (l.status || '').toLowerCase().trim();
+      if (['cancelado', 'lixeira', 'deletado', 'finalizado', 'orcamento', 'orçamento'].includes(s)) return false;
+      return ehPassado(l.dataDevolucao);
+    });
+
+    let pecasSaida = 0;
+    saidasHoje.forEach(l => {
+      if (Array.isArray(l.itens)) {
+        l.itens.forEach(it => { pecasSaida += (Number(it.qtd) || 1); });
+      }
+    });
+
+    let pecasDevolucao = 0;
+    devolucoesHoje.forEach(l => {
+      if (Array.isArray(l.itens)) {
+        l.itens.forEach(it => { pecasDevolucao += (Number(it.qtd) || 1); });
+      }
+    });
+
+    const saidasEntregues = saidasHoje.filter(l => ['entregue', 'finalizado'].includes((l.status || '').toLowerCase().trim())).length;
+    const saidasPendentes = saidasHoje.length - saidasEntregues;
+
+    return {
+      saidasHoje,
+      devolucoesHoje,
+      devolucoesAtrasadas,
+      pecasSaida,
+      pecasDevolucao,
+      saidasEntregues,
+      saidasPendentes,
+      totalAcoes: saidasHoje.length + devolucoesHoje.length + devolucoesAtrasadas.length
+    };
+  }, [todasLocacoes]);
+
+  const dataHojeFormatada = useMemo(() => {
+    try {
+      const hoje = new Date();
+      const str = new Intl.DateTimeFormat('pt-BR', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long' 
+      }).format(hoje);
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    } catch {
+      return 'Hoje';
+    }
+  }, []);
+
+  // 🚨 CÁLCULO INTELIGENTE DE CONFLITOS IMINENTES DE ACERVO (PRÓXIMOS 5 DIAS)
+  const conflitosIminentes = useMemo(() => {
+    const hoje = new Date();
+    const hojeZero = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+    const limite5Dias = new Date(hojeZero.getTime() + (5 * 24 * 60 * 60 * 1000) + (23 * 59 * 59 * 1000));
+
+    // Modo demonstração interativa para o gestor visualizar a interface mesmo sem peças danificadas no momento
+    if (simularDemonstracaoConflito) {
+      return [
+        {
+          conflitoId: 'demo_1',
+          pecaId: 'demo_peca_1',
+          pecaNome: 'Suporte Bolo Imperial Dourado 40cm',
+          pecaFoto: '',
+          pecaCodigo: 'SUP-IMP-01',
+          motivo: '🛠️ Em Manutenção',
+          qtdManut: 1,
+          qtdEstoqueTotal: 1,
+          locacaoId: todasLocacoes[0]?.id || 'demo_loc',
+          numeroPedido: todasLocacoes[0]?.numeroPedido || 'LOC-8821',
+          clienteNome: 'Mariana Silveira (Cerimonial)',
+          clienteCelular: '19998564109',
+          dataEvento: new Date(hojeZero.getTime() + (2 * 24 * 60 * 60 * 1000)).toLocaleDateString('pt-BR'),
+          diffDias: 2,
+          tagDias: '📅 Em 2 dias',
+          qtdReservada: 1,
+          isDemo: true
+        }
+      ];
+    }
+
+    if (!listaEstoque.length || !todasLocacoes.length) return [];
+
+    const mapPecasPorId = new Map();
+    const mapPecasPorCodigo = new Map();
+    const mapPecasPorNome = new Map();
+
+    listaEstoque.forEach(p => {
+      if (p.id) mapPecasPorId.set(String(p.id), p);
+      if (p.codigo) mapPecasPorCodigo.set(String(p.codigo).toLowerCase().trim(), p);
+      if (p.nome) mapPecasPorNome.set(String(p.nome).toLowerCase().trim(), p);
+    });
+
+    const ehPecaComAvariaOuManutencao = (peca) => {
+      if (!peca) return false;
+      const st = String(peca.status || '').toLowerCase().trim();
+      if (['manutencao', 'reforma', 'avaria', 'avariado', 'conserto', 'danificado'].includes(st)) return true;
+      if (peca.emManutencao === true || peca.avaria === true || peca.reforma === true) return true;
+      if (Number(peca.qtdManutencao || 0) > 0 || Number(peca.qtdAvariada || 0) > 0) return true;
+      return false;
+    };
+
+    // Identificar peças com avarias registradas em locações recentes
+    const pecasAvariadasRecentemente = new Set();
+    todasLocacoes.forEach(loc => {
+      const itens = Array.isArray(loc.itens) ? loc.itens : [];
+      itens.forEach(it => {
+        if (it.avaria === true || it.status === 'avaria') {
+          if (it.id) pecasAvariadasRecentemente.add(String(it.id));
+          if (it.nome) pecasAvariadasRecentemente.add(String(it.nome).toLowerCase().trim());
+        }
+      });
+    });
+
+    // Filtra locações confirmadas/em preparação para os próximos 5 dias
+    const locacoesProximas = todasLocacoes.filter(loc => {
+      const s = String(loc.status || '').toLowerCase().trim();
+      if (['cancelado', 'lixeira', 'deletado', 'finalizado', 'concluido', 'devolvido', 'orcamento', 'orçamento'].includes(s)) return false;
+
+      const dataRaw = loc.dataRetirada || loc.dataEvento;
+      if (!dataRaw) return false;
+      const d = parseFirestoreDate(dataRaw);
+      if (!d || isNaN(d.getTime())) return false;
+
+      const dZero = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      return dZero >= hojeZero && dZero <= limite5Dias;
+    });
+
+    const conflitos = [];
+    const conflitosVistos = new Set();
+
+    locacoesProximas.forEach(loc => {
+      const dataRaw = loc.dataRetirada || loc.dataEvento;
+      const dataObj = parseFirestoreDate(dataRaw);
+      const diffDias = dataObj ? Math.round((dataObj.getTime() - hojeZero.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+
+      let tagDias = '';
+      if (diffDias <= 0) tagDias = '🚨 Retirada HOJE';
+      else if (diffDias === 1) tagDias = '⏰ Retirada AMANHÃ';
+      else tagDias = `📅 Em ${diffDias} dias`;
+
+      const itens = Array.isArray(loc.itens) ? loc.itens : Array.isArray(loc.carrinho) ? loc.carrinho : [];
+
+      itens.forEach((item, itemIdx) => {
+        const pecaEstoque = 
+          mapPecasPorId.get(String(item.id || item.pecaId || '')) ||
+          (item.codigo ? mapPecasPorCodigo.get(String(item.codigo).toLowerCase().trim()) : null) ||
+          (item.nome ? mapPecasPorNome.get(String(item.nome).toLowerCase().trim()) : null);
+
+        const temProblemaNoEstoque = ehPecaComAvariaOuManutencao(pecaEstoque);
+        const temProblemaNoItem = item.avaria === true || item.status === 'avaria' || item.status === 'manutencao';
+        const temAvariaRecente = pecasAvariadasRecentemente.has(String(item.id || '')) || pecasAvariadasRecentemente.has(String(item.nome || '').toLowerCase().trim());
+
+        if (temProblemaNoEstoque || temProblemaNoItem || temAvariaRecente) {
+          const chaveUnica = `${loc.id}_${item.id || item.nome || itemIdx}`;
+          if (conflitosVistos.has(chaveUnica)) return;
+          conflitosVistos.add(chaveUnica);
+
+          const nomePeca = pecaEstoque?.nome || item.nome || 'Peça Decorativa';
+          const fotoPeca = pecaEstoque?.foto || (Array.isArray(pecaEstoque?.fotos) ? pecaEstoque.fotos[0] : '') || item.foto || '';
+          const qtdReservada = Number(item.qtd || item.quantidade || 1);
+          const qtdEstoqueTotal = Number(pecaEstoque?.quantidade || pecaEstoque?.qtd || 1);
+          const qtdManut = Number(pecaEstoque?.qtdManutencao || pecaEstoque?.qtdAvariada || 0) || (temProblemaNoEstoque ? qtdEstoqueTotal : 1);
+
+          let motivo = '🛠️ Em Manutenção';
+          if (pecaEstoque?.status === 'avaria' || item.avaria || temAvariaRecente || Number(pecaEstoque?.qtdAvariada || 0) > 0) {
+            motivo = '⚠️ Avaria Registrada';
+          } else if (pecaEstoque?.status === 'reforma' || pecaEstoque?.reforma) {
+            motivo = '🎨 Em Reforma';
+          }
+
+          conflitos.push({
+            conflitoId: chaveUnica,
+            pecaId: pecaEstoque?.id || item.id,
+            pecaNome: nomePeca,
+            pecaFoto: fotoPeca,
+            pecaCodigo: pecaEstoque?.codigo || item.codigo || '',
+            motivo,
+            qtdManut,
+            qtdEstoqueTotal,
+            locacaoId: loc.id,
+            numeroPedido: loc.numeroPedido || loc.id.substring(0, 5).toUpperCase(),
+            clienteNome: loc.clienteNome || loc.cliente?.nome || loc.razaoSocial || 'Cliente',
+            clienteCelular: loc.clienteCelular || loc.clientePhone || loc.cliente?.celular || '',
+            dataEvento: dataObj ? dataObj.toLocaleDateString('pt-BR') : dataRaw,
+            diffDias,
+            tagDias,
+            qtdReservada
+          });
+        }
+      });
+    });
+
+    return conflitos.sort((a, b) => a.diffDias - b.diffDias);
+  }, [listaEstoque, todasLocacoes, simularDemonstracaoConflito]);
+
+  // Mensagem WhatsApp inteligente e cortês de substituição preventiva
+  const gerarMsgZapSubstituicao = (conflito) => {
+    const nomeCliente = conflito.clienteNome || 'Cliente';
+    const pecaNome = conflito.pecaNome;
+    const numPed = conflito.numeroPedido;
+    const dataPed = conflito.dataEvento;
+    return encodeURIComponent(
+      `Olá ${nomeCliente}! Tudo bem? 😊\n\n` +
+      `Referente ao seu pedido #${numPed} agendado para ${dataPed}, nossa equipe de controle de qualidade identificou durante a inspeção que a peça "${pecaNome}" está em revisão técnica no galpão.\n\n` +
+      `Para garantir que sua comemoração seja perfeita, preparamos opções lindas de substituição sem custo adicional! ✨\n\n` +
+      `Podemos conversar sobre as alternativas disponíveis no acervo? 📦🎉`
+    );
   };
 
   useEffect(() => {
@@ -521,6 +785,7 @@ const Dashboard = () => {
           (snap.docs || []).forEach(d => mapEstoque.set(d.id, { id: d.id, ...d.data() }));
         });
         const estoqueDocs = Array.from(mapEstoque.values());
+        setListaEstoque(estoqueDocs);
         const estSnap = { docs: estoqueDocs.map(d => ({ data: () => d })), size: estoqueDocs.length };
 
         const mapLocacoes = new Map();
@@ -1029,6 +1294,7 @@ const Dashboard = () => {
               moodboardStats: moodStatsCalc,
               projetosMoodboard: moodList,
               todasLocacoes: locs,
+              listaEstoque: estoqueDocs,
               statusChart: {
                 orcamento: cOrcamento,
                 confirmado: cConfirmado,
@@ -1249,89 +1515,7 @@ const Dashboard = () => {
   const totalFatPeriodo = dataFaturamentoBar.reduce((a, b) => a + (Number(b.faturamento) || 0), 0);
   const totalGastosPeriodo = dataFaturamentoBar.reduce((a, b) => a + (Number(b.gastos) || 0), 0);
 
-  // 🚚 CÁLCULO INTELIGENTE DA OPERAÇÃO DE HOJE (SAÍDAS E DEVOLUÇÕES DO GALPÃO)
-  const operacaoHoje = useMemo(() => {
-    const hoje = new Date();
-    const anoH = hoje.getFullYear();
-    const mesH = hoje.getMonth();
-    const diaH = hoje.getDate();
 
-    const ehMesmoDia = (dateVal) => {
-      if (!dateVal) return false;
-      const d = parseFirestoreDate(dateVal);
-      if (!d || isNaN(d.getTime())) return false;
-      return d.getDate() === diaH && d.getMonth() === mesH && d.getFullYear() === anoH;
-    };
-
-    const ehPassado = (dateVal) => {
-      if (!dateVal) return false;
-      const d = parseFirestoreDate(dateVal);
-      if (!d || isNaN(d.getTime())) return false;
-      const dZero = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      const hojeZero = new Date(anoH, mesH, diaH);
-      return dZero < hojeZero;
-    };
-
-    const saidasHoje = todasLocacoes.filter(l => {
-      const s = (l.status || '').toLowerCase().trim();
-      if (['cancelado', 'lixeira', 'deletado', 'orcamento', 'orçamento'].includes(s)) return false;
-      return ehMesmoDia(l.dataRetirada || l.dataEvento);
-    });
-
-    const devolucoesHoje = todasLocacoes.filter(l => {
-      const s = (l.status || '').toLowerCase().trim();
-      if (['cancelado', 'lixeira', 'deletado', 'finalizado', 'orcamento', 'orçamento'].includes(s)) return false;
-      return ehMesmoDia(l.dataDevolucao);
-    });
-
-    const devolucoesAtrasadas = todasLocacoes.filter(l => {
-      const s = (l.status || '').toLowerCase().trim();
-      if (['cancelado', 'lixeira', 'deletado', 'finalizado', 'orcamento', 'orçamento'].includes(s)) return false;
-      return ehPassado(l.dataDevolucao);
-    });
-
-    let pecasSaida = 0;
-    saidasHoje.forEach(l => {
-      if (Array.isArray(l.itens)) {
-        l.itens.forEach(it => { pecasSaida += (Number(it.qtd) || 1); });
-      }
-    });
-
-    let pecasDevolucao = 0;
-    devolucoesHoje.forEach(l => {
-      if (Array.isArray(l.itens)) {
-        l.itens.forEach(it => { pecasDevolucao += (Number(it.qtd) || 1); });
-      }
-    });
-
-    const saidasEntregues = saidasHoje.filter(l => ['entregue', 'finalizado'].includes((l.status || '').toLowerCase().trim())).length;
-    const saidasPendentes = saidasHoje.length - saidasEntregues;
-
-    return {
-      saidasHoje,
-      devolucoesHoje,
-      devolucoesAtrasadas,
-      pecasSaida,
-      pecasDevolucao,
-      saidasEntregues,
-      saidasPendentes,
-      totalAcoes: saidasHoje.length + devolucoesHoje.length + devolucoesAtrasadas.length
-    };
-  }, [todasLocacoes]);
-
-  const dataHojeFormatada = useMemo(() => {
-    try {
-      const hoje = new Date();
-      const str = new Intl.DateTimeFormat('pt-BR', { 
-        weekday: 'long', 
-        day: 'numeric', 
-        month: 'long' 
-      }).format(hoje);
-      return str.charAt(0).toUpperCase() + str.slice(1);
-    } catch {
-      return 'Hoje';
-    }
-  }, []);
 
   return (
     <div className="dash-wide-container fade-in">
@@ -1524,6 +1708,188 @@ const Dashboard = () => {
           </div>
         );
       })()}
+
+      {/* 🚨 CARD DE ALERTA DE CONFLITO IMINENTE NO ACERVO (PRÓXIMOS 5 DIAS) */}
+      <section className={`dash-alerta-conflito-card fade-in ${conflitosIminentes.length === 0 ? 'is-limpo' : 'is-critico'}`}>
+        <div className="dash-alerta-conflito-header">
+          <div className="dash-alerta-conflito-title-box">
+            <div className={`dash-alerta-icon-badge ${conflitosIminentes.length === 0 ? 'icon-badge-limpo' : 'icon-badge-critico'}`}>
+              <i className={conflitosIminentes.length === 0 ? "fas fa-shield-alt" : "fas fa-exclamation-triangle"}></i>
+            </div>
+            <div className="dash-alerta-title-texts">
+              <div className="dash-alerta-h4-row">
+                <h4>{conflitosIminentes.length === 0 ? "Conformidade do Acervo" : "Alerta de Conflito no Acervo"}</h4>
+                <span className={`dash-alerta-badge ${conflitosIminentes.length === 0 ? 'badge-limpo' : 'badge-critico'}`}>
+                  {conflitosIminentes.length === 0 ? "✓ 100% Liberado" : `⚠️ ${conflitosIminentes.length} em risco`}
+                </span>
+              </div>
+              <p className="dash-alerta-sub">
+                {conflitosIminentes.length === 0 
+                  ? "Nenhuma peça avariada possui reservas para os próximos 5 dias."
+                  : "Peças com avaria/manutenção reservadas para os próximos 5 dias. Conserte ou substitua a tempo!"
+                }
+              </p>
+            </div>
+          </div>
+
+          <div className="dash-alerta-header-actions">
+            {conflitosIminentes.length === 0 && (
+              <button
+                type="button"
+                className="btn-simular-alerta-dash"
+                onClick={() => setSimularDemonstracaoConflito(prev => !prev)}
+                title="Ver demonstração visual de como o alerta se comporta quando há peças avariadas reservadas"
+              >
+                {simularDemonstracaoConflito ? '✕ Fechar Exemplo' : '🧪 Ver Exemplo'}
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="btn-ir-disponibilidade-dash"
+              onClick={() => navigate('/disponibilidade')}
+              title="Abrir Matriz de Disponibilidade completa"
+            >
+              <i className="fas fa-calendar-alt"></i> Matriz
+            </button>
+
+            {conflitosIminentes.length > 0 && (
+              <button
+                type="button"
+                className="btn-toggle-alerta-conflito"
+                onClick={toggleAlertaConflito}
+                title={alertaConflitoExpandido ? "Recolher alertas" : "Expandir alertas"}
+              >
+                <i className={`fas fa-chevron-${alertaConflitoExpandido ? 'up' : 'down'}`}></i>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* LISTA EXPANSÍVEL DE CONFLITOS */}
+        {conflitosIminentes.length > 0 && alertaConflitoExpandido && (
+          <div className="dash-conflitos-list-container fade-in">
+            <div className="dash-conflitos-grid">
+              {conflitosIminentes.map((conflito) => {
+                const foneLimpo = (conflito.clienteCelular || '').replace(/\D/g, '');
+                const msgZap = gerarMsgZapSubstituicao(conflito);
+                const zapUrl = foneLimpo ? `https://wa.me/55${foneLimpo}?text=${msgZap}` : null;
+
+                return (
+                  <div key={conflito.conflitoId} className="dash-conflito-card-item">
+                    {/* CABEÇALHO DO ITEM: FOTO + NOME + TAGS */}
+                    <div className="dash-conflito-header-row">
+                      <div className="dash-conflito-foto-wrapper">
+                        {conflito.pecaFoto ? (
+                          <img src={conflito.pecaFoto} alt={conflito.pecaNome} className="dash-conflito-foto" />
+                        ) : (
+                          <div className="dash-conflito-foto-placeholder">
+                            <i className="fas fa-boxes"></i>
+                          </div>
+                        )}
+                        {conflito.diffDias <= 1 && (
+                          <span className="dash-conflito-pulse-urgente" title="Urgência máxima: evento hoje ou amanhã!"></span>
+                        )}
+                      </div>
+
+                      <div className="dash-conflito-head-info">
+                        <div className="dash-conflito-title-line">
+                          <strong className="dash-conflito-peca-nome" title={conflito.pecaNome}>
+                            {conflito.pecaNome}
+                          </strong>
+                          <span className="dash-conflito-tag-dias">{conflito.tagDias}</span>
+                        </div>
+                        <div className="dash-conflito-pills-line">
+                          {conflito.pecaCodigo && (
+                            <span className="dash-conflito-sku">SKU: {conflito.pecaCodigo}</span>
+                          )}
+                          <span className="dash-conflito-motivo-pill">
+                            {conflito.motivo}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* BLOCO DE DADOS FORMATADOS EM 4 CARDS LEVES */}
+                    <div className="dash-conflito-details-grid">
+                      <div className="dash-conflito-detail-item">
+                        <i className="far fa-calendar-alt detail-icon-date"></i>
+                        <div className="detail-texts">
+                          <span className="detail-label">Data Retirada</span>
+                          <strong className="detail-value">{conflito.dataEvento}</strong>
+                        </div>
+                      </div>
+
+                      <div className="dash-conflito-detail-item">
+                        <i className="fas fa-user detail-icon-client"></i>
+                        <div className="detail-texts">
+                          <span className="detail-label">Cliente</span>
+                          <strong className="detail-value" title={conflito.clienteNome}>{conflito.clienteNome}</strong>
+                        </div>
+                      </div>
+
+                      <div className="dash-conflito-detail-item">
+                        <i className="fas fa-receipt detail-icon-order"></i>
+                        <div className="detail-texts">
+                          <span className="detail-label">Pedido</span>
+                          <strong className="detail-value">#{conflito.numeroPedido}</strong>
+                        </div>
+                      </div>
+
+                      <div className="dash-conflito-detail-item">
+                        <i className="fas fa-layer-group detail-icon-qty"></i>
+                        <div className="detail-texts">
+                          <span className="detail-label">Qtd Reservada</span>
+                          <strong className="detail-value">{conflito.qtdReservada} unid.</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* FAIXA DE AÇÃO PREVENTIVA */}
+                    <div className="dash-conflito-sugestao-strip">
+                      <i className="fas fa-lightbulb"></i>
+                      <span><strong>Ação preventiva Celebre:</strong> Finalize a manutenção no galpão ou combine a substituição preventiva com o cliente para evitar atrasos na entrega.</span>
+                    </div>
+
+                    {/* BARRA DE BOTÕES DE AÇÃO */}
+                    <div className="dash-conflito-actions-bar">
+                      {zapUrl && (
+                        <a
+                          href={zapUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-conflito-zap"
+                          title="Propor substituição cortês no WhatsApp do cliente"
+                        >
+                          <i className="fab fa-whatsapp"></i> Avisar Cliente
+                        </a>
+                      )}
+
+                      <button
+                        type="button"
+                        className="btn-conflito-locacao"
+                        onClick={() => navigate(`/locacoes/editar/${conflito.locacaoId}`)}
+                        title="Abrir locação para substituir a peça ou reagendar"
+                      >
+                        <i className="fas fa-edit"></i> Abrir Pedido
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn-conflito-acervo"
+                        onClick={() => navigate('/estoque')}
+                        title="Abrir estoque e acervo"
+                      >
+                        <i className="fas fa-tools"></i> Ver no Acervo
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </section>
 
       {/* 🚚 WIDGET OPERACIONAL DO DIA: SAÍDAS E DEVOLUÇÕES DO GALPÃO */}
       <section className="dash-operacao-hoje-card fade-in">

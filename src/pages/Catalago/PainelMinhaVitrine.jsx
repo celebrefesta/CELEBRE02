@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db, auth } from '../../firebaseConfig';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs, setDoc } from 'firebase/firestore';
+import { gerarLinkPublico } from '../../utils/urlUtils';
 import './PainelMinhaVitrine.css';
 
 // 🎨 PALETAS EXCLUSIVAS DE COR DA MARCA PARA O CATÁLOGO
@@ -108,8 +109,7 @@ const PainelMinhaVitrine = () => {
   // URL Base do Catálogo Oficial
   const urlCatalogo = useMemo(() => {
     if (!tenantId) return '';
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://celebrefesta.com.br';
-    return `${origin}/catalogo/${tenantId}`;
+    return gerarLinkPublico(`/catalogo/${tenantId}`);
   }, [tenantId]);
 
   // Carrega dados da empresa e métricas do estoque

@@ -11485,4 +11485,204 @@ body.dark-mode .config-container .banner-anual-sub {
   .config-container .assinatura-billing-grid {
     grid-template-columns: 1fr !important;
   }
+}
+
+/* ===================================================================
+   🛡️ CARD DE SEGURANÇA & CONEXÃO GOOGLE (ABA MEU PERFIL)
+   =================================================================== */
+.config-container .profile-google-security-card {
+  background: var(--branco, #ffffff);
+  border-radius: 14px;
+  padding: 18px 16px;
+  border: 1px solid var(--borda, #e2e8f0);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.config-container .profile-google-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.config-container .profile-google-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.config-container .profile-google-title-wrap h4 {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--texto-principal, #0f172a);
+}
+
+.config-container .badge-google-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+}
+
+.config-container .badge-google-status.conectado {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.config-container .badge-google-status.desconectado {
+  background: var(--fundo-cinza, #f1f5f9);
+  color: var(--texto-secundario, #64748b);
+  border: 1px solid var(--borda, #e2e8f0);
+}
+
+.config-container .profile-google-info-box {
+  background: var(--fundo-cinza, #f8fafc);
+  border: 1px solid var(--borda, #f1f5f9);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.config-container .profile-google-email-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--texto-principal, #0f172a);
+}
+
+.config-container .profile-google-email-row img {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.config-container .profile-google-email-row span {
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.config-container .profile-google-shared-list {
+  font-size: 11.5px;
+  color: var(--texto-secundario, #64748b);
+  line-height: 1.4;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-top: 1px dashed var(--borda, #e2e8f0);
+  padding-top: 8px;
+}
+
+.config-container .profile-google-shared-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.config-container .profile-google-shared-list li i {
+  color: var(--dourado, #c5a059);
+  font-size: 11px;
+}
+
+.config-container .btn-google-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid var(--borda, #e2e8f0);
+  background: var(--branco, #ffffff);
+  color: var(--texto-principal, #0f172a);
+}
+
+.config-container .btn-google-action:hover {
+  background: var(--fundo-cinza, #f1f5f9);
+  border-color: var(--dourado, #c5a059);
+  color: var(--dourado, #c5a059);
+}
+
+.config-container .btn-google-action.btn-vincular {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #ffffff;
+  border-color: rgba(197, 160, 89, 0.35);
+}
+
+.config-container .btn-google-action.btn-vincular:hover {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border-color: var(--dourado, #c5a059);
+}
+
+.config-container .profile-google-feedback-alert {
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.35;
+}
+
+.config-container .profile-google-feedback-alert.sucesso {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.config-container .profile-google-feedback-alert.erro {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.config-container .profile-google-feedback-alert.aviso {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+/* Modo Escuro */
+[data-theme='dark'] .config-container .profile-google-security-card {
+  background: var(--branco, #18181b) !important;
+  border-color: var(--borda, #3f3f46) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2) !important;
+}
+
+[data-theme='dark'] .config-container .profile-google-info-box {
+  background: var(--fundo-cinza, #27272a) !important;
+  border-color: var(--borda, #3f3f46) !important;
+}
+
+[data-theme='dark'] .config-container .btn-google-action {
+  background: var(--fundo-cinza, #27272a) !important;
+  border-color: var(--borda, #3f3f46) !important;
+  color: var(--texto-principal, #f4f4f5) !important;
+}
+
+[data-theme='dark'] .config-container .btn-google-action:hover {
+  background: #3f3f46 !important;
+  color: var(--dourado, #c5a059) !important;
 }

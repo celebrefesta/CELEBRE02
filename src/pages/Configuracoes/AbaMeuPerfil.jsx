@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { doc, getDoc, updateDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { updateProfile, getAuth } from 'firebase/auth';
+import { updateProfile, getAuth, linkWithPopup, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { formatarDataExibicao, obterMelhorContaPorEmail } from '../../utils/periodoTesteUtils';
 import { validarCPF, validarDataNascimento } from '../../utils/validadores';
 import './Configuracoes.css';
@@ -78,6 +78,11 @@ const AbaMeuPerfil = ({
   const [carregando, setCarregando] = useState(true);
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
   const [uploadingFoto, setUploadingFoto] = useState(false);
+
+  // 🛡️ Estados para Segurança & Conexão com Google
+  const [sincronizandoGoogle, setSincronizandoGoogle] = useState(false);
+  const [vinculandoGoogle, setVinculandoGoogle] = useState(false);
+  const [msgGoogleFeedback, setMsgGoogleFeedback] = useState({ tipo: '', texto: '' });
 
   const [dadosPerfil, setDadosPerfil] = useState({
     nome: '',
@@ -478,104 +483,286 @@ const AbaMeuPerfil = ({
     return 'fa-id-badge';
   };
 
+  // 🛡️ DADOS E MÉTODOS DE CONEXÃO COM O GOOGLE
+  const currentUser = auth.currentUser;
+  const isGoogleVinculado = Boolean(
+    currentUser?.providerData?.some(p => p.providerId === 'google.com') ||
+    dadosPerfil?.authProvider === 'google.com'
+  );
+  const googleProviderInfo = currentUser?.providerData?.find(p => p.providerId === 'google.com');
+  const emailGoogleExibicao = googleProviderInfo?.email || currentUser?.email || dadosPerfil.email;
+
+  // 🔗 Vincular Conta Google para contas criadas com e-mail e senha
+  const handleVincularGoogle = async () => {
+    setMsgGoogleFeedback({ tipo: '', texto: '' });
+    setVinculandoGoogle(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await linkWithPopup(currentUser, provider);
+      const user = result.user;
+      const foto = user.photoURL || '';
+
+      const userRef = doc(db, 'usuarios', targetUid);
+      const updateData = { authProvider: 'google.com' };
+      if (foto && !dadosPerfil.fotoUrl) {
+        updateData.fotoUrl = foto;
+        updateData.photoURL = foto;
+        setDadosPerfil(prev => ({ ...prev, fotoUrl: foto, authProvider: 'google.com' }));
+      } else {
+        setDadosPerfil(prev => ({ ...prev, authProvider: 'google.com' }));
+      }
+      await setDoc(userRef, updateData, { merge: true });
+
+      if (isImpersonating && impData?.originalUid) {
+        await setDoc(doc(db, 'usuarios', impData.originalUid), updateData, { merge: true });
+      }
+
+      setMsgGoogleFeedback({
+        tipo: 'sucesso',
+        texto: 'Conta Google vinculada com sucesso! Você já pode fazer login em 1 clique.'
+      });
+    } catch (err) {
+      console.error("Erro ao vincular Google:", err);
+      if (err.code === 'auth/credential-already-in-use') {
+        setMsgGoogleFeedback({
+          tipo: 'erro',
+          texto: 'Esta conta Google já está vinculada a outro cadastro no Celebre.'
+        });
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        setMsgGoogleFeedback({ tipo: '', texto: '' });
+      } else {
+        setMsgGoogleFeedback({
+          tipo: 'erro',
+          texto: 'Não foi possível vincular a conta Google. Tente novamente.'
+        });
+      }
+    } finally {
+      setVinculandoGoogle(false);
+    }
+  };
+
+  // 📸 Sincronizar Foto Oficial da Conta Google
+  const handleSincronizarFotoGoogle = async () => {
+    setMsgGoogleFeedback({ tipo: '', texto: '' });
+    setSincronizandoGoogle(true);
+    try {
+      let fotoParaAplicar = currentUser?.photoURL || googleProviderInfo?.photoURL;
+
+      if (!fotoParaAplicar) {
+        const provider = new GoogleAuthProvider();
+        const res = await signInWithPopup(auth, provider);
+        fotoParaAplicar = res.user.photoURL;
+      }
+
+      if (!fotoParaAplicar) {
+        setMsgGoogleFeedback({
+          tipo: 'aviso',
+          texto: 'Sua conta Google não possui uma foto de perfil cadastrada.'
+        });
+        return;
+      }
+
+      const userRef = doc(db, 'usuarios', targetUid);
+      await setDoc(userRef, { fotoUrl: fotoParaAplicar, photoURL: fotoParaAplicar }, { merge: true });
+
+      if (isImpersonating && impData?.originalUid) {
+        await setDoc(doc(db, 'usuarios', impData.originalUid), { fotoUrl: fotoParaAplicar, photoURL: fotoParaAplicar }, { merge: true });
+      }
+
+      await updateProfile(currentUser, { photoURL: fotoParaAplicar }).catch(() => {});
+
+      setDadosPerfil(prev => ({ ...prev, fotoUrl: fotoParaAplicar }));
+      setMsgGoogleFeedback({
+        tipo: 'sucesso',
+        texto: 'Foto do perfil sincronizada com o Google com sucesso!'
+      });
+    } catch (err) {
+      console.error("Erro ao sincronizar foto do Google:", err);
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setMsgGoogleFeedback({
+          tipo: 'erro',
+          texto: 'Não foi possível sincronizar a foto com o Google.'
+        });
+      }
+    } finally {
+      setSincronizandoGoogle(false);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
 
       <div className="profile-grid-responsive">
 
-        {/* COLUNA ESQUERDA: CRACHÁ DIGITAL & FOTO PESSOAL */}
-        <div className="profile-cracha-card">
+        {/* COLUNA ESQUERDA: CRACHÁ DIGITAL & SEGURANÇA GOOGLE */}
+        <div className="profile-left-col" style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%' }}>
 
-          {/* CONTAINER DA FOTO COM UPLOAD OVERLAY */}
-          <div className="profile-cracha-avatar-col">
-            <div className="profile-cracha-avatar-wrap">
-              <div className="profile-cracha-avatar">
-                {dadosPerfil.fotoUrl ? (
-                  <img src={dadosPerfil.fotoUrl} alt="Foto de Perfil" />
-                ) : (
-                  <span>
-                    {dadosPerfil.nome ? dadosPerfil.nome.charAt(0).toUpperCase() : 'U'}
-                  </span>
-                )}
+          <div className="profile-cracha-card">
+
+            {/* CONTAINER DA FOTO COM UPLOAD OVERLAY */}
+            <div className="profile-cracha-avatar-col">
+              <div className="profile-cracha-avatar-wrap">
+                <div className="profile-cracha-avatar">
+                  {dadosPerfil.fotoUrl ? (
+                    <img src={dadosPerfil.fotoUrl} alt="Foto de Perfil" />
+                  ) : (
+                    <span>
+                      {dadosPerfil.nome ? dadosPerfil.nome.charAt(0).toUpperCase() : 'U'}
+                    </span>
+                  )}
+                </div>
+
+                {/* BOTÃO DA CÂMERA DE UPLOAD DE FOTO PESSOAL */}
+                <label
+                  htmlFor="upload-foto-perfil-input"
+                  className="profile-cracha-cam-btn"
+                  title="Alterar Foto de Perfil"
+                >
+                  <i className="fas fa-camera"></i>
+                </label>
+
+                <input
+                  type="file"
+                  id="upload-foto-perfil-input"
+                  accept="image/*"
+                  onChange={handleUploadFoto}
+                  style={{ display: 'none' }}
+                />
               </div>
 
-              {/* BOTÃO DA CÂMERA DE UPLOAD DE FOTO PESSOAL */}
-              <label
-                htmlFor="upload-foto-perfil-input"
-                className="profile-cracha-cam-btn"
-                title="Alterar Foto de Perfil"
-              >
-                <i className="fas fa-camera"></i>
-              </label>
+              {/* BOTÃO REMOVER FOTO (SE TIVER) */}
+              {dadosPerfil.fotoUrl && (
+                <button
+                  type="button"
+                  onClick={handleRemoverFoto}
+                  disabled={uploadingFoto}
+                  className="profile-cracha-remove-btn"
+                >
+                  Remover Foto
+                </button>
+              )}
 
-              <input
-                type="file"
-                id="upload-foto-perfil-input"
-                accept="image/*"
-                onChange={handleUploadFoto}
-                style={{ display: 'none' }}
-              />
+              {uploadingFoto && (
+                <span className="profile-cracha-uploading">
+                  <i className="fas fa-spinner fa-spin"></i> Atualizando...
+                </span>
+              )}
             </div>
 
-            {/* BOTÃO REMOVER FOTO (SE TIVER) */}
-            {dadosPerfil.fotoUrl && (
+            {/* INFORMAÇÕES PESSOAIS (AO LADO NO MOBILE, ABAIXO NO DESKTOP) */}
+            <div className="profile-cracha-info-col">
+              <div className="profile-cracha-header-row">
+                <h2 className="profile-cracha-name">
+                  {capitalize(dadosPerfil.nome) || 'Usuário'} {capitalize(dadosPerfil.sobrenome)}
+                </h2>
+
+                <span
+                  className="profile-cracha-role-badge"
+                  title="Cargo oficial do usuário (gerenciado em Equipe e Acessos)"
+                >
+                  <i className={`fas ${getIconeCargo()}`}></i>
+                  <span>{cargoExibicao}</span>
+                </span>
+              </div>
+
+              <div className="profile-cracha-details-box">
+                <p className="profile-cracha-detail-item">
+                  <i className="fas fa-envelope"></i>
+                  <span className="detail-val" title={dadosPerfil.email}>{dadosPerfil.email}</span>
+                </p>
+
+                <p className="profile-cracha-detail-item">
+                  <i className="fas fa-building"></i>
+                  <span>Empresa: <strong>{nomeEmpresa || dadosPerfil.empresa || 'Sua Empresa'}</strong></span>
+                </p>
+
+                <div className="profile-cracha-meta-row">
+                  <p className="profile-cracha-detail-item meta-status">
+                    <i className="fas fa-check-circle"></i>
+                    <span>Status: <strong>Conta Ativa</strong></span>
+                  </p>
+
+                  <p className="profile-cracha-detail-item meta-date">
+                    <i className="fas fa-calendar-alt"></i>
+                    <span>Criação: <strong>{dadosPerfil.dataCriacao || dataCriacaoConta || '—'}</strong></span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 🛡️ CARD OFICIAL DE SEGURANÇA & CONEXÃO GOOGLE */}
+          <div className="profile-google-security-card">
+            <div className="profile-google-header">
+              <div className="profile-google-title-wrap">
+                <img 
+                  src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
+                  alt="Google" 
+                  style={{ width: '18px', height: '18px' }} 
+                />
+                <h4>Conta Google</h4>
+              </div>
+              <span className={`badge-google-status ${isGoogleVinculado ? 'conectado' : 'desconectado'}`}>
+                {isGoogleVinculado ? '✓ Vinculada' : 'Não vinculada'}
+              </span>
+            </div>
+
+            <div className="profile-google-info-box">
+              <div className="profile-google-email-row">
+                <i className="fab fa-google" style={{ color: '#ea4335', fontSize: '13px' }}></i>
+                <span title={emailGoogleExibicao}>
+                  {emailGoogleExibicao || 'Nenhum e-mail Google associado'}
+                </span>
+              </div>
+
+              <ul className="profile-google-shared-list">
+                <li>
+                  <i className="fas fa-check"></i>
+                  <span>Login rápido com 1 clique</span>
+                </li>
+                <li>
+                  <i className="fas fa-check"></i>
+                  <span>Sincronização de foto de perfil</span>
+                </li>
+                <li>
+                  <i className="fas fa-shield-alt"></i>
+                  <span>Autenticação protegida (OAuth 2.0)</span>
+                </li>
+              </ul>
+            </div>
+
+            {msgGoogleFeedback.texto && (
+              <div className={`profile-google-feedback-alert ${msgGoogleFeedback.tipo}`}>
+                <i className={`fas ${msgGoogleFeedback.tipo === 'sucesso' ? 'fa-check-circle' : msgGoogleFeedback.tipo === 'aviso' ? 'fa-exclamation-triangle' : 'fa-times-circle'}`}></i>
+                <span>{msgGoogleFeedback.texto}</span>
+              </div>
+            )}
+
+            {isGoogleVinculado ? (
               <button
                 type="button"
-                onClick={handleRemoverFoto}
-                disabled={uploadingFoto}
-                className="profile-cracha-remove-btn"
+                onClick={handleSincronizarFotoGoogle}
+                disabled={sincronizandoGoogle}
+                className="btn-google-action"
+                title="Puxar a foto mais recente da sua Conta Google para o perfil Celebre"
               >
-                Remover Foto
+                <i className={`fas ${sincronizandoGoogle ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i>
+                {sincronizandoGoogle ? 'Sincronizando foto...' : 'Sincronizar Foto do Google'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleVincularGoogle}
+                disabled={vinculandoGoogle}
+                className="btn-google-action btn-vincular"
+                title="Vincular sua conta Google para fazer login com 1 clique"
+              >
+                <i className={`fas ${vinculandoGoogle ? 'fa-spinner fa-spin' : 'fa-link'}`}></i>
+                {vinculandoGoogle ? 'Vinculando...' : 'Vincular Minha Conta Google'}
               </button>
             )}
-
-            {uploadingFoto && (
-              <span className="profile-cracha-uploading">
-                <i className="fas fa-spinner fa-spin"></i> Atualizando...
-              </span>
-            )}
           </div>
 
-          {/* INFORMAÇÕES PESSOAIS (AO LADO NO MOBILE, ABAIXO NO DESKTOP) */}
-          <div className="profile-cracha-info-col">
-            <div className="profile-cracha-header-row">
-              <h2 className="profile-cracha-name">
-                {capitalize(dadosPerfil.nome) || 'Usuário'} {capitalize(dadosPerfil.sobrenome)}
-              </h2>
-
-              <span
-                className="profile-cracha-role-badge"
-                title="Cargo oficial do usuário (gerenciado em Equipe e Acessos)"
-              >
-                <i className={`fas ${getIconeCargo()}`}></i>
-                <span>{cargoExibicao}</span>
-              </span>
-            </div>
-
-            <div className="profile-cracha-details-box">
-              <p className="profile-cracha-detail-item">
-                <i className="fas fa-envelope"></i>
-                <span className="detail-val" title={dadosPerfil.email}>{dadosPerfil.email}</span>
-              </p>
-
-              <p className="profile-cracha-detail-item">
-                <i className="fas fa-building"></i>
-                <span>Empresa: <strong>{nomeEmpresa || dadosPerfil.empresa || 'Sua Empresa'}</strong></span>
-              </p>
-
-              <div className="profile-cracha-meta-row">
-                <p className="profile-cracha-detail-item meta-status">
-                  <i className="fas fa-check-circle"></i>
-                  <span>Status: <strong>Conta Ativa</strong></span>
-                </p>
-
-                <p className="profile-cracha-detail-item meta-date">
-                  <i className="fas fa-calendar-alt"></i>
-                  <span>Criação: <strong>{dadosPerfil.dataCriacao || dataCriacaoConta || '—'}</strong></span>
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* COLUNA DIREITA: FORMULÁRIO COMPLETO EM 2 COLUNAS COMPACTAS E ALINHADAS */}

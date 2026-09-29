@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { getAuth } from "firebase/auth"; 
 import jsPDF from "jspdf"; 
 import "./Contratos.css";
+import { gerarLinkPublico } from "../../utils/urlUtils";
 
 const Contratos = () => {
   const [contratos, setContratos] = useState([]);
@@ -170,7 +171,7 @@ const Contratos = () => {
     const numLimpo = telefoneBruto.replace(/\D/g, '');
     const numFormatado = numLimpo.length <= 11 && !numLimpo.startsWith('55') ? `55${numLimpo}` : numLimpo;
     
-    const linkAssinatura = `${window.location.origin}/assinatura/${item.id}`;
+    const linkAssinatura = gerarLinkPublico(`/assinatura/${item.id}`, dadosEmpresa?.dominioOficial);
     const clienteNome = item.cliente || 'Cliente';
     const empresaNome = dadosEmpresa?.nomeEmpresa || dadosEmpresa?.nome || 'Celebre Festas';
     const eventoData = item.dataEvento ? item.dataEvento.split('-').reverse().join('/') : 'seu evento';
@@ -693,7 +694,7 @@ const Contratos = () => {
                                   </button>
 
                                   <button onClick={() => {
-                                    navigator.clipboard.writeText(`${window.location.origin}/assinatura/${item.id}`);
+                                    navigator.clipboard.writeText(gerarLinkPublico(`/assinatura/${item.id}`, dadosEmpresa?.dominioOficial));
                                     alert("Link de assinatura copiado para a área de transferência!");
                                   }}>
                                     🔗 Copiar Link de Assinatura

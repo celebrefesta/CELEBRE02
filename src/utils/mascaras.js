@@ -94,5 +94,5 @@ export const anonimizarEmail = (email) => {
 };
 
 // 🔒 Re-export de Validação Oficial de Documentos (CPF / CNPJ)
-export { validarCPF, validarCNPJ, validarCpfCnpj, obterMensagemErroDocumento } from './validadores';
+export { validarCPF, validarCNPJ, validarCpfCnpj, obterMensagemErroDocumento } from './validadores.js';
 

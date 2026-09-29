@@ -4,8 +4,28 @@ import { db } from '../../firebaseConfig';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { validarCPF, validarCNPJ } from '../../utils/validadores';
+import { consultarCNPJ } from '../../utils/consultaCnpj';
 import { processarDisparoAutomatico } from '../../utils/notificacoesDispatchService';
 import './AutoCadastro.css';
+
+export const formatarNomeCapitalizado = (nomeBruto) => {
+  if (!nomeBruto || typeof nomeBruto !== 'string') return '';
+  const conectores = ['da', 'de', 'di', 'do', 'du', 'das', 'dos', 'e'];
+  const palavras = nomeBruto.trim().toLowerCase().split(/\s+/);
+  return palavras.map((palavra, index) => {
+    if (!palavra) return '';
+    if (index > 0 && conectores.includes(palavra)) return palavra;
+    return palavra.charAt(0).toUpperCase() + palavra.slice(1);
+  }).join(' ');
+};
+
+// ⚡ Capitalização em tempo real na digitação (sem perder espaços nem alterar tamanho do texto)
+export const capitalizarPalavrasAoDigitar = (texto) => {
+  if (!texto || typeof texto !== 'string') return '';
+  return texto.replace(/(^|[\s])([a-z\u00C0-\u00FF])/g, (match, sep, char) => {
+    return sep + char.toUpperCase();
+  });
+};
 
 const AutoCadastro = () => {
   const location = useLocation();
@@ -19,6 +39,8 @@ const AutoCadastro = () => {
 
   const [loading, setLoading] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
+  const [buscandoCnpj, setBuscandoCnpj] = useState(false);
+  const [statusCnpj, setStatusCnpj] = useState(null);
   const [tipoPessoa, setTipoPessoa] = useState('fisica');
   const [concluido, setConcluido] = useState(false);
 
@@ -27,6 +49,32 @@ const AutoCadastro = () => {
     cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', dataEvento: '',
     observacoes: ''
   });
+
+  // Sugestão em tempo real de nome com iniciais maiúsculas (Ex: "michel silva" -> "Michel Silva")
+  const nomeSugerido = formatarNomeCapitalizado(form.nome);
+  const podeCapitalizarNome = Boolean(
+    nomeSugerido && 
+    form.nome && 
+    form.nome.trim().length >= 2 && 
+    nomeSugerido !== form.nome.trim()
+  );
+
+  const aplicarCapitalizacaoNome = () => {
+    if (nomeSugerido) {
+      setForm(prev => ({ ...prev, nome: nomeSugerido }));
+    }
+  };
+
+  const handleBlurCapitalize = (e) => {
+    const { name, value } = e.target;
+    if (!value || typeof value !== 'string') return;
+    if (['nome', 'logradouro', 'bairro', 'cidade'].includes(name)) {
+      const formatado = formatarNomeCapitalizado(value);
+      if (formatado && formatado !== value) {
+        setForm(prev => ({ ...prev, [name]: formatado }));
+      }
+    }
+  };
 
   const maskCPFOrCNPJ = (v) => {
     v = v.replace(/\D/g, "");
@@ -64,12 +112,11 @@ const AutoCadastro = () => {
         const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
         const data = await response.json();
         if (!data.erro) {
-          const formatar = (str) => str ? str.replace(/(^\w{1})|(\s+\w{1})/g, l => l.toUpperCase()) : '';
           setForm(prev => ({
             ...prev,
-            logradouro: formatar(data.logradouro),
-            bairro: formatar(data.bairro),
-            cidade: formatar(data.localidade)
+            logradouro: formatarNomeCapitalizado(data.logradouro) || data.logradouro || '',
+            bairro: formatarNomeCapitalizado(data.bairro) || data.bairro || '',
+            cidade: formatarNomeCapitalizado(data.localidade) || data.localidade || ''
           }));
         }
       } catch (error) {
@@ -80,15 +127,59 @@ const AutoCadastro = () => {
     }
   };
 
+  const buscarCnpj = async (cnpjEntrada) => {
+    const limpo = String(cnpjEntrada || '').replace(/\D/g, '');
+    if (limpo.length !== 14) return;
+    setBuscandoCnpj(true);
+    setStatusCnpj(null);
+    try {
+      const res = await consultarCNPJ(limpo);
+      if (res.sucesso) {
+        setStatusCnpj({
+          situacao: res.situacaoCadastral,
+          isAtiva: res.isAtiva,
+          provedor: res.provedor
+        });
+        setForm(prev => ({
+          ...prev,
+          nome: prev.nome ? prev.nome : formatarNomeCapitalizado(res.nomeExibicao),
+          cep: res.cep || prev.cep,
+          logradouro: res.logradouro ? formatarNomeCapitalizado(res.logradouro) : prev.logradouro,
+          numero: res.numero || prev.numero,
+          complemento: res.complemento || prev.complemento,
+          bairro: res.bairro ? formatarNomeCapitalizado(res.bairro) : prev.bairro,
+          cidade: res.cidade ? formatarNomeCapitalizado(res.cidade) : prev.cidade,
+          contato: prev.contato ? prev.contato : res.telefone,
+          email: prev.email ? prev.email : res.email
+        }));
+      } else {
+        setStatusCnpj({ erro: res.erro, isAtiva: false, situacao: 'NÃO ENCONTRADO' });
+      }
+    } catch (err) {
+      console.error("Erro na busca de CNPJ no auto-cadastro:", err);
+    } finally {
+      setBuscandoCnpj(false);
+    }
+  };
+
   const handleChange = (e) => { 
     let { name, value } = e.target;
-    if (name === 'documento') value = maskCPFOrCNPJ(value);
+    if (['nome', 'cidade', 'logradouro', 'bairro'].includes(name)) {
+      value = capitalizarPalavrasAoDigitar(value);
+    }
+    if (name === 'documento') {
+      value = maskCPFOrCNPJ(value);
+      const docLimpo = value.replace(/\D/g, '');
+      if (tipoPessoa === 'juridica' && docLimpo.length === 14) {
+        buscarCnpj(docLimpo);
+      }
+    }
     if (name === 'contato') value = maskPhone(value);
     if (name === 'cep') {
       value = maskCEP(value);
       if (value.length === 9) buscarCep(value);
     }
-    setForm({ ...form, [name]: value }); 
+    setForm(prev => ({ ...prev, [name]: value })); 
   };
 
   const calcularTotal = () => carrinho.reduce((acc, i) => acc + (Number(i.financeiro?.valorAluguel || i.preco || 0) * i.qtd), 0);
@@ -134,20 +225,26 @@ const AutoCadastro = () => {
           return;
       }
 
+      // Sanitiza e padroniza os campos de texto com primeira letra maiúscula (Ex: "Michel Silva")
+      const nomeFinal = formatarNomeCapitalizado(form.nome) || (form.nome || '').trim();
+      const logradouroFinal = formatarNomeCapitalizado(form.logradouro) || (form.logradouro || '').trim();
+      const bairroFinal = formatarNomeCapitalizado(form.bairro) || (form.bairro || '').trim();
+      const cidadeFinal = formatarNomeCapitalizado(form.cidade) || (form.cidade || '').trim();
+
       // 1. Salva o cliente
       const clienteRef = await addDoc(collection(db, "clientes"), {
-        nome: form.nome,
-        nomeFantasia: isJuridica ? form.nome : '',
+        nome: nomeFinal,
+        nomeFantasia: isJuridica ? nomeFinal : '',
         cpf: !isJuridica ? form.documento : '',
         cnpj: isJuridica ? form.documento : '',
         celular: form.contato,
         email: form.email,
         cep: form.cep,
-        logradouro: form.logradouro,
+        logradouro: logradouroFinal,
         numero: form.numero,
         complemento: form.complemento,
-        bairro: form.bairro,
-        cidade: form.cidade,
+        bairro: bairroFinal,
+        cidade: cidadeFinal,
         observacoes: form.observacoes,
         situacaoFinanceira: 'pendente', 
         statusAprovacao: 'pendente', // ⏳ Requer aprovação da loja antes de virar ativo
@@ -162,7 +259,7 @@ const AutoCadastro = () => {
         const total = calcularTotal();
         await addDoc(collection(db, "locacoes"), {
           clienteId: clienteRef.id,
-          clienteNome: form.nome,
+          clienteNome: nomeFinal,
           clienteWhats: form.contato,
           dataRetirada: form.dataEvento,
           itens: carrinho,
@@ -180,11 +277,11 @@ const AutoCadastro = () => {
         evento: 'novo_cadastro_cliente',
         destinatario: 'gestor',
         dados: {
-          nomeCliente: form.nome,
+          nomeCliente: nomeFinal,
           clienteEmail: form.email,
           clienteTelefone: form.contato,
           documento: form.documento,
-          cidade: form.cidade,
+          cidade: cidadeFinal,
           nomeEmpresa: empresa.nome || 'Celebre Festas',
           telefoneEmpresa: empresa.whats || ''
         }
@@ -195,7 +292,7 @@ const AutoCadastro = () => {
         evento: 'boas_vindas_catalogo',
         destinatario: 'cliente',
         dados: {
-          nomeCliente: form.nome,
+          nomeCliente: nomeFinal,
           clienteEmail: form.email,
           clienteTelefone: form.contato,
           dataEvento: form.dataEvento ? form.dataEvento.split('-').reverse().join('/') : '',
@@ -212,10 +309,18 @@ const AutoCadastro = () => {
           nomeFuncionario: "Auto-Cadastro Público 📱",
           acao: "AUTO-CADASTRO DE CLIENTE",
           tipo: "CRIACAO",
-          detalhes: `O cliente ${form.nome} preencheu a própria ficha via link público. ${carrinho.length > 0 ? `Com pedido de ${carrinho.length} itens.` : ''}`,
+          detalhes: `O cliente ${nomeFinal} preencheu a própria ficha via link público. ${carrinho.length > 0 ? `Com pedido de ${carrinho.length} itens.` : ''}`,
           dataHora: new Date().toISOString()
         });
       } catch (errLog) {}
+
+      setForm(prev => ({
+        ...prev,
+        nome: nomeFinal,
+        logradouro: logradouroFinal,
+        bairro: bairroFinal,
+        cidade: cidadeFinal
+      }));
 
       setConcluido(true);
     } catch (error) {
@@ -351,16 +456,35 @@ const AutoCadastro = () => {
           </div>
           
           <div className="form-group-custom full">
-            <label>{tipoPessoa === 'juridica' ? 'Razão Social / Nome Fantasia *' : 'Nome Completo *'}</label>
+            <div className="label-with-option-row">
+              <label htmlFor="autocadastro-nome">
+                {tipoPessoa === 'juridica' ? 'Razão Social / Nome Fantasia *' : 'Nome Completo *'}
+              </label>
+              {podeCapitalizarNome && (
+                <button
+                  type="button"
+                  className="btn-sugestao-nome-caps"
+                  onClick={aplicarCapitalizacaoNome}
+                  title="Clique para formatar com primeira letra maiúscula"
+                >
+                  <i className="fas fa-magic"></i> {nomeSugerido}
+                </button>
+              )}
+            </div>
             <div className="input-with-icon">
               <i className="fas fa-user input-icon"></i>
               <input 
+                id="autocadastro-nome"
                 type="text" 
                 name="nome" 
-                placeholder={tipoPessoa === 'juridica' ? 'Ex: Festas & Eventos Ltda' : 'Ex: Maria Silva'} 
+                placeholder={tipoPessoa === 'juridica' ? 'Ex: Festas & Eventos Ltda' : 'Ex: Michel Silva'} 
                 value={form.nome}
+                autoCapitalize="words"
+                autoComplete="name"
+                style={{ textTransform: 'capitalize' }}
                 required 
                 onChange={handleChange} 
+                onBlur={handleBlurCapitalize}
               />
             </div>
           </div>
@@ -383,27 +507,53 @@ const AutoCadastro = () => {
           <div className="form-row-dupla">
             <div className="form-group-custom">
               <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>{tipoPessoa === 'juridica' ? 'CNPJ *' : 'CPF *'}</span>
-                {(() => {
-                  const dLimpo = (form.documento || '').replace(/\D/g, '');
-                  if (tipoPessoa === 'fisica' && dLimpo.length === 11) {
-                    return validarCPF(dLimpo) ? (
-                      <span style={{ color: '#16a34a', fontWeight: '800', fontSize: '0.72rem' }}>✓ VÁLIDO</span>
-                    ) : (
-                      <span style={{ color: '#ef4444', fontWeight: '800', fontSize: '0.72rem' }}>✗ INVÁLIDO</span>
-                    );
-                  }
-                  if (tipoPessoa === 'juridica' && dLimpo.length === 14) {
-                    return validarCNPJ(dLimpo) ? (
-                      <span style={{ color: '#16a34a', fontWeight: '800', fontSize: '0.72rem' }}>✓ VÁLIDO</span>
-                    ) : (
-                      <span style={{ color: '#ef4444', fontWeight: '800', fontSize: '0.72rem' }}>✗ INVÁLIDO</span>
-                    );
-                  }
-                  return null;
-                })()}
+                <span>
+                  {tipoPessoa === 'juridica' ? 'CNPJ *' : 'CPF *'}
+                  {buscandoCnpj && (
+                    <span style={{ color: '#c5a059', fontWeight: 'bold', fontSize: '0.68rem', marginLeft: '6px' }}>
+                      ⏳ Consultando...
+                    </span>
+                  )}
+                </span>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  {statusCnpj && (
+                    <span 
+                      style={{ 
+                        color: statusCnpj.isAtiva ? '#16a34a' : '#ef4444', 
+                        backgroundColor: statusCnpj.isAtiva ? 'rgba(22, 163, 74, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                        border: `1px solid ${statusCnpj.isAtiva ? 'rgba(22, 163, 74, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                        padding: '1px 6px',
+                        borderRadius: '4px',
+                        fontWeight: '800', 
+                        fontSize: '0.62rem',
+                        letterSpacing: '0.5px'
+                      }}
+                      title={`Situação: ${statusCnpj.situacao} (Fonte: ${statusCnpj.provedor})`}
+                    >
+                      {statusCnpj.isAtiva ? '✓' : '⚠️'} {statusCnpj.situacao}
+                    </span>
+                  )}
+                  {(() => {
+                    const dLimpo = (form.documento || '').replace(/\D/g, '');
+                    if (tipoPessoa === 'fisica' && dLimpo.length === 11) {
+                      return validarCPF(dLimpo) ? (
+                        <span style={{ color: '#16a34a', fontWeight: '800', fontSize: '0.72rem' }}>✓ VÁLIDO</span>
+                      ) : (
+                        <span style={{ color: '#ef4444', fontWeight: '800', fontSize: '0.72rem' }}>✗ INVÁLIDO</span>
+                      );
+                    }
+                    if (tipoPessoa === 'juridica' && dLimpo.length === 14) {
+                      return validarCNPJ(dLimpo) ? (
+                        <span style={{ color: '#16a34a', fontWeight: '800', fontSize: '0.72rem' }}>✓ VÁLIDO</span>
+                      ) : (
+                        <span style={{ color: '#ef4444', fontWeight: '800', fontSize: '0.72rem' }}>✗ INVÁLIDO</span>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
               </label>
-              <div className="input-with-icon">
+              <div className="input-with-icon" style={{ position: 'relative' }}>
                 <i className="fas fa-address-card input-icon"></i>
                 <input 
                   type="text" 
@@ -412,7 +562,19 @@ const AutoCadastro = () => {
                   value={form.documento} 
                   required 
                   onChange={handleChange} 
+                  style={tipoPessoa === 'juridica' ? { paddingRight: '88px' } : {}}
                 />
+                {tipoPessoa === 'juridica' && (
+                  <button 
+                    type="button" 
+                    className="btn-autocadastro-cnpj"
+                    onClick={() => buscarCnpj(form.documento)}
+                    disabled={buscandoCnpj || (form.documento || '').replace(/\D/g, '').length !== 14}
+                    title="Consultar dados da empresa na Receita Federal"
+                  >
+                    {buscandoCnpj ? <i className="fas fa-spinner fa-spin"></i> : <><i className="fas fa-search"></i> Buscar</>}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -461,8 +623,11 @@ const AutoCadastro = () => {
                   name="cidade" 
                   placeholder="Sua cidade" 
                   value={form.cidade} 
+                  autoCapitalize="words"
+                  style={{ textTransform: 'capitalize' }}
                   required 
                   onChange={handleChange} 
+                  onBlur={handleBlurCapitalize}
                 />
               </div>
             </div>
@@ -477,8 +642,11 @@ const AutoCadastro = () => {
                 name="logradouro" 
                 placeholder="Endereço (Rua, Avenida, Alameda...)" 
                 value={form.logradouro} 
+                autoCapitalize="words"
+                style={{ textTransform: 'capitalize' }}
                 required 
                 onChange={handleChange} 
+                onBlur={handleBlurCapitalize}
               />
             </div>
           </div>
@@ -508,8 +676,11 @@ const AutoCadastro = () => {
                   name="bairro" 
                   placeholder="Seu bairro" 
                   value={form.bairro} 
+                  autoCapitalize="words"
+                  style={{ textTransform: 'capitalize' }}
                   required 
                   onChange={handleChange} 
+                  onBlur={handleBlurCapitalize}
                 />
               </div>
             </div>

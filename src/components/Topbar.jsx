@@ -109,6 +109,12 @@ const Topbar = () => {
             const emailAdmin = "celebrefesta25@gmail.com";
             if (user.email !== emailAdmin || isImp) {
               const uData = userSnap.data();
+              if (!isImp && (uData.fotoUrl || uData.photoURL)) {
+                setUsuario(prev => ({
+                  ...prev,
+                  foto: uData.fotoUrl || uData.photoURL || prev?.foto
+                }));
+              }
               const tenantId = uData.tenantId || targetUid;
               let empresaData = uData;
               if (tenantId !== targetUid) {

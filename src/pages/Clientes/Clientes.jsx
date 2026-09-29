@@ -5,6 +5,7 @@ import { db, storage } from '../../firebaseConfig';
 import { collection, getDocs, deleteDoc, doc, updateDoc, query, where, writeBatch, addDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
+import { gerarLinkPublico } from '../../utils/urlUtils';
 
 const getTagStyle = (tag) => {
   if (!tag) return { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0' };
@@ -82,6 +83,7 @@ const Clientes = () => {
 
   const [clienteVisualizacao, setClienteVisualizacao] = useState(null);
   const [abaAtiva, setAbaAtiva] = useState('dados');
+  const [modalLinkAutoCadastro, setModalLinkAutoCadastro] = useState(false);
 
   // 📱 CONTROLE DE EXIBIÇÃO OPCIONAL DE CARDS KPI NO CELULAR (RECOLHER / EXPANDIR)
   const [mostrarKpiMobile, setMostrarKpiMobile] = useState(() => {
@@ -874,10 +876,13 @@ const Clientes = () => {
   const numAniversariantes = clientes.filter(c => isAniversarianteDoMes(c)).length;
   const numPendentesAprovacao = clientes.filter(c => c.statusAprovacao === 'pendente' || c.situacaoFinanceira === 'pendente').length;
 
+  const linkAutoCadastroOficial = gerarLinkPublico(`/autocadastro/${tenantId}`, configEmpresa?.dominioOficial);
+
   const copiarLinkAutoCadastro = () => {
-    const link = `${window.location.origin}/autocadastro/${tenantId}`;
-    navigator.clipboard.writeText(link);
-    alert(`📋 Link de Auto-Cadastro copiado com sucesso!\n\n${link}\n\nEnvie este link para os seus clientes pelo WhatsApp para que eles preencham o cadastro diretamente no celular!`);
+    try {
+      navigator.clipboard.writeText(linkAutoCadastroOficial);
+    } catch (_) {}
+    setModalLinkAutoCadastro(true);
   };
 
   return (
@@ -2518,6 +2523,227 @@ const Clientes = () => {
                 >
                   ❌ Cancelar e Bloquear Nova Locação
                 </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🚀 MODAL EXCLUSIVO LINK DE AUTO-CADASTRO REAL */}
+      {modalLinkAutoCadastro && (
+        <div 
+          className="modal-overlay-autocadastro fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setModalLinkAutoCadastro(false);
+          }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 999999,
+            padding: '20px'
+          }}
+        >
+          <div 
+            className="modal-content-autocadastro" 
+            style={{ 
+              maxWidth: '520px', 
+              width: '100%', 
+              backgroundColor: 'var(--fundo-card, #ffffff)', 
+              borderRadius: '24px', 
+              overflow: 'hidden', 
+              padding: 0,
+              boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.45)',
+              border: '1px solid var(--borda, rgba(226, 232, 240, 0.8))'
+            }}
+          >
+            {/* Cabeçalho */}
+            <div style={{
+              background: 'linear-gradient(135deg, #090d16 0%, #0f172a 60%, #1e293b 100%)',
+              color: '#ffffff',
+              padding: '24px 26px',
+              borderBottom: '3px solid #c5a059',
+              position: 'relative'
+            }}>
+              <button 
+                type="button" 
+                onClick={() => setModalLinkAutoCadastro(false)}
+                style={{
+                  position: 'absolute',
+                  top: '18px',
+                  right: '18px',
+                  background: 'rgba(255,255,255,0.12)',
+                  border: 'none',
+                  color: '#ffffff',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '14px',
+                  transition: 'background 0.2s ease'
+                }}
+              >
+                ✕
+              </button>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(197,160,89,0.18)', border: '1px solid rgba(197,160,89,0.4)', borderRadius: '20px', padding: '4px 12px', marginBottom: '10px' }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#fef08a', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                  🔗 Link Oficial do Cliente
+                </span>
+              </div>
+              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '850', color: '#ffffff', letterSpacing: '-0.3px' }}>
+                Auto-Cadastro de Clientes
+              </h2>
+              <p style={{ margin: '6px 0 0 0', fontSize: '0.82rem', color: '#94a3b8' }}>
+                Envie este link para seu cliente preencher os dados de cadastro e endereço diretamente pelo celular.
+              </p>
+            </div>
+
+            {/* Corpo */}
+            <div style={{ padding: '24px', backgroundColor: 'var(--fundo-card, #ffffff)' }}>
+              <div style={{
+                background: '#ecfdf5',
+                border: '1px solid #a7f3d0',
+                borderRadius: '12px',
+                padding: '12px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                marginBottom: '18px'
+              }}>
+                <span style={{ fontSize: '1.2rem' }}>✅</span>
+                <span style={{ fontSize: '0.82rem', fontWeight: '750', color: '#065f46' }}>
+                  Link oficial copiado para sua área de transferência com sucesso!
+                </span>
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '800', color: 'var(--texto-secundario, #64748b)', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>
+                  Link Real de Produção:
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input 
+                    type="text" 
+                    readOnly 
+                    value={linkAutoCadastroOficial} 
+                    style={{
+                      flex: 1,
+                      background: 'var(--fundo-input, #f8fafc)',
+                      border: '1.5px solid var(--borda, #cbd5e1)',
+                      borderRadius: '10px',
+                      padding: '10px 12px',
+                      fontSize: '0.84rem',
+                      fontFamily: 'monospace',
+                      color: 'var(--texto-principal, #0f172a)',
+                      fontWeight: '600'
+                    }}
+                    onClick={(e) => e.target.select()}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(linkAutoCadastroOficial);
+                      alert('📋 Link copiado novamente!');
+                    }}
+                    style={{
+                      background: 'var(--fundo-hover, #f1f5f9)',
+                      border: '1.5px solid var(--borda, #cbd5e1)',
+                      borderRadius: '10px',
+                      padding: '0 14px',
+                      fontWeight: '800',
+                      fontSize: '0.8rem',
+                      color: 'var(--texto-principal, #334155)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <i className="fas fa-copy"></i> Copiar
+                  </button>
+                </div>
+              </div>
+
+              {/* Botões de Ação */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
+                <a
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                    `Olá! ✨ Para agilizarmos a preparação da sua locação e contrato na *${configEmpresa?.nomeEmpresa || configEmpresa?.nomeFantasia || 'nossa loja'}*, por favor acesse o link seguro abaixo para preencher os seus dados de cadastro:\n\n👉 ${linkAutoCadastroOficial}\n\nLeva menos de 1 minuto! Qualquer dúvida, estamos por aqui! 🎈`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    background: '#25d366',
+                    color: '#ffffff',
+                    textDecoration: 'none',
+                    borderRadius: '12px',
+                    height: '46px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    fontWeight: '850',
+                    fontSize: '0.88rem',
+                    boxShadow: '0 4px 14px rgba(37, 211, 102, 0.35)',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <i className="fab fa-whatsapp" style={{ fontSize: '1.2rem' }}></i>
+                  Compartilhar no WhatsApp
+                </a>
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <a
+                    href={linkAutoCadastroOficial}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      flex: 1,
+                      background: 'var(--fundo-hover, #f1f5f9)',
+                      border: '1px solid var(--borda, #cbd5e1)',
+                      color: 'var(--texto-principal, #475569)',
+                      textDecoration: 'none',
+                      borderRadius: '10px',
+                      height: '40px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      fontWeight: '750',
+                      fontSize: '0.8rem'
+                    }}
+                  >
+                    <i className="fas fa-external-link-alt"></i> Testar Link
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setModalLinkAutoCadastro(false)}
+                    style={{
+                      flex: 1,
+                      background: 'transparent',
+                      border: '1px solid var(--borda, #e2e8f0)',
+                      color: 'var(--texto-secundario, #64748b)',
+                      borderRadius: '10px',
+                      height: '40px',
+                      fontWeight: '750',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Fechar
+                  </button>
+                </div>
               </div>
 
             </div>

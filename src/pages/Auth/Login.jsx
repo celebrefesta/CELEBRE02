@@ -176,7 +176,7 @@ const Login = () => {
               }
             }
           } catch (errCheckExistente) {
-            console.error("Erro ao verificar conta pré-existente por e-mail:", errCheckExistente);
+            // Consulta global restrita pelas regras de segurança
           }
 
           const dataAtual = new Date();
@@ -355,7 +355,41 @@ const Login = () => {
           console.warn("Falha ao checar existência da conta:", checkErr);
         }
 
-        setErro('Senha incorreta. Verifique os dados digitados ou clique em "Esqueceu a senha?".');
+        setErro(
+          <div style={{ textAlign: 'left', lineHeight: '1.45', padding: '2px 0' }}>
+            <p style={{ margin: '0 0 6px 0', fontWeight: 600 }}>
+              Senha incorreta. Verifique os dados digitados ou clique em <Link to="/redefinir-senha" style={{ color: 'var(--dourado, #c5a059)', fontWeight: 700 }}>"Esqueceu a senha?"</Link>.
+            </p>
+            <div style={{ background: 'rgba(234, 67, 53, 0.06)', border: '1px solid rgba(234, 67, 53, 0.2)', borderRadius: '8px', padding: '8px 10px', marginTop: '6px' }}>
+              <p style={{ margin: '0 0 6px 0', fontSize: '0.8rem', color: 'var(--texto-principal, #0f172a)' }}>
+                💡 <strong>Acessou com o Google?</strong> Se você entrou pelo Google, sua conta não precisa de senha digitada. Clique abaixo para entrar com 1 clique:
+              </p>
+              <button
+                type="button"
+                onClick={() => handleGoogleLogin()}
+                style={{
+                  width: '100%',
+                  background: '#ffffff',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '7px',
+                  padding: '7px 10px',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  color: '#0f172a',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+                }}
+              >
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: '15px', height: '15px' }} />
+                Entrar com Google
+              </button>
+            </div>
+          </div>
+        );
       } else if (code === 'auth/invalid-email') {
         setErro('Formato de e-mail inválido.');
       } else if (code === 'auth/too-many-requests') {
@@ -388,6 +422,7 @@ const Login = () => {
       const user = result.user;
       const emailLimpo = user.email ? user.email.toLowerCase().trim() : '';
       const nomeGoogle = user.displayName || emailLimpo.split('@')[0] || 'Usuário Google';
+      const fotoGoogle = user.photoURL || '';
 
       // 🔍 1. Busca tenantId existente para o usuário (equipe ou conta pré-existente)
       let tenantIdParaSalvar = user.uid;
@@ -442,7 +477,7 @@ const Login = () => {
             }
           }
         } catch (errBuscaUser) {
-          console.error("Erro ao verificar conta existente em usuarios:", errBuscaUser);
+          // Consulta global em /usuarios restrita pelas regras de segurança do Firestore
         }
       }
 
@@ -458,6 +493,8 @@ const Login = () => {
           email: emailLimpo,
           nomeCompleto: nomeParaSalvar,
           nomeExibicao: nomeParaSalvar,
+          fotoUrl: fotoGoogle,
+          photoURL: fotoGoogle,
           role: roleParaSalvar,
           tenantId: tenantIdParaSalvar,
           dataCadastro: docPrincipalExistente?.dataCadastro || dataAtual.toISOString(),
@@ -494,6 +531,13 @@ const Login = () => {
         const existingData = userDocSnap.data();
         const updates = {};
         if (!existingData.email || existingData.email !== emailLimpo) updates.email = emailLimpo;
+        if (fotoGoogle && (!existingData.fotoUrl || !existingData.photoURL)) {
+          updates.fotoUrl = existingData.fotoUrl || fotoGoogle;
+          updates.photoURL = existingData.photoURL || fotoGoogle;
+        }
+        if (!existingData.authProvider) {
+          updates.authProvider = 'google.com';
+        }
 
         // 🔥 BUG 4 FIX: Se este doc Google é alias de uma conta mestre, sincroniza SEMPRE os
         // dados financeiros atuais da conta mestre — não apenas quando o campo está vazio.

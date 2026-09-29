@@ -5,6 +5,7 @@ import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp } from "fir
 import { getAuth } from "firebase/auth";
 import SignatureCanvas from "react-signature-canvas";
 import { processarDisparoAutomatico } from "../../utils/notificacoesDispatchService";
+import { gerarLinkPublico } from "../../utils/urlUtils";
 import "./AssinaturaContrato.css";
 
 const AssinaturaContrato = () => {
@@ -106,7 +107,7 @@ const AssinaturaContrato = () => {
   }, [id, navigate, isExternal, usuarioLogado, tenantId]);
 
   const enviarWhatsapp = () => {
-    const linkAssinatura = `${window.location.origin}/assinatura/${id}?external=true`;
+    const linkAssinatura = gerarLinkPublico(`/assinatura/${id}?external=true`);
     const textoBruto = `Olá ${contrato.cliente}!\n\nAqui está o link para a assinatura digital do seu contrato da *${nomeEmpresa}*:\n\n👉 ${linkAssinatura}\n\nÉ só clicar, desenhar sua assinatura na tela e salvar!`;
     const mensagem = encodeURIComponent(textoBruto);
     const fone = contrato.telefone ? String(contrato.telefone).replace(/\D/g, "") : "";
@@ -192,7 +193,7 @@ const AssinaturaContrato = () => {
             clienteEmail: contrato?.email || '',
             clienteTelefone: contrato?.telefone || '',
             numeroPedido: contrato?.id || id,
-            linkContrato: `${window.location.origin}/assinatura/${id}?external=true`,
+            linkContrato: gerarLinkPublico(`/assinatura/${id}?external=true`),
             nomeEmpresa: nomeEmpresa || 'Celebre Festas',
             telefoneEmpresa: ''
           }

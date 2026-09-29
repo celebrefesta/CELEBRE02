@@ -4,8 +4,8 @@
 
 /* O botão principal do sino */
 .sininho-btn-trigger {
-  background: var(--fundo-cinza);
-  border: 1px solid var(--borda);
+  background: var(--fundo-cinza, #f1f5f9);
+  border: 1px solid var(--borda, #e2e8f0);
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -15,17 +15,17 @@
   cursor: pointer;
   position: relative;
   transition: all 0.2s ease;
-  color: var(--texto-principal);
+  color: var(--texto-principal, #0f172a);
 }
 
 .sininho-btn-trigger i {
-  font-size: 1.2rem;
+  font-size: 1.15rem;
 }
 
 .sininho-btn-trigger:hover,
 .sininho-btn-trigger.ativo {
-  background: var(--borda);
-  color: var(--dourado);
+  background: var(--borda, #e2e8f0);
+  color: var(--dourado, #c5a059);
 }
 
 /* A bolinha com o número */
@@ -44,7 +44,7 @@
   align-items: center;
   justify-content: center;
   padding: 0 4px;
-  border: 2px solid white; 
+  border: 2px solid var(--branco, #ffffff); 
   animation: pulsar 1.5s infinite; 
 }
 
@@ -54,50 +54,54 @@
   100% { transform: scale(1); }
 }
 
-/* A GAVETA DE NOTIFICAÇÕES (ESTILO FACEBOOK) */
+/* A GAVETA DE NOTIFICAÇÕES (DESKTOP) */
 .notificacoes-dropdown-menu {
   position: absolute;
-  top: 120%;
-  right: 0;
-  width: 320px;
-  background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-  border: 1px solid #e2e8f0;
+  top: calc(100% + 10px);
+  right: -20px;
+  width: 330px;
+  max-width: 90vw;
+  background-color: var(--branco, #ffffff);
+  border-radius: 14px;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.16);
+  border: 1px solid var(--borda, #e2e8f0);
   display: flex;
   flex-direction: column;
-  animation: slideDown 0.2s ease forwards;
-  z-index: 100;
+  animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  z-index: 1000;
   overflow: hidden;
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
+  from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .noti-dropdown-header {
-  padding: 15px 20px;
-  border-bottom: 1px solid #f1f5f9;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--borda, #f1f5f9);
+  background-color: var(--branco, #ffffff);
 }
 
 .noti-dropdown-header h3 {
   margin: 0;
-  font-size: 1.1rem;
-  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--texto-principal, #0f172a);
 }
 
 .noti-dropdown-body {
   max-height: 350px;
   overflow-y: auto;
-  padding: 5px;
+  padding: 6px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .noti-vazia {
   padding: 30px 20px;
   text-align: center;
-  color: #94a3b8;
-  font-size: 0.9rem;
+  color: var(--texto-secundario, #94a3b8);
+  font-size: 0.88rem;
 }
 
 /* Estilo de cada notificação individual */
@@ -105,27 +109,27 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 10px;
-  border-radius: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.18s ease;
   text-align: left;
 }
 
 .noti-item:hover {
-  background-color: #f8fafc;
+  background-color: var(--fundo-cinza, #f8fafc);
 }
 
 /* Ícones redondos do lado esquerdo */
 .noti-icon-circle {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 1rem;
+  font-size: 0.95rem;
   flex-shrink: 0;
 }
 
@@ -139,25 +143,25 @@
 
 .noti-text p {
   margin: 0;
-  font-size: 0.85rem;
-  color: #334155;
-  line-height: 1.3;
+  font-size: 0.84rem;
+  color: var(--texto-secundario, #334155);
+  line-height: 1.35;
 }
 
 .noti-text p strong {
-  color: #0f172a;
+  color: var(--texto-principal, #0f172a);
 }
 
 .noti-text span {
-  font-size: 0.75rem;
-  color: #3b82f6;
-  font-weight: 600;
+  font-size: 0.74rem;
+  color: var(--dourado, #c5a059);
+  font-weight: 700;
 }
 
-/* Bolinha azul estilo "Não lida" das redes sociais */
+/* Bolinha azul estilo "Não lida" */
 .noti-bolinha-azul {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   background-color: #3b82f6;
   border-radius: 50%;
   flex-shrink: 0;
@@ -167,25 +171,112 @@
 .noti-dropdown-footer {
   padding: 12px;
   text-align: center;
-  font-size: 0.85rem;
-  font-weight: bold;
-  color: #c5a059;
-  border-top: 1px solid #f1f5f9;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--dourado, #c5a059);
+  border-top: 1px solid var(--borda, #f1f5f9);
   cursor: pointer;
-  background: #f8fafc;
-  transition: background 0.2s;
+  background: var(--fundo-cinza, #f8fafc);
+  transition: all 0.2s ease;
 }
 
 .noti-dropdown-footer:hover {
-  background: #f1f5f9;
-  color: #b08d4a;
+  background: var(--borda, #f1f5f9);
+  color: var(--dourado, #b08d4a);
 }
 
-/* Custom Scrollbar para a gaveta não ficar feia */
+/* Custom Scrollbar */
 .noti-dropdown-body::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 .noti-dropdown-body::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--borda, #cbd5e1);
   border-radius: 10px;
+}
+
+/* ====================================================
+   📱 RESPONSIVIDADE MOBILE & TABLET (BLINDAGEM TOTAL)
+   Impede 100% o vazamento pelas beiradas da tela
+==================================================== */
+@media (max-width: 768px) {
+  .notificacoes-dropdown-menu {
+    position: fixed !important;
+    top: 58px !important;
+    right: 12px !important;
+    left: 12px !important;
+    width: auto !important;
+    max-width: 360px !important;
+    margin-left: auto !important;
+    margin-right: 0 !important;
+    border-radius: 14px !important;
+    box-shadow: 0 16px 45px rgba(0, 0, 0, 0.25) !important;
+    z-index: 10002 !important;
+    animation: slideDownMobile 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  }
+
+  .noti-dropdown-body {
+    max-height: calc(100vh - 180px) !important;
+  }
+
+  .noti-dropdown-header {
+    padding: 12px 16px;
+  }
+
+  .noti-dropdown-header h3 {
+    font-size: 1rem;
+  }
+
+  .noti-dropdown-footer {
+    padding: 11px;
+    font-size: 0.8rem;
+  }
+}
+
+@keyframes slideDownMobile {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ====================================================
+   🌙 SOBREPOSIÇÃO PARA O MODO ESCURO
+==================================================== */
+[data-theme='dark'] .notificacoes-dropdown-menu {
+  background-color: var(--branco, #18181b) !important;
+  border-color: var(--borda, #3f3f46) !important;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme='dark'] .noti-dropdown-header {
+  background-color: var(--branco, #18181b) !important;
+  border-bottom-color: var(--borda, #3f3f46) !important;
+}
+
+[data-theme='dark'] .noti-dropdown-header h3 {
+  color: var(--texto-principal, #f4f4f5) !important;
+}
+
+[data-theme='dark'] .noti-dropdown-footer {
+  background: var(--fundo-cinza, #27272a) !important;
+  border-top-color: var(--borda, #3f3f46) !important;
+  color: var(--dourado, #c5a059) !important;
+}
+
+[data-theme='dark'] .noti-dropdown-footer:hover {
+  background: var(--borda, #3f3f46) !important;
+}
+
+[data-theme='dark'] .noti-item:hover {
+  background-color: var(--fundo-cinza, #27272a) !important;
+}
+
+[data-theme='dark'] .noti-text p {
+  color: var(--texto-secundario, #a1a1aa) !important;
+}
+
+[data-theme='dark'] .noti-text p strong {
+  color: var(--texto-principal, #f4f4f5) !important;
+}
+
+[data-theme='dark'] .noti-vazia {
+  color: var(--texto-secundario, #a1a1aa) !important;
 }
