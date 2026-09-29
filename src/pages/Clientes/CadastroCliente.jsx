@@ -8,21 +8,33 @@ import { validarCPF, validarCNPJ } from '../../utils/validadores';
 import { consultarCNPJ } from '../../utils/consultaCnpj';
 
 const formatarNomeCapitalizado = (nomeBruto) => {
-  if (!nomeBruto) return '';
-  const partes = nomeBruto.toLowerCase().split(' ');
+  if (!nomeBruto || typeof nomeBruto !== 'string') return '';
   const conectores = ['da', 'de', 'di', 'do', 'du', 'das', 'dos', 'e'];
-  return partes.map((palavra, index) => {
-      if (palavra === '') return ''; 
-      if (index > 0 && conectores.includes(palavra)) return palavra;
-      return palavra.charAt(0).toUpperCase() + palavra.slice(1);
+  const palavras = nomeBruto.trim().split(/\s+/);
+  return palavras.map((palavra, index) => {
+    if (!palavra) return '';
+    const lower = palavra.toLowerCase();
+    if (index > 0 && conectores.includes(lower)) return lower;
+    return palavra.replace(/([\p{L}]+)/gu, (match) => {
+      return match.charAt(0).toUpperCase() + match.slice(1).toLowerCase();
+    });
   }).join(' ');
 };
 
 const capitalizarPalavrasAoDigitar = (texto) => {
   if (!texto || typeof texto !== 'string') return '';
-  return texto.replace(/(^|[\s])([a-z\u00C0-\u00FF])/g, (match, sep, char) => {
-    return sep + char.toUpperCase();
-  });
+  const conectores = ['da', 'de', 'di', 'do', 'du', 'das', 'dos', 'e'];
+  return texto.split(/(\s+)/).map((parte, index) => {
+    if (/^\s+$/.test(parte)) return parte;
+    if (!parte) return '';
+    const lower = parte.toLowerCase();
+    if (index > 0 && conectores.includes(lower)) {
+      return lower;
+    }
+    return parte.replace(/([\p{L}]+)/gu, (match) => {
+      return match.charAt(0).toUpperCase() + match.slice(1).toLowerCase();
+    });
+  }).join('');
 };
 
 const getTagIcon = (tag) => {
@@ -135,6 +147,23 @@ const obterNomeEmpresaTenant = (config) => {
   return config?.nomeEmpresa || config?.nomeFantasia || config?.razaoSocial || localStorage.getItem('nomeEmpresa') || 'Nossa Empresa';
 };
 
+const formatarDataCriacao = (dataVal) => {
+  if (!dataVal) return 'Hoje';
+  try {
+    if (typeof dataVal.toDate === 'function') {
+      return dataVal.toDate().toLocaleDateString('pt-BR');
+    }
+    if (dataVal.seconds) {
+      return new Date(dataVal.seconds * 1000).toLocaleDateString('pt-BR');
+    }
+    const d = new Date(dataVal);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString('pt-BR');
+    }
+  } catch (_) {}
+  return 'Hoje';
+};
+
 const CadastroCliente = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -195,6 +224,46 @@ const CadastroCliente = () => {
     statusCadastro: 'aprovado' 
   });
 
+  const aprovarCadastroDireto = async () => {
+    if (!clienteEditando?.id) return;
+    try {
+      setSalvando(true);
+      await updateDoc(doc(db, "clientes", clienteEditando.id), {
+        statusAprovacao: 'aprovado',
+        statusCadastro: 'aprovado',
+        situacaoFinanceira: 'adimplente',
+        atualizadoEm: new Date().toISOString()
+      });
+
+      try {
+        const nomeEquipe = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipe";
+        await addDoc(collection(db, "logs_atividades"), {
+          empresaId: tenantId,
+          userId: tenantId,
+          funcionarioId: usuarioLogado?.uid,
+          nomeFuncionario: nomeEquipe,
+          usuarioEmail: usuarioLogado?.email || "Desconhecido",
+          acao: "APROVAÇÃO DE CLIENTE",
+          detalhes: `Aprovou o pré-cadastro do cliente "${formData.nome || formData.nomeFantasia}".`,
+          dataHora: new Date().toISOString()
+        });
+      } catch (_) {}
+
+      setFormData(prev => ({
+        ...prev,
+        statusCadastro: 'aprovado',
+        situacaoFinanceira: 'adimplente'
+      }));
+      setPodeSerPendente(false);
+      alert(`✅ Cadastro de "${formData.nome || formData.nomeFantasia}" aprovado com sucesso! Agora é um cliente oficial ativo.`);
+    } catch (err) {
+      console.error("Erro ao aprovar cliente:", err);
+      alert("Erro ao aprovar cliente: " + err.message);
+    } finally {
+      setSalvando(false);
+    }
+  };
+
   useEffect(() => {
     if (!usuarioLogado) {
         navigate('/login');
@@ -208,6 +277,8 @@ const CadastroCliente = () => {
 
       const eraPendenteAntigo = clienteEditando.situacaoFinanceira === 'pendente';
       const statusReal = clienteEditando.statusCadastro ? clienteEditando.statusCadastro : (eraPendenteAntigo ? 'pendente' : 'aprovado');
+      const ehPendenteReal = clienteEditando.statusAprovacao === 'pendente' || statusReal === 'pendente' || eraPendenteAntigo;
+      const situacaoReal = ehPendenteReal ? 'pendente' : (clienteEditando.situacaoFinanceira || 'adimplente');
    
       setFormData({
         nome: formatarNomeCapitalizado(clienteEditando.nome || ''), 
@@ -229,15 +300,11 @@ const CadastroCliente = () => {
         uf: (clienteEditando.uf || '').toUpperCase(),
         tags: clienteEditando.tags || 'NOVO', 
         observacoes: clienteEditando.observacoes || '',
-        situacaoFinanceira: clienteEditando.situacaoFinanceira || 'adimplente',
+        situacaoFinanceira: situacaoReal,
         statusCadastro: statusReal
       });
 
-      if (statusReal === 'pendente') {
-          setPodeSerPendente(true);
-      } else {
-          setPodeSerPendente(false);
-      }
+      setPodeSerPendente(ehPendenteReal);
 
     } else {
       setFormData(prev => ({...prev, statusCadastro: 'aprovado', situacaoFinanceira: 'adimplente', tags: 'NOVO'}));
@@ -310,10 +377,13 @@ const CadastroCliente = () => {
           }
         }
 
-        setFormData(prev => ({
-          ...prev,
-          situacaoFinanceira: temDividaVencida ? 'inadimplente' : 'adimplente'
-        }));
+        setFormData(prev => {
+          const ehPend = prev.statusCadastro === 'pendente' || prev.situacaoFinanceira === 'pendente' || clienteEditando?.statusAprovacao === 'pendente';
+          return {
+            ...prev,
+            situacaoFinanceira: ehPend ? 'pendente' : (temDividaVencida ? 'inadimplente' : 'adimplente')
+          };
+        });
 
       } catch(e) {
         console.error("Erro ao montar histórico:", e);
@@ -332,6 +402,16 @@ const CadastroCliente = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     let newValue = value;
+
+    if (name === 'statusCadastro' && value === 'aprovado') {
+      setPodeSerPendente(false);
+      setFormData(prev => ({
+        ...prev,
+        statusCadastro: 'aprovado',
+        situacaoFinanceira: prev.situacaoFinanceira === 'pendente' ? 'adimplente' : prev.situacaoFinanceira
+      }));
+      return;
+    }
 
     if (['nome', 'razaoSocial', 'nomeFantasia', 'nomeContato', 'logradouro', 'bairro', 'cidade'].includes(name)) {
       newValue = capitalizarPalavrasAoDigitar(value);
@@ -743,6 +823,18 @@ const CadastroCliente = () => {
         </div>
 
         <div className="cadastro-hero-right-actions">
+          {podeSerPendente && (
+            <button 
+              type="button" 
+              onClick={aprovarCadastroDireto} 
+              className="btn-secondary-celebre"
+              style={{ background: '#10b981', color: '#ffffff', borderColor: '#10b981', fontWeight: '800', boxShadow: '0 2px 10px rgba(16, 185, 129, 0.25)' }}
+              title="Aprovar e ativar cliente na carteira"
+            >
+              <i className="fas fa-check-circle"></i> Aprovar Cadastro
+            </button>
+          )}
+
           <button type="button" onClick={() => navigate('/clientes')} className="btn-secondary-celebre">
             <i className="fas fa-arrow-left"></i> Voltar à Lista
           </button>
@@ -859,17 +951,17 @@ const CadastroCliente = () => {
 
             {/* STATUS BADGES GRID */}
             <div className="profile-status-cards">
-              <div className={`status-mini-card ${formData.statusCadastro}`}>
+              <div className={`status-mini-card ${podeSerPendente ? 'pendente' : formData.statusCadastro}`}>
                 <span className="status-label">STATUS CADASTRO</span>
                 <strong className="status-val">
-                  {formData.statusCadastro === 'pendente' ? '⏳ Pendente' : formData.statusCadastro === 'bloqueado' ? '🚫 Bloqueado' : '✅ Aprovado'}
+                  {podeSerPendente ? '⏳ Pendente' : formData.statusCadastro === 'bloqueado' ? '🚫 Bloqueado' : '✅ Aprovado'}
                 </strong>
               </div>
 
-              <div className={`status-mini-card ${calculandoFinancas ? 'calculando' : formData.situacaoFinanceira}`}>
+              <div className={`status-mini-card ${calculandoFinancas ? 'calculando' : podeSerPendente ? 'pendente' : formData.situacaoFinanceira}`}>
                 <span className="status-label">SAÚDE FINANCEIRA</span>
                 <strong className="status-val">
-                  {calculandoFinancas ? '⏳ Calculando...' : (formData.situacaoFinanceira === 'inadimplente' ? '🔴 Inadimplente' : '🟢 Adimplente')}
+                  {calculandoFinancas ? '⏳ Calculando...' : podeSerPendente ? '⏳ Em Análise' : (formData.situacaoFinanceira === 'inadimplente' ? '🔴 Inadimplente' : '🟢 Adimplente')}
                 </strong>
               </div>
             </div>
@@ -896,7 +988,7 @@ const CadastroCliente = () => {
 
             {/* DATA DE CADASTRO */}
             <div className="profile-since-footer">
-              <i className="far fa-calendar-alt"></i> Cliente desde: {clienteEditando?.criadoEm ? new Date(clienteEditando.criadoEm).toLocaleDateString('pt-BR') : 'Hoje'}
+              <i className="far fa-calendar-alt"></i> Cliente desde: {formatarDataCriacao(clienteEditando?.criadoEm)}
             </div>
 
           </div>
@@ -904,6 +996,28 @@ const CadastroCliente = () => {
           {/* COLUNA DIREITA: FORMULÁRIO WIDESCREEN ALINHADO */}
           <div className="right-data-col">
             
+            {/* BANNER DE PRÉ-CADASTRO AGUARDANDO APROVAÇÃO */}
+            {podeSerPendente && (
+              <div className="pending-client-review-banner fade-in">
+                <div className="pending-review-banner-left">
+                  <div className="pending-review-icon-box">
+                    <i className="fas fa-user-clock"></i>
+                  </div>
+                  <div className="pending-review-text-wrap">
+                    <strong>Pré-Cadastro Aguardando Aprovação</strong>
+                    <p>Este cliente realizou o pré-cadastro pelo link online. Revise os dados e aprove para liberá-lo para contratos e locações.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={aprovarCadastroDireto}
+                  className="btn-approve-profile-direct"
+                >
+                  <i className="fas fa-check"></i> Aprovar Cadastro
+                </button>
+              </div>
+            )}
+
             {/* SELETOR PESSOA FÍSICA / JURÍDICA */}
             <div className="tabs-container">
               <button 
@@ -1239,11 +1353,12 @@ const CadastroCliente = () => {
                       id="situacaoFinanceira" 
                       name="situacaoFinanceira" 
                       autoComplete="off" 
-                      value={calculandoFinancas ? 'calculando' : formData.situacaoFinanceira} 
+                      value={calculandoFinancas ? 'calculando' : podeSerPendente ? 'pendente' : formData.situacaoFinanceira} 
                       disabled={true} 
-                      className={`status-select-pro ${calculandoFinancas ? 'calculando' : formData.situacaoFinanceira}`}
+                      className={`status-select-pro ${calculandoFinancas ? 'calculando' : podeSerPendente ? 'pendente' : formData.situacaoFinanceira}`}
                     >
                       <option value="calculando">⏳ Calculando...</option>
+                      {podeSerPendente && <option value="pendente">⏳ Em Análise (Aguardando Aprovação)</option>}
                       <option value="adimplente">🟢 Adimplente (Sem pendências)</option>
                       <option value="inadimplente">🔴 Inadimplente (Com pendências)</option>
                     </select>

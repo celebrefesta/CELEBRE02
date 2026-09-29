@@ -146,6 +146,42 @@
   background: #9a3412;
 }
 
+/* Badge Chamativo de Atenção */
+.badge-alerta-atencao,
+.clientes-container .badge-alerta-atencao {
+  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+  color: #ffffff !important;
+  font-size: 0.65rem !important;
+  font-weight: 850 !important;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.35);
+  animation: pulseAtencao 2.2s infinite ease-in-out;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.badge-alerta-atencao i,
+.clientes-container .badge-alerta-atencao i {
+  font-size: 0.72rem;
+}
+
+@keyframes pulseAtencao {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 2px 6px rgba(234, 88, 12, 0.35);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 3px 10px rgba(234, 88, 12, 0.55);
+  }
+}
+
 @media (max-width: 600px) {
   .crm-birthday-alert-subtle {
     padding: 7px 10px;
@@ -3748,5 +3784,1342 @@
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+/* ==========================================================================
+   ⏳ SEÇÃO EXCLUSIVA DE PRÉ-CADASTROS AGUARDANDO APROVAÇÃO (AUTO-CADASTRO)
+   Escopo Total: .clientes-container .pending-approvals-section
+   ========================================================================== */
+.clientes-container .pending-approvals-section {
+  background: var(--fundo-card, #ffffff);
+  border: 1.5px solid rgba(245, 158, 11, 0.4);
+  border-left: 5px solid #f59e0b;
+  border-radius: 16px;
+  padding: 18px 22px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px -4px rgba(245, 158, 11, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: all 0.2s ease;
+}
+
+.clientes-container .pending-approvals-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.clientes-container .pending-header-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.clientes-container .pending-icon-box {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.1) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #d97706;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+.clientes-container .pending-section-title {
+  margin: 0;
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: var(--texto-principal, #0f172a);
+}
+
+.clientes-container .pending-count-pill {
+  background: #f59e0b;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.clientes-container .pending-section-subtitle {
+  margin: 3px 0 0 0;
+  font-size: 0.8rem;
+  color: var(--texto-secundario, #64748b);
+  font-weight: 500;
+}
+
+.clientes-container .btn-ir-notificacoes-pending {
+  background: transparent;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #b45309;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 750;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.clientes-container .btn-ir-notificacoes-pending:hover {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: #d97706;
+}
+
+.clientes-container .pending-cards-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.clientes-container .pending-client-card {
+  background: rgba(245, 158, 11, 0.04);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  transition: all 0.2s ease;
+}
+
+.clientes-container .pending-client-card:hover {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.45);
+  transform: translateY(-1px);
+}
+
+.clientes-container .pending-client-main-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.clientes-container .pending-avatar-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 850;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+  box-shadow: 0 3px 8px rgba(245, 158, 11, 0.25);
+}
+
+.clientes-container .pending-client-textos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.clientes-container .pending-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.clientes-container .pending-tag-site {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+  font-size: 0.64rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.clientes-container .pending-city-chip {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.clientes-container .pending-client-name {
+  margin: 0;
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: var(--texto-principal, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clientes-container .pending-contact-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+}
+
+.clientes-container .pending-zap-link {
+  color: #16a34a;
+  text-decoration: none;
+  font-weight: 750;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.clientes-container .pending-zap-link:hover {
+  text-decoration: underline;
+}
+
+.clientes-container .pending-doc-chip,
+.clientes-container .pending-email-chip {
+  color: var(--texto-secundario, #64748b);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+}
+
+.clientes-container .pending-client-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.clientes-container .btn-pending-action {
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 750;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.clientes-container .btn-pending-action.btn-review {
+  background: var(--fundo-card, #ffffff);
+  border-color: var(--borda, #cbd5e1);
+  color: var(--texto-principal, #334155);
+}
+
+.clientes-container .btn-pending-action.btn-review:hover {
+  background: var(--fundo-hover, #f1f5f9);
+  border-color: var(--dourado, #c5a059);
+}
+
+.clientes-container .btn-pending-action.btn-reject {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #dc2626;
+}
+
+.clientes-container .btn-pending-action.btn-reject:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.clientes-container .btn-pending-action.btn-approve {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+
+.clientes-container .btn-pending-action.btn-approve:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+/* Responsividade mobile do bloco de pendentes */
+@media (max-width: 768px) {
+  .clientes-container .pending-approvals-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .clientes-container .btn-ir-notificacoes-pending {
+    width: 100%;
+    justify-content: center;
+  }
+  .clientes-container .pending-client-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .clientes-container .pending-client-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .clientes-container .btn-pending-action.btn-approve {
+    grid-column: 1 / -1;
+    justify-content: center;
+    height: 38px;
+  }
+}
+
+/* Modo escuro para o bloco */
+[data-theme^='dark'] .clientes-container .pending-approvals-section {
+  background: #18181b;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+[data-theme^='dark'] .clientes-container .pending-client-card {
+  background: rgba(245, 158, 11, 0.05);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+[data-theme^='dark'] .clientes-container .pending-section-title {
+  color: #f4f4f5;
+}
+[data-theme^='dark'] .clientes-container .pending-client-name {
+  color: #f4f4f5;
+}
+[data-theme^='dark'] .clientes-container .btn-pending-action.btn-review {
+  background: #27272a;
+  border-color: #3f3f46;
+  color: #f4f4f5;
+}
+
+/* ==========================================================================
+   ⚡ CALIBRAÇÃO DA FAIXA SLIM (40PX) E MODAL DE TRIAGEM RÁPIDA
+   Escopo Total: .clientes-container .modal-overlay-triagem
+   ========================================================================== */
+.clientes-container .crm-birthday-alert-subtle.alert-subtle-pending .btn-subtle-pill {
+  background: #d97706;
+  color: #ffffff;
+}
+
+.clientes-container .crm-birthday-alert-subtle.alert-subtle-pending .btn-subtle-pill:hover {
+  background: #b45309;
+}
+
+.clientes-container .modal-overlay-triagem {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.clientes-container .modal-card-triagem {
+  background: var(--fundo-card, #ffffff);
+  border: 1px solid var(--borda, #e2e8f0);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: modalPopCelebre 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modalPopCelebre {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.clientes-container .modal-triagem-header {
+  padding: 18px 24px;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border-bottom: 1.5px solid #fde68a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+[data-theme^='dark'] .clientes-container .modal-triagem-header {
+  background: #271a06;
+  border-bottom-color: #92400e;
+}
+
+.clientes-container .triagem-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.clientes-container .triagem-header-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #f59e0b;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
+}
+
+.clientes-container .triagem-header-title {
+  margin: 0;
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #92400e;
+}
+
+[data-theme^='dark'] .clientes-container .triagem-header-title {
+  color: #fef3c7;
+}
+
+.clientes-container .triagem-header-counter {
+  font-size: 0.78rem;
+  color: #b45309;
+  font-weight: 600;
+}
+
+[data-theme^='dark'] .clientes-container .triagem-header-counter {
+  color: #fde68a;
+}
+
+.clientes-container .btn-close-triagem {
+  background: transparent;
+  border: none;
+  font-size: 1.6rem;
+  color: #92400e;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.clientes-container .btn-close-triagem:hover {
+  background: rgba(146, 64, 14, 0.1);
+}
+
+.clientes-container .modal-triagem-body {
+  padding: 22px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.clientes-container .triagem-client-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--borda, #f1f5f9);
+}
+
+.clientes-container .triagem-avatar-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  font-weight: 850;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
+  overflow: hidden;
+}
+
+.clientes-container .triagem-avatar-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.clientes-container .triagem-hero-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+}
+
+.clientes-container .triagem-pills-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.clientes-container .triagem-tag-site {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+  font-size: 0.64rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 5px;
+  text-transform: uppercase;
+}
+
+.clientes-container .triagem-tag-tipo {
+  background: var(--fundo-hover, #f1f5f9);
+  color: var(--texto-secundario, #475569);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 5px;
+}
+
+.clientes-container .triagem-tag-data {
+  font-size: 0.72rem;
+  color: var(--texto-secundario, #64748b);
+  font-weight: 600;
+}
+
+.clientes-container .triagem-client-name {
+  margin: 0;
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--texto-principal, #0f172a);
+}
+
+.clientes-container .triagem-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.clientes-container .triagem-detail-item {
+  background: var(--fundo-hover, #f8fafc);
+  border: 1px solid var(--borda, #e2e8f0);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+[data-theme^='dark'] .clientes-container .triagem-detail-item {
+  background: #18181b;
+  border-color: #27272a;
+}
+
+.clientes-container .triagem-detail-item.span-full {
+  grid-column: 1 / -1;
+}
+
+.clientes-container .triagem-detail-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  color: var(--texto-secundario, #64748b);
+  font-weight: 750;
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.clientes-container .triagem-detail-val {
+  font-size: 0.85rem;
+  color: var(--texto-principal, #0f172a);
+  font-weight: 700;
+}
+
+.clientes-container .triagem-contact-val {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.clientes-container .triagem-zap-btn {
+  background: #25d366;
+  color: #ffffff;
+  text-decoration: none;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.clientes-container .triagem-zap-btn:hover {
+  background: #1eb956;
+}
+
+.clientes-container .triagem-notes-text {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--texto-principal, #334155);
+  line-height: 1.4;
+  font-style: italic;
+}
+
+/* ⚡ CENTRAL DE TRIAGEM EM LISTA EXECUTIVA */
+.clientes-container .modal-card-triagem.modal-triagem-lista {
+  max-width: 860px !important;
+  width: 95% !important;
+}
+
+.clientes-container .triagem-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.clientes-container .btn-triagem-aprovar-todos {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 9px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  transition: all 0.2s ease;
+}
+
+.clientes-container .btn-triagem-aprovar-todos:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.45);
+}
+
+.clientes-container .modal-triagem-body-lista {
+  padding: 16px 20px;
+  overflow-y: auto;
+  max-height: 62vh;
+  background: var(--fundo-geral, #f8fafc);
+}
+
+[data-theme^='dark'] .clientes-container .modal-triagem-body-lista {
+  background: #09090b;
+}
+
+.clientes-container .triagem-items-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.clientes-container .triagem-item-card {
+  background: var(--fundo-card, #ffffff);
+  border: 1.5px solid var(--borda, #e2e8f0);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s ease;
+}
+
+[data-theme^='dark'] .clientes-container .triagem-item-card {
+  background: #18181b;
+  border-color: #27272a;
+}
+
+.clientes-container .triagem-item-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme^='dark'] .clientes-container .triagem-item-card:hover {
+  border-color: #3f3f46;
+}
+
+.clientes-container .triagem-item-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.clientes-container .triagem-item-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  font-weight: 850;
+  flex-shrink: 0;
+  box-shadow: 0 3px 8px rgba(245, 158, 11, 0.25);
+  overflow: hidden;
+}
+
+.clientes-container .triagem-item-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.clientes-container .triagem-item-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.clientes-container .triagem-item-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.clientes-container .triagem-item-name {
+  margin: 0;
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--texto-principal, #0f172a);
+}
+
+.clientes-container .triagem-item-info-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  background: var(--fundo-hover, #f8fafc);
+  border: 1px solid var(--borda, #e2e8f0);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+[data-theme^='dark'] .clientes-container .triagem-item-info-grid {
+  background: #111827;
+  border-color: #1f2937;
+}
+
+.clientes-container .triagem-info-block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.clientes-container .triagem-info-block.span-full {
+  grid-column: 1 / -1;
+}
+
+.clientes-container .triagem-info-lbl {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--texto-secundario, #64748b);
+  font-weight: 750;
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.clientes-container .triagem-info-val {
+  font-size: 0.82rem;
+  color: var(--texto-principal, #0f172a);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clientes-container .triagem-item-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 6px;
+  border-top: 1px solid var(--borda, #f1f5f9);
+}
+
+[data-theme^='dark'] .clientes-container .triagem-item-actions {
+  border-top-color: #27272a;
+}
+
+.clientes-container .triagem-item-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clientes-container .btn-triagem-reject {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #dc2626;
+  padding: 7px 14px;
+  border-radius: 9px;
+  font-size: 0.8rem;
+  font-weight: 750;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.clientes-container .btn-triagem-reject:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.clientes-container .btn-triagem-full {
+  background: var(--fundo-card, #ffffff);
+  border: 1px solid var(--borda, #cbd5e1);
+  color: var(--texto-principal, #334155);
+  padding: 7px 14px;
+  border-radius: 9px;
+  font-size: 0.8rem;
+  font-weight: 750;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.clientes-container .btn-triagem-full:hover {
+  background: var(--fundo-hover, #f1f5f9);
+}
+
+.clientes-container .btn-triagem-approve {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 9px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  transition: all 0.2s ease;
+}
+
+.clientes-container .btn-triagem-approve:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.clientes-container .modal-triagem-footer {
+  padding: 14px 20px;
+  background: var(--fundo-hover, #f8fafc);
+  border-top: 1px solid var(--borda, #e2e8f0);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+[data-theme^='dark'] .clientes-container .modal-triagem-footer {
+  background: #18181b;
+  border-top-color: #27272a;
+}
+
+.clientes-container .triagem-footer-hint {
+  font-size: 0.76rem;
+  color: var(--texto-secundario, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.clientes-container .btn-triagem-close-footer {
+  background: var(--fundo-card, #ffffff);
+  border: 1px solid var(--borda, #cbd5e1);
+  color: var(--texto-principal, #475569);
+  padding: 7px 18px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clientes-container .btn-triagem-close-footer:hover {
+  background: var(--fundo-hover, #f1f5f9);
+}
+
+.clientes-container .triagem-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  gap: 8px;
+}
+
+.clientes-container .triagem-empty-icon {
+  font-size: 2.8rem;
+  margin-bottom: 4px;
+}
+
+.clientes-container .triagem-empty-state h4 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--texto-principal, #0f172a);
+}
+
+.clientes-container .triagem-empty-state p {
+  margin: 0 0 12px 0;
+  font-size: 0.85rem;
+  color: var(--texto-secundario, #64748b);
+}
+
+.clientes-container .btn-triagem-empty-close {
+  background: #d97706;
+  color: #ffffff;
+  border: none;
+  padding: 9px 18px;
+  border-radius: 9px;
+  font-weight: 750;
+  font-size: 0.84rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clientes-container .btn-triagem-empty-close:hover {
+  background: #b45309;
+}
+
+@media (max-width: 768px) {
+  .clientes-container .triagem-item-info-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .clientes-container .triagem-item-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .clientes-container .triagem-item-actions-right {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .clientes-container .btn-triagem-reject,
+  .clientes-container .btn-triagem-full,
+  .clientes-container .btn-triagem-approve {
+    width: 100%;
+    justify-content: center;
+    padding: 10px;
+  }
+  .clientes-container .modal-triagem-footer {
+    flex-direction: column;
+    text-align: center;
+  }
+  .clientes-container .btn-triagem-close-footer {
+    width: 100%;
+  }
+}
+
+/* ==========================================================================
+   📱 MODAL DE AUTO-CADASTRO — RESPONSIVO LUXURY (MOBILE & DESKTOP)
+   Escopo Total: .clientes-container
+   ========================================================================== */
+.clientes-container .modal-autocadastro-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.clientes-container .modal-autocadastro-card {
+  max-width: 480px;
+  width: 100%;
+  background: var(--fundo-card, #ffffff);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.38);
+  border: 1px solid var(--borda, rgba(226, 232, 240, 0.9));
+  animation: modalPopCelebre 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  display: flex;
+  flex-direction: column;
+}
+
+[data-theme^='dark'] .clientes-container .modal-autocadastro-card {
+  background: #18181b;
+  border-color: #27272a;
+}
+
+.clientes-container .modal-autocadastro-header {
+  background: linear-gradient(135deg, #090d16 0%, #0f172a 60%, #1e293b 100%);
+  color: #ffffff;
+  padding: 22px 24px;
+  border-bottom: 2px solid #c5a059;
+  position: relative;
+  text-align: left;
+}
+
+.clientes-container .btn-close-autocadastro {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  color: #ffffff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.clientes-container .btn-close-autocadastro:hover {
+  background: rgba(255, 255, 255, 0.24);
+  transform: scale(1.05);
+}
+
+.clientes-container .modal-autocadastro-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(197, 160, 89, 0.18);
+  border: 1px solid rgba(197, 160, 89, 0.4);
+  border-radius: 20px;
+  padding: 3px 10px;
+  margin-bottom: 8px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #fef08a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.clientes-container .modal-autocadastro-title {
+  margin: 0;
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 1.25rem;
+  font-weight: 850;
+  color: #ffffff;
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+}
+
+.clientes-container .modal-autocadastro-subtitle {
+  margin: 6px 0 0 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.clientes-container .modal-autocadastro-body {
+  padding: 20px 22px;
+  background: var(--fundo-card, #ffffff);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+[data-theme^='dark'] .clientes-container .modal-autocadastro-body {
+  background: #18181b;
+}
+
+.clientes-container .autocadastro-success-toast {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 11px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #065f46;
+  font-size: 0.8rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+[data-theme^='dark'] .clientes-container .autocadastro-success-toast {
+  background: #064e3b;
+  border-color: #059669;
+  color: #a7f3d0;
+}
+
+.clientes-container .autocadastro-toast-icon {
+  font-size: 0.95rem;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #10b981;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 850;
+  flex-shrink: 0;
+}
+
+.clientes-container .autocadastro-link-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.clientes-container .autocadastro-link-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--texto-secundario, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.clientes-container .autocadastro-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clientes-container .autocadastro-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--fundo-input, #f8fafc);
+  border: 1.5px solid var(--borda, #cbd5e1);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.82rem;
+  font-family: 'Consolas', 'Courier New', monospace;
+  color: var(--texto-principal, #0f172a);
+  font-weight: 600;
+  outline: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-theme^='dark'] .clientes-container .autocadastro-input {
+  background: #111827;
+  border-color: #374151;
+  color: #f3f4f6;
+}
+
+.clientes-container .autocadastro-input:focus {
+  border-color: #d97706;
+  background: var(--fundo-card, #ffffff);
+}
+
+.clientes-container .btn-autocadastro-copy {
+  background: var(--fundo-hover, #f1f5f9);
+  border: 1.5px solid var(--borda, #cbd5e1);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 800;
+  font-size: 0.8rem;
+  color: var(--texto-principal, #334155);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+[data-theme^='dark'] .clientes-container .btn-autocadastro-copy {
+  background: #27272a;
+  border-color: #3f3f46;
+  color: #f4f4f5;
+}
+
+.clientes-container .btn-autocadastro-copy:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+}
+
+[data-theme^='dark'] .clientes-container .btn-autocadastro-copy:hover {
+  background: #3f3f46;
+}
+
+.clientes-container .autocadastro-actions-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.clientes-container .btn-autocadastro-whatsapp {
+  background: linear-gradient(135deg, #25d366 0%, #1ea952 100%);
+  color: #ffffff !important;
+  text-decoration: none;
+  border-radius: 12px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-weight: 850;
+  font-size: 0.88rem;
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.clientes-container .btn-autocadastro-whatsapp:hover {
+  background: linear-gradient(135deg, #1ea952 0%, #178a42 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(37, 211, 102, 0.45);
+}
+
+.clientes-container .btn-autocadastro-whatsapp i {
+  font-size: 1.25rem;
+}
+
+.clientes-container .btn-autocadastro-close-full {
+  background: transparent;
+  border: 1px solid var(--borda, #cbd5e1);
+  color: var(--texto-secundario, #64748b);
+  border-radius: 11px;
+  height: 40px;
+  font-weight: 750;
+  font-size: 0.82rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+[data-theme^='dark'] .clientes-container .btn-autocadastro-close-full {
+  border-color: #3f3f46;
+  color: #a1a1aa;
+}
+
+.clientes-container .btn-autocadastro-close-full:hover {
+  background: var(--fundo-hover, #f1f5f9);
+  color: var(--texto-principal, #0f172a);
+}
+
+/* ==========================================================================
+   📱 CALIBRAÇÃO EXCLUSIVA PARA CELULAR (<= 520px)
+   ========================================================================== */
+@media (max-width: 520px) {
+  .clientes-container .modal-autocadastro-overlay {
+    padding: 12px;
+  }
+
+  .clientes-container .modal-autocadastro-card {
+    border-radius: 18px;
+    max-width: 100%;
+  }
+
+  .clientes-container .modal-autocadastro-header {
+    padding: 16px 16px 14px 16px;
+  }
+
+  .clientes-container .modal-autocadastro-title {
+    font-size: 1.1rem;
+  }
+
+  .clientes-container .modal-autocadastro-subtitle {
+    font-size: 0.76rem;
+    margin-top: 4px;
+  }
+
+  .clientes-container .btn-close-autocadastro {
+    top: 14px;
+    right: 14px;
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  .clientes-container .modal-autocadastro-body {
+    padding: 14px 14px 16px 14px;
+    gap: 13px;
+  }
+
+  .clientes-container .autocadastro-success-toast {
+    font-size: 0.74rem;
+    padding: 8px 10px;
+    gap: 7px;
+  }
+
+  .clientes-container .autocadastro-toast-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 0.8rem;
+  }
+
+  .clientes-container .autocadastro-input {
+    font-size: 0.76rem;
+    padding: 8px 10px;
+  }
+
+  .clientes-container .btn-autocadastro-copy {
+    padding: 8px 12px;
+    font-size: 0.76rem;
+  }
+
+  .clientes-container .btn-autocadastro-whatsapp {
+    height: 42px;
+    font-size: 0.84rem;
+    border-radius: 10px;
+  }
+
+  .clientes-container .btn-autocadastro-close-full {
+    height: 38px;
+    font-size: 0.78rem;
+    border-radius: 10px;
   }
 }

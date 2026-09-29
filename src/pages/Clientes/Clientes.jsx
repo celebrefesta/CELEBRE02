@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import './Clientes.css';
 import { db, storage } from '../../firebaseConfig';
@@ -61,6 +61,32 @@ const obterNomeEmpresaTenant = (config) => {
   return config?.nomeEmpresa || config?.nomeFantasia || config?.razaoSocial || localStorage.getItem('nomeEmpresa') || 'Nossa Empresa';
 };
 
+const isClientePendente = (c) => {
+  if (!c) return false;
+  return (
+    c.statusAprovacao === 'pendente' ||
+    c.statusCadastro === 'pendente' ||
+    c.situacaoFinanceira === 'pendente'
+  );
+};
+
+const formatarDataCriacao = (dataVal) => {
+  if (!dataVal) return 'Hoje';
+  try {
+    if (typeof dataVal.toDate === 'function') {
+      return dataVal.toDate().toLocaleDateString('pt-BR');
+    }
+    if (dataVal.seconds) {
+      return new Date(dataVal.seconds * 1000).toLocaleDateString('pt-BR');
+    }
+    const d = new Date(dataVal);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString('pt-BR');
+    }
+  } catch (_) {}
+  return 'Hoje';
+};
+
 const Clientes = () => {
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
@@ -84,6 +110,9 @@ const Clientes = () => {
   const [clienteVisualizacao, setClienteVisualizacao] = useState(null);
   const [abaAtiva, setAbaAtiva] = useState('dados');
   const [modalLinkAutoCadastro, setModalLinkAutoCadastro] = useState(false);
+  const [linkCopiadoFeedback, setLinkCopiadoFeedback] = useState(false);
+  const [modalTriagem, setModalTriagem] = useState(false);
+  const [indexTriagem, setIndexTriagem] = useState(0);
 
   // 📱 CONTROLE DE EXIBIÇÃO OPCIONAL DE CARDS KPI NO CELULAR (RECOLHER / EXPANDIR)
   const [mostrarKpiMobile, setMostrarKpiMobile] = useState(() => {
@@ -375,7 +404,9 @@ const Clientes = () => {
     try {
       await updateDoc(doc(db, "clientes", clienteId), {
         statusAprovacao: 'aprovado',
-        situacaoFinanceira: 'adimplente'
+        statusCadastro: 'aprovado',
+        situacaoFinanceira: 'adimplente',
+        atualizadoEm: new Date().toISOString()
       });
 
       try {
@@ -395,11 +426,52 @@ const Clientes = () => {
       alert(`✅ Cadastro de "${clienteNome}" aprovado com sucesso!`);
       carregarClientes();
       if (clienteVisualizacao?.id === clienteId) {
-        setClienteVisualizacao(prev => prev ? ({ ...prev, statusAprovacao: 'aprovado', situacaoFinanceira: 'adimplente' }) : null);
+        setClienteVisualizacao(prev => prev ? ({ ...prev, statusAprovacao: 'aprovado', statusCadastro: 'aprovado', situacaoFinanceira: 'adimplente' }) : null);
       }
     } catch (error) {
       console.error("Erro ao aprovar cliente:", error);
       alert("Erro ao aprovar cliente.");
+    }
+  };
+
+  const aprovarTodosClientes = async () => {
+    if (!clientesPendentes.length) return;
+    const confirmou = window.confirm(`Deseja aprovar todos os ${clientesPendentes.length} pré-cadastros de uma só vez?`);
+    if (!confirmou) return;
+
+    try {
+      const batch = writeBatch(db);
+      clientesPendentes.forEach(cli => {
+        const refDoc = doc(db, "clientes", cli.id);
+        batch.update(refDoc, {
+          statusAprovacao: 'aprovado',
+          statusCadastro: 'aprovado',
+          situacaoFinanceira: 'adimplente',
+          atualizadoEm: new Date().toISOString()
+        });
+      });
+      await batch.commit();
+
+      try {
+        const nomeEquipe = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipe";
+        await addDoc(collection(db, "logs_atividades"), {
+          empresaId: tenantId,
+          userId: tenantId,
+          funcionarioId: usuarioLogado?.uid,
+          nomeFuncionario: nomeEquipe,
+          usuarioEmail: usuarioLogado?.email || "Desconhecido",
+          acao: "APROVAÇÃO EM LOTE DE CLIENTES",
+          detalhes: `Aprovou em lote todos os ${clientesPendentes.length} pré-cadastros pendentes.`,
+          dataHora: new Date().toISOString()
+        });
+      } catch (_) {}
+
+      alert(`✅ Todos os ${clientesPendentes.length} pré-cadastros foram aprovados com sucesso!`);
+      setModalTriagem(false);
+      carregarClientes();
+    } catch (err) {
+      console.error("Erro ao aprovar todos os clientes:", err);
+      alert("Erro ao aprovar clientes: " + err.message);
     }
   };
 
@@ -819,7 +891,29 @@ const Clientes = () => {
     return map;
   }, [clientes, allLocacoes]);
 
+  const clientesPendentes = useMemo(() => {
+    return clientes.filter(c => isClientePendente(c));
+  }, [clientes]);
+
+  const clientesAprovados = useMemo(() => {
+    return clientes.filter(c => !isClientePendente(c));
+  }, [clientes]);
+
+  const numPendentesAprovacao = clientesPendentes.length;
+  const numAniversariantes = clientesAprovados.filter(c => isAniversarianteDoMes(c)).length;
+
   let clientesFiltrados = clientes.filter(c => {
+    const pendente = isClientePendente(c);
+
+    // Se o filtro for 'pendentes', mostra apenas pendentes
+    if (filtroStatus === 'pendentes') {
+      if (!pendente) return false;
+    } else {
+      // Se qualquer outro filtro ('todos', 'adimplentes', 'inadimplentes', 'vip', 'aniversariantes'),
+      // clientes pendentes NÃO entram na tabela principal regular!
+      if (pendente) return false;
+    }
+
     const termo = busca.toLowerCase();
     const matchBusca = (c.nome?.toLowerCase().includes(termo)) || 
                        (c.nomeFantasia?.toLowerCase().includes(termo)) || 
@@ -830,7 +924,7 @@ const Clientes = () => {
     let passStatus = true;
     if (filtroStatus === 'adimplentes') passStatus = c.situacaoFinanceira === 'adimplente';
     if (filtroStatus === 'inadimplentes') passStatus = c.situacaoFinanceira === 'inadimplente';
-    if (filtroStatus === 'pendentes') passStatus = c.statusAprovacao === 'pendente' || c.situacaoFinanceira === 'pendente';
+    if (filtroStatus === 'pendentes') passStatus = true;
     if (filtroStatus === 'vip') passStatus = (c.tags || '').toUpperCase().includes('VIP');
     if (filtroStatus === 'aniversariantes') passStatus = isAniversarianteDoMes(c);
 
@@ -873,10 +967,10 @@ const Clientes = () => {
       perfilTotalGasto = res.totalGasto;
   }
 
-  const numAniversariantes = clientes.filter(c => isAniversarianteDoMes(c)).length;
-  const numPendentesAprovacao = clientes.filter(c => c.statusAprovacao === 'pendente' || c.situacaoFinanceira === 'pendente').length;
-
   const linkAutoCadastroOficial = gerarLinkPublico(`/autocadastro/${tenantId}`, configEmpresa?.dominioOficial);
+  const linkAutoCadastroParaTestar = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+    ? `/autocadastro/${tenantId}`
+    : linkAutoCadastroOficial;
 
   const copiarLinkAutoCadastro = () => {
     try {
@@ -954,18 +1048,21 @@ const Clientes = () => {
       {numPendentesAprovacao > 0 && (
         <div 
           className="crm-birthday-alert-subtle alert-subtle-pending fade-in" 
-          onClick={() => setFiltroStatus(filtroStatus === 'pendentes' ? 'todos' : 'pendentes')}
-          title="Clique para revisar os cadastros pendentes"
+          onClick={() => setModalTriagem(true)}
+          title="Clique para abrir a central de pré-cadastros pendentes"
+          style={{ cursor: 'pointer' }}
         >
           <div className="alert-subtle-left">
-            <span className="subtle-cake-emoji">⏳</span>
+            <span className="badge-alerta-atencao">
+              <i className="fas fa-exclamation-triangle"></i> ATENÇÃO
+            </span>
             <span className="subtle-text">
-              <strong>{numPendentesAprovacao} {numPendentesAprovacao === 1 ? 'cadastro aguardando sua aprovação' : 'cadastros aguardando sua aprovação'}</strong>
+              <strong>{numPendentesAprovacao} {numPendentesAprovacao === 1 ? 'pré-cadastro online aguarda aprovação' : 'pré-cadastros online aguardam aprovação'}</strong>
             </span>
           </div>
           <div className="alert-subtle-right">
             <span className="btn-subtle-pill btn-subtle-pending-pill">
-              {filtroStatus === 'pendentes' ? 'Filtrando Pendentes ✓' : 'Revisar →'}
+              Revisar ({numPendentesAprovacao}) →
             </span>
           </div>
         </div>
@@ -1007,7 +1104,7 @@ const Clientes = () => {
               <span className="toggle-kpi-title">Resumo de Indicadores</span>
             ) : (
               <span className="toggle-kpi-summary">
-                <strong>{clientes.length}</strong> clientes • <strong>{clientes.filter(c => c.situacaoFinanceira === 'inadimplente').length}</strong> pendências
+                <strong>{clientesAprovados.length}</strong> clientes • <strong>{clientesAprovados.filter(c => c.situacaoFinanceira === 'inadimplente').length}</strong> pendências
               </span>
             )}
           </div>
@@ -1023,46 +1120,46 @@ const Clientes = () => {
 
       {/* KPI CARDS (MÉTRICAS DA CARTEIRA) */}
       <div className={`clientes-stats-grid ${!mostrarKpiMobile ? 'kpi-hidden-mobile' : ''}`}>
-        <div className="stat-card-pro border-purple">
+        <div className="stat-card-pro border-purple" onClick={() => setFiltroStatus('todos')} style={{ cursor: 'pointer' }}>
           <div className="stat-icon-wrapper icon-purple">
             <i className="fas fa-address-book"></i>
           </div>
           <div className="stat-content">
             <span className="stat-title">Total na Carteira</span>
-            <strong className="stat-value">{clientes.length}</strong>
-            <span className="stat-sub">Cadastrados</span>
+            <strong className="stat-value">{clientesAprovados.length}</strong>
+            <span className="stat-sub">Aprovados e Ativos</span>
           </div>
         </div>
 
-        <div className="stat-card-pro border-amber" onClick={() => setFiltroStatus('pendentes')} style={{ cursor: 'pointer' }}>
+        <div className="stat-card-pro border-amber" onClick={() => setModalTriagem(true)} style={{ cursor: 'pointer' }}>
           <div className="stat-icon-wrapper icon-amber">
             <i className="fas fa-user-clock"></i>
           </div>
           <div className="stat-content">
             <span className="stat-title">Aguardando Aprovação</span>
             <strong className="stat-value">{numPendentesAprovacao}</strong>
-            <span className="stat-sub">Auto-cadastro</span>
+            <span className="stat-sub">Auto-cadastro online</span>
           </div>
         </div>
  
-        <div className="stat-card-pro border-green">
+        <div className="stat-card-pro border-green" onClick={() => setFiltroStatus('adimplentes')} style={{ cursor: 'pointer' }}>
           <div className="stat-icon-wrapper icon-green">
             <i className="fas fa-user-check"></i>
           </div>
           <div className="stat-content">
             <span className="stat-title">Adimplentes</span>
-            <strong className="stat-value">{clientes.filter(c => c.situacaoFinanceira === 'adimplente').length}</strong>
+            <strong className="stat-value">{clientesAprovados.filter(c => c.situacaoFinanceira === 'adimplente').length}</strong>
             <span className="stat-sub">Sem pendências</span>
           </div>
         </div>
         
-        <div className="stat-card-pro border-red">
+        <div className="stat-card-pro border-red" onClick={() => setFiltroStatus('inadimplentes')} style={{ cursor: 'pointer' }}>
           <div className="stat-icon-wrapper icon-red">
             <i className="fas fa-exclamation-triangle"></i>
           </div>
           <div className="stat-content">
             <span className="stat-title">Com Pendências</span>
-            <strong className="stat-value">{clientes.filter(c => c.situacaoFinanceira === 'inadimplente').length}</strong>
+            <strong className="stat-value">{clientesAprovados.filter(c => c.situacaoFinanceira === 'inadimplente').length}</strong>
             <span className="stat-sub">Exigem atenção</span>
           </div>
         </div>
@@ -1095,12 +1192,12 @@ const Clientes = () => {
               onChange={(e) => setFiltroStatus(e.target.value)} 
               className="select-pill-filter mobile-status-select"
             >
-              <option value="todos">👥 Todos ({clientes.length})</option>
+              <option value="todos">👥 Todos Aprovados ({clientesAprovados.length})</option>
               {numPendentesAprovacao > 0 && <option value="pendentes">⏳ Pendentes ({numPendentesAprovacao})</option>}
-              <option value="adimplentes">✅ Adimplentes ({clientes.filter(c => c.situacaoFinanceira === 'adimplente').length})</option>
-              <option value="inadimplentes">⚠️ Pendências ({clientes.filter(c => c.situacaoFinanceira === 'inadimplente').length})</option>
+              <option value="adimplentes">✅ Adimplentes ({clientesAprovados.filter(c => c.situacaoFinanceira === 'adimplente').length})</option>
+              <option value="inadimplentes">⚠️ Pendências ({clientesAprovados.filter(c => c.situacaoFinanceira === 'inadimplente').length})</option>
               <option value="aniversariantes">🎂 Níver ({numAniversariantes})</option>
-              <option value="vip">👑 VIPs ({clientes.filter(c => (c.tags || '').toUpperCase().includes('VIP')).length})</option>
+              <option value="vip">👑 VIPs ({clientesAprovados.filter(c => (c.tags || '').toUpperCase().includes('VIP')).length})</option>
             </select>
 
             <select 
@@ -1146,15 +1243,16 @@ const Clientes = () => {
             className={`pill-btn ${filtroStatus === 'todos' ? 'active' : ''}`}
             onClick={() => setFiltroStatus('todos')}
           >
-            Todos <span className="pill-badge">{clientes.length}</span>
+            Todos <span className="pill-badge">{clientesAprovados.length}</span>
           </button>
           {numPendentesAprovacao > 0 && (
             <button 
               type="button"
               className={`pill-btn ${filtroStatus === 'pendentes' ? 'active' : ''}`}
               onClick={() => setFiltroStatus('pendentes')}
+              style={{ background: filtroStatus === 'pendentes' ? '#f59e0b' : '#fffbeb', borderColor: '#fcd34d', color: filtroStatus === 'pendentes' ? '#ffffff' : '#b45309', fontWeight: '800' }}
             >
-              ⏳ Aguardando Aprovação <span className="pill-badge">{numPendentesAprovacao}</span>
+              ⏳ Aguardando Aprovação <span className="pill-badge" style={{ background: filtroStatus === 'pendentes' ? '#ffffff' : '#f59e0b', color: filtroStatus === 'pendentes' ? '#f59e0b' : '#ffffff' }}>{numPendentesAprovacao}</span>
             </button>
           )}
           <button 
@@ -1162,14 +1260,14 @@ const Clientes = () => {
             className={`pill-btn ${filtroStatus === 'adimplentes' ? 'active' : ''}`}
             onClick={() => setFiltroStatus('adimplentes')}
           >
-            Adimplentes <span className="pill-badge">{clientes.filter(c => c.situacaoFinanceira === 'adimplente').length}</span>
+            Adimplentes <span className="pill-badge">{clientesAprovados.filter(c => c.situacaoFinanceira === 'adimplente').length}</span>
           </button>
           <button 
             type="button"
             className={`pill-btn ${filtroStatus === 'inadimplentes' ? 'active' : ''}`}
             onClick={() => setFiltroStatus('inadimplentes')}
           >
-            Com Pendências <span className="pill-badge badge-warning">{clientes.filter(c => c.situacaoFinanceira === 'inadimplente').length}</span>
+            Com Pendências <span className="pill-badge badge-warning">{clientesAprovados.filter(c => c.situacaoFinanceira === 'inadimplente').length}</span>
           </button>
           <button 
             type="button"
@@ -1183,7 +1281,7 @@ const Clientes = () => {
             className={`pill-btn ${filtroStatus === 'vip' ? 'active' : ''}`}
             onClick={() => setFiltroStatus('vip')}
           >
-            👑 Clientes VIP <span className="pill-badge badge-vip">{clientes.filter(c => (c.tags || '').toUpperCase().includes('VIP')).length}</span>
+            👑 Clientes VIP <span className="pill-badge badge-vip">{clientesAprovados.filter(c => (c.tags || '').toUpperCase().includes('VIP')).length}</span>
           </button>
         </div>
 
@@ -1653,9 +1751,19 @@ const Clientes = () => {
                     <span className="perfil-tag-destaque" style={{ backgroundColor: perfilTagColorida.bg, color: perfilTagColorida.color, border: `1px solid ${perfilTagColorida.border}` }}>
                       <i className="fas fa-crown"></i> {tagTexto}
                     </span>
-                    <span className={`badge-status-pro ${clienteVisualizacao.situacaoFinanceira === 'inadimplente' ? 'devedor' : 'ok'}`}>
-                      {clienteVisualizacao.situacaoFinanceira === 'inadimplente' ? '⚠️ PENDÊNCIAS' : '✅ ADIMPLENTE'}
-                    </span>
+                    {isClientePendente(clienteVisualizacao) ? (
+                      <span className="badge-status-pro pendente" style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #fdba74', fontWeight: '850' }}>
+                        ⏳ AGUARDANDO APROVAÇÃO
+                      </span>
+                    ) : clienteVisualizacao.situacaoFinanceira === 'inadimplente' ? (
+                      <span className="badge-status-pro devedor">
+                        ⚠️ PENDÊNCIAS
+                      </span>
+                    ) : (
+                      <span className="badge-status-pro ok">
+                        ✅ ADIMPLENTE
+                      </span>
+                    )}
                     <span className="badge-tipo-pessoa">
                       {clienteVisualizacao.tipoPessoa === 'juridica' ? '🏢 PJ' : '👤 PF'}
                     </span>
@@ -1672,11 +1780,22 @@ const Clientes = () => {
                     </div>
                     <div className="stat-line">
                       <span className="stat-label"><i className="fas fa-calendar-alt text-purple"></i> Cliente Desde:</span> 
-                      <span className="stat-value">{clienteVisualizacao.criadoEm ? new Date(clienteVisualizacao.criadoEm).toLocaleDateString('pt-BR') : '-'}</span>
+                      <span className="stat-value">{formatarDataCriacao(clienteVisualizacao.criadoEm)}</span>
                     </div>
                   </div>
 
                   <div className="perfil-actions-stack">
+                    {isClientePendente(clienteVisualizacao) && (
+                      <button 
+                        type="button"
+                        onClick={(e) => aprovarCliente(e, clienteVisualizacao.id, perfilNomeBonito)} 
+                        className="btn-perfil-aprovar"
+                        style={{ background: '#10b981', color: '#ffffff', border: 'none', padding: '10px 16px', borderRadius: '12px', fontWeight: '850', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)', marginBottom: '8px' }}
+                      >
+                        <i className="fas fa-check-circle"></i> Aprovar Cadastro
+                      </button>
+                    )}
+
                     <button 
                       type="button"
                       onClick={() => verificarETentarNovaLocacao(clienteVisualizacao)} 
@@ -2530,223 +2649,314 @@ const Clientes = () => {
         </div>
       )}
 
-      {/* 🚀 MODAL EXCLUSIVO LINK DE AUTO-CADASTRO REAL */}
+      {/* 🚀 MODAL EXCLUSIVO LINK DE AUTO-CADASTRO REAL (RESPONSIVO LUXURY) */}
       {modalLinkAutoCadastro && (
         <div 
-          className="modal-overlay-autocadastro fade-in"
+          className="modal-autocadastro-overlay fade-in"
           onClick={(e) => {
             if (e.target === e.currentTarget) setModalLinkAutoCadastro(false);
           }}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.75)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 999999,
-            padding: '20px'
-          }}
         >
-          <div 
-            className="modal-content-autocadastro" 
-            style={{ 
-              maxWidth: '520px', 
-              width: '100%', 
-              backgroundColor: 'var(--fundo-card, #ffffff)', 
-              borderRadius: '24px', 
-              overflow: 'hidden', 
-              padding: 0,
-              boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.45)',
-              border: '1px solid var(--borda, rgba(226, 232, 240, 0.8))'
-            }}
-          >
+          <div className="modal-autocadastro-card" onClick={e => e.stopPropagation()}>
             {/* Cabeçalho */}
-            <div style={{
-              background: 'linear-gradient(135deg, #090d16 0%, #0f172a 60%, #1e293b 100%)',
-              color: '#ffffff',
-              padding: '24px 26px',
-              borderBottom: '3px solid #c5a059',
-              position: 'relative'
-            }}>
+            <div className="modal-autocadastro-header">
               <button 
                 type="button" 
+                className="btn-close-autocadastro"
                 onClick={() => setModalLinkAutoCadastro(false)}
-                style={{
-                  position: 'absolute',
-                  top: '18px',
-                  right: '18px',
-                  background: 'rgba(255,255,255,0.12)',
-                  border: 'none',
-                  color: '#ffffff',
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '14px',
-                  transition: 'background 0.2s ease'
-                }}
+                title="Fechar modal"
               >
                 ✕
               </button>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(197,160,89,0.18)', border: '1px solid rgba(197,160,89,0.4)', borderRadius: '20px', padding: '4px 12px', marginBottom: '10px' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#fef08a', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                  🔗 Link Oficial do Cliente
-                </span>
+              <div className="modal-autocadastro-badge">
+                <span>🔗 Link Oficial do Cliente</span>
               </div>
-              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '850', color: '#ffffff', letterSpacing: '-0.3px' }}>
+              <h3 className="modal-autocadastro-title">
                 Auto-Cadastro de Clientes
-              </h2>
-              <p style={{ margin: '6px 0 0 0', fontSize: '0.82rem', color: '#94a3b8' }}>
-                Envie este link para seu cliente preencher os dados de cadastro e endereço diretamente pelo celular.
+              </h3>
+              <p className="modal-autocadastro-subtitle">
+                Envie este link para seu cliente preencher dados e endereço diretamente pelo celular.
               </p>
             </div>
 
             {/* Corpo */}
-            <div style={{ padding: '24px', backgroundColor: 'var(--fundo-card, #ffffff)' }}>
-              <div style={{
-                background: '#ecfdf5',
-                border: '1px solid #a7f3d0',
-                borderRadius: '12px',
-                padding: '12px 14px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                marginBottom: '18px'
-              }}>
-                <span style={{ fontSize: '1.2rem' }}>✅</span>
-                <span style={{ fontSize: '0.82rem', fontWeight: '750', color: '#065f46' }}>
-                  Link oficial copiado para sua área de transferência com sucesso!
-                </span>
+            <div className="modal-autocadastro-body">
+              <div className="autocadastro-success-toast">
+                <span className="autocadastro-toast-icon">✓</span>
+                <span>Link oficial pronto e copiado para sua área de transferência!</span>
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '800', color: 'var(--texto-secundario, #64748b)', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>
+              <div className="autocadastro-link-group">
+                <label className="autocadastro-link-label">
                   Link Real de Produção:
                 </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div className="autocadastro-input-row">
                   <input 
                     type="text" 
                     readOnly 
                     value={linkAutoCadastroOficial} 
-                    style={{
-                      flex: 1,
-                      background: 'var(--fundo-input, #f8fafc)',
-                      border: '1.5px solid var(--borda, #cbd5e1)',
-                      borderRadius: '10px',
-                      padding: '10px 12px',
-                      fontSize: '0.84rem',
-                      fontFamily: 'monospace',
-                      color: 'var(--texto-principal, #0f172a)',
-                      fontWeight: '600'
-                    }}
+                    className="autocadastro-input"
                     onClick={(e) => e.target.select()}
                   />
                   <button
                     type="button"
+                    className="btn-autocadastro-copy"
                     onClick={() => {
-                      navigator.clipboard.writeText(linkAutoCadastroOficial);
-                      alert('📋 Link copiado novamente!');
+                      try {
+                        navigator.clipboard.writeText(linkAutoCadastroOficial);
+                        setLinkCopiadoFeedback(true);
+                        setTimeout(() => setLinkCopiadoFeedback(false), 2500);
+                      } catch (_) {}
                     }}
-                    style={{
-                      background: 'var(--fundo-hover, #f1f5f9)',
-                      border: '1.5px solid var(--borda, #cbd5e1)',
-                      borderRadius: '10px',
-                      padding: '0 14px',
-                      fontWeight: '800',
-                      fontSize: '0.8rem',
-                      color: 'var(--texto-principal, #334155)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
+                    title="Copiar link oficial"
                   >
-                    <i className="fas fa-copy"></i> Copiar
+                    {linkCopiadoFeedback ? (
+                      <>
+                        <i className="fas fa-check" style={{ color: '#10b981' }}></i> Copiado!
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-copy"></i> Copiar
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
 
               {/* Botões de Ação */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
+              <div className="autocadastro-actions-stack">
                 <a
                   href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
                     `Olá! ✨ Para agilizarmos a preparação da sua locação e contrato na *${configEmpresa?.nomeEmpresa || configEmpresa?.nomeFantasia || 'nossa loja'}*, por favor acesse o link seguro abaixo para preencher os seus dados de cadastro:\n\n👉 ${linkAutoCadastroOficial}\n\nLeva menos de 1 minuto! Qualquer dúvida, estamos por aqui! 🎈`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{
-                    background: '#25d366',
-                    color: '#ffffff',
-                    textDecoration: 'none',
-                    borderRadius: '12px',
-                    height: '46px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px',
-                    fontWeight: '850',
-                    fontSize: '0.88rem',
-                    boxShadow: '0 4px 14px rgba(37, 211, 102, 0.35)',
-                    transition: 'all 0.2s ease'
-                  }}
+                  className="btn-autocadastro-whatsapp"
                 >
-                  <i className="fab fa-whatsapp" style={{ fontSize: '1.2rem' }}></i>
-                  Compartilhar no WhatsApp
+                  <i className="fab fa-whatsapp"></i>
+                  <span>Compartilhar no WhatsApp</span>
                 </a>
 
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <a
-                    href={linkAutoCadastroOficial}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      flex: 1,
-                      background: 'var(--fundo-hover, #f1f5f9)',
-                      border: '1px solid var(--borda, #cbd5e1)',
-                      color: 'var(--texto-principal, #475569)',
-                      textDecoration: 'none',
-                      borderRadius: '10px',
-                      height: '40px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      fontWeight: '750',
-                      fontSize: '0.8rem'
-                    }}
-                  >
-                    <i className="fas fa-external-link-alt"></i> Testar Link
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => setModalLinkAutoCadastro(false)}
-                    style={{
-                      flex: 1,
-                      background: 'transparent',
-                      border: '1px solid var(--borda, #e2e8f0)',
-                      color: 'var(--texto-secundario, #64748b)',
-                      borderRadius: '10px',
-                      height: '40px',
-                      fontWeight: '750',
-                      fontSize: '0.8rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Fechar
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setModalLinkAutoCadastro(false)}
+                  className="btn-autocadastro-close-full"
+                >
+                  Fechar
+                </button>
               </div>
 
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ⚡ MODAL CENTRAL DE TRIAGEM DE PRÉ-CADASTROS (LISTA EXECUTIVA) */}
+      {modalTriagem && (
+        <div className="modal-overlay-triagem fade-in" onClick={() => setModalTriagem(false)}>
+          <div className="modal-card-triagem modal-triagem-lista" onClick={e => e.stopPropagation()}>
+            
+            {/* TOPO DO MODAL */}
+            <div className="modal-triagem-header">
+              <div className="triagem-header-left">
+                <div className="triagem-header-icon">
+                  <i className="fas fa-user-clock"></i>
+                </div>
+                <div>
+                  <h3 className="triagem-header-title">Triagem de Pré-Cadastros</h3>
+                  <span className="triagem-header-counter">
+                    {clientesPendentes.length > 0 ? (
+                      <><strong>{clientesPendentes.length}</strong> {clientesPendentes.length === 1 ? 'cadastro aguardando sua revisão' : 'cadastros aguardando sua revisão'}</>
+                    ) : (
+                      'Todos os cadastros foram revisados!'
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              <div className="triagem-header-right">
+                {clientesPendentes.length > 1 && (
+                  <button
+                    type="button"
+                    className="btn-triagem-aprovar-todos"
+                    onClick={aprovarTodosClientes}
+                    title="Aprovar todos os pré-cadastros pendentes de uma só vez"
+                  >
+                    <i className="fas fa-bolt"></i> Aprovar Todos ({clientesPendentes.length})
+                  </button>
+                )}
+                <button 
+                  type="button" 
+                  className="btn-close-triagem"
+                  onClick={() => setModalTriagem(false)}
+                  title="Fechar modal de triagem"
+                >
+                  &times;
+                </button>
+              </div>
+            </div>
+
+            {/* CORPO: LISTA DE PRÉ-CADASTROS */}
+            <div className="modal-triagem-body modal-triagem-body-lista">
+              {clientesPendentes.length === 0 ? (
+                <div className="triagem-empty-state">
+                  <div className="triagem-empty-icon">🎉</div>
+                  <h4>Tudo em dia por aqui!</h4>
+                  <p>Nenhum pré-cadastro online pendente de aprovação no momento.</p>
+                  <button 
+                    type="button" 
+                    className="btn-triagem-empty-close"
+                    onClick={() => setModalTriagem(false)}
+                  >
+                    Concluir e Voltar para Clientes
+                  </button>
+                </div>
+              ) : (
+                <div className="triagem-items-stack">
+                  {clientesPendentes.map((cli) => {
+                    const nomeFormatado = formatarNomeCapitalizado(
+                      cli.tipoPessoa === 'juridica' 
+                        ? (cli.nomeFantasia || cli.razaoSocial || cli.nome) 
+                        : (cli.nome || cli.razaoSocial || 'Cliente Sem Nome')
+                    );
+                    const docFormatado = cli.tipoPessoa === 'juridica' ? (cli.cnpj ? `CNPJ: ${cli.cnpj}` : 'Sem CNPJ') : (cli.cpf ? `CPF: ${cli.cpf}` : 'Sem CPF');
+                    const celLimpo = (cli.celular || cli.telefoneFixo || '').replace(/\D/g, '');
+                    const dataCadastro = formatarDataCriacao(cli.criadoEm);
+                    const localizacaoFmt = [
+                      cli.cidade ? `${cli.cidade}/${cli.uf || ''}` : '',
+                      cli.bairro || ''
+                    ].filter(Boolean).join(' • ');
+
+                    return (
+                      <div key={cli.id} className="triagem-item-card fade-in">
+                        {/* CABEÇALHO DO ITEM */}
+                        <div className="triagem-item-hero">
+                          <div className="triagem-item-avatar">
+                            {cli.foto ? (
+                              <img src={cli.foto} alt={nomeFormatado} />
+                            ) : (
+                              <span>{nomeFormatado.charAt(0).toUpperCase()}</span>
+                            )}
+                          </div>
+                          <div className="triagem-item-titles">
+                            <div className="triagem-item-tags">
+                              <span className="triagem-tag-site">
+                                <i className="fas fa-globe"></i> Link Auto-Cadastro
+                              </span>
+                              <span className="triagem-tag-tipo">
+                                {cli.tipoPessoa === 'juridica' ? '🏢 Pessoa Jurídica' : '👤 Pessoa Física'}
+                              </span>
+                              <span className="triagem-tag-data">
+                                <i className="far fa-clock"></i> Enviado: {dataCadastro}
+                              </span>
+                            </div>
+                            <h4 className="triagem-item-name">{nomeFormatado}</h4>
+                          </div>
+                        </div>
+
+                        {/* GRID DE DADOS RESUMIDOS DO ITEM */}
+                        <div className="triagem-item-info-grid">
+                          <div className="triagem-info-block">
+                            <span className="triagem-info-lbl"><i className="far fa-id-card"></i> Documento</span>
+                            <strong className="triagem-info-val">{docFormatado}</strong>
+                          </div>
+
+                          <div className="triagem-info-block">
+                            <span className="triagem-info-lbl"><i className="fas fa-phone-alt"></i> WhatsApp</span>
+                            <div className="triagem-contact-val">
+                              <strong className="triagem-info-val">{cli.celular ? formatarTelefone(cli.celular) : '--'}</strong>
+                              {celLimpo && (
+                                <a 
+                                  href={`https://wa.me/55${celLimpo}`} 
+                                  target="_blank" 
+                                  rel="noreferrer" 
+                                  className="triagem-zap-btn"
+                                  title="Abrir conversa no WhatsApp"
+                                >
+                                  <i className="fab fa-whatsapp"></i> Conversar
+                                </a>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="triagem-info-block">
+                            <span className="triagem-info-lbl"><i className="far fa-envelope"></i> E-mail</span>
+                            <strong className="triagem-info-val">{cli.email || 'Não informado'}</strong>
+                          </div>
+
+                          <div className="triagem-info-block">
+                            <span className="triagem-info-lbl"><i className="fas fa-map-marker-alt"></i> Cidade / Região</span>
+                            <strong className="triagem-info-val">{localizacaoFmt || 'Não informado'}</strong>
+                          </div>
+
+                          {cli.observacoes && (
+                            <div className="triagem-info-block span-full">
+                              <span className="triagem-info-lbl"><i className="far fa-comment-alt"></i> Observações</span>
+                              <p className="triagem-notes-text">{cli.observacoes}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* BARRA DE AÇÕES DO ITEM */}
+                        <div className="triagem-item-actions">
+                          <button
+                            type="button"
+                            className="btn-triagem-reject"
+                            onClick={async () => {
+                              const confirmou = window.confirm(`Deseja realmente recusar e excluir o pré-cadastro de "${nomeFormatado}"?`);
+                              if (confirmou) {
+                                await excluirCliente(cli.id, nomeFormatado);
+                              }
+                            }}
+                          >
+                            <i className="fas fa-trash-alt"></i> Recusar
+                          </button>
+
+                          <div className="triagem-item-actions-right">
+                            <button
+                              type="button"
+                              className="btn-triagem-full"
+                              onClick={() => {
+                                setModalTriagem(false);
+                                setClienteVisualizacao(cli);
+                                setAbaAtiva('dados');
+                              }}
+                            >
+                              <i className="fas fa-eye"></i> Abrir Ficha Completa
+                            </button>
+
+                            <button
+                              type="button"
+                              className="btn-triagem-approve"
+                              onClick={async (e) => {
+                                await aprovarCliente(e, cli.id, nomeFormatado);
+                              }}
+                            >
+                              <i className="fas fa-check-circle"></i> Aprovar Cadastro
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* RODAPÉ DO MODAL */}
+            <div className="modal-triagem-footer">
+              <div className="triagem-footer-hint">
+                <i className="fas fa-info-circle"></i> Clientes aprovados passam a ter acesso completo a orçamentos, contratos e histórico de locações.
+              </div>
+              <button
+                type="button"
+                className="btn-triagem-close-footer"
+                onClick={() => setModalTriagem(false)}
+              >
+                Fechar
+              </button>
+            </div>
+
           </div>
         </div>
       )}

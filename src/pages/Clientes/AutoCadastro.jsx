@@ -1,30 +1,73 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../firebaseConfig'; 
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { validarCPF, validarCNPJ } from '../../utils/validadores';
 import { consultarCNPJ } from '../../utils/consultaCnpj';
 import { processarDisparoAutomatico } from '../../utils/notificacoesDispatchService';
 import './AutoCadastro.css';
 
+// 🎨 GERADOR DINÂMICO DE PALETA EXCLUSIVA (HARMONIA DE LUXO IDÊNTICA AO CATÁLOGO)
+const processarPaletaVitrine = (hexCor) => {
+  const hex = (hexCor || '#c5a059').replace('#', '');
+  const r = parseInt(hex.substring(0, 2), 16) || 197;
+  const g = parseInt(hex.substring(2, 4), 16) || 160;
+  const b = parseInt(hex.substring(4, 6), 16) || 89;
+
+  const rL = Math.min(255, Math.round(r + (255 - r) * 0.28));
+  const gL = Math.min(255, Math.round(g + (255 - g) * 0.28));
+  const bL = Math.min(255, Math.round(b + (255 - b) * 0.28));
+  const clara = `rgb(${rL}, ${gL}, ${bL})`;
+
+  const rD = Math.max(0, Math.round(r * 0.75));
+  const gD = Math.max(0, Math.round(g * 0.75));
+  const bD = Math.max(0, Math.round(g * 0.75));
+  const escura = `rgb(${rD}, ${gD}, ${bD})`;
+
+  const glow = `rgba(${r}, ${g}, ${b}, 0.28)`;
+  const soft = `rgba(${r}, ${g}, ${b}, 0.08)`;
+  const borderSoft = `rgba(${r}, ${g}, ${b}, 0.25)`;
+
+  return {
+    primaria: `#${hex}`,
+    clara,
+    escura,
+    glow,
+    soft,
+    borderSoft
+  };
+};
+
 export const formatarNomeCapitalizado = (nomeBruto) => {
   if (!nomeBruto || typeof nomeBruto !== 'string') return '';
   const conectores = ['da', 'de', 'di', 'do', 'du', 'das', 'dos', 'e'];
-  const palavras = nomeBruto.trim().toLowerCase().split(/\s+/);
+  const palavras = nomeBruto.trim().split(/\s+/);
   return palavras.map((palavra, index) => {
     if (!palavra) return '';
-    if (index > 0 && conectores.includes(palavra)) return palavra;
-    return palavra.charAt(0).toUpperCase() + palavra.slice(1);
+    const lower = palavra.toLowerCase();
+    if (index > 0 && conectores.includes(lower)) return lower;
+    return palavra.replace(/([\p{L}]+)/gu, (match) => {
+      return match.charAt(0).toUpperCase() + match.slice(1).toLowerCase();
+    });
   }).join(' ');
 };
 
-// ⚡ Capitalização em tempo real na digitação (sem perder espaços nem alterar tamanho do texto)
+// ⚡ Capitalização em tempo real na digitação (1ª letra Maiúscula e 2ª em diante Minúscula, preservando espaços e conectores)
 export const capitalizarPalavrasAoDigitar = (texto) => {
   if (!texto || typeof texto !== 'string') return '';
-  return texto.replace(/(^|[\s])([a-z\u00C0-\u00FF])/g, (match, sep, char) => {
-    return sep + char.toUpperCase();
-  });
+  const conectores = ['da', 'de', 'di', 'do', 'du', 'das', 'dos', 'e'];
+  return texto.split(/(\s+)/).map((parte, index) => {
+    if (/^\s+$/.test(parte)) return parte;
+    if (!parte) return '';
+    const lower = parte.toLowerCase();
+    if (index > 0 && conectores.includes(lower)) {
+      return lower;
+    }
+    return parte.replace(/([\p{L}]+)/gu, (match) => {
+      return match.charAt(0).toUpperCase() + match.slice(1).toLowerCase();
+    });
+  }).join('');
 };
 
 const AutoCadastro = () => {
@@ -34,8 +77,80 @@ const AutoCadastro = () => {
   const { idEmpresa } = useParams();
   const auth = getAuth();
   
+  // 1. Extração do tenantId da URL (/autocadastro/:idEmpresa), query string (?t=...), state ou cache
+  const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const queryTenantId = queryParams.get('t') || queryParams.get('idEmpresa') || queryParams.get('empresa') || queryParams.get('tenantId');
+  const tenantIdAlvo = idEmpresa || queryTenantId || location.state?.empresaConfig?.userId || localStorage.getItem('tenantId');
+
   const carrinho = location.state?.carrinhoCatalogo || [];
-  const empresa = location.state?.empresaConfig || { nome: 'CELEBRE DECORAÇÕES', whats: '' };
+  const [empresa, setEmpresa] = useState(() => {
+    const salvoCor = localStorage.getItem('corMarcaCatalogo');
+    const stateEmp = location.state?.empresaConfig;
+    return {
+      nome: stateEmp?.nome || 'CELEBRE FESTAS',
+      logo: stateEmp?.logo || '',
+      whats: stateEmp?.whats || '',
+      corMarca: stateEmp?.corMarca || salvoCor || '#c5a059',
+      capa: stateEmp?.capa || '',
+      descricao: stateEmp?.descricao || 'Vitrine Oficial de Locação & Cenografia',
+      endereco: stateEmp?.endereco || '',
+      insta: stateEmp?.insta || ''
+    };
+  });
+
+  // 📡 SINCRONIZAÇÃO EM TEMPO REAL COM A APARÊNCIA DO CATÁLOGO (configuracoes_empresa)
+  useEffect(() => {
+    if (!tenantIdAlvo) return;
+
+    const refDoc = doc(db, "configuracoes_empresa", tenantIdAlvo);
+    const unsub = onSnapshot(refDoc, async (docSnap) => {
+      if (docSnap.exists()) {
+        const d = docSnap.data();
+        const cor = d.corMarcaCatalogo || d.accentColor || localStorage.getItem('corMarcaCatalogo') || '#c5a059';
+        localStorage.setItem('corMarcaCatalogo', cor);
+        setEmpresa(prev => ({
+          ...prev,
+          nome: d.tituloCatalogo || d.nomeEmpresa || d.nome || prev.nome,
+          logo: d.logoUrl || d.logo || d.logotipo || prev.logo,
+          whats: d.whatsapp || d.telefone || prev.whats,
+          corMarca: cor,
+          capa: d.bannerUrl || d.capaUrl || prev.capa,
+          descricao: d.descricaoCatalogo || prev.descricao,
+          endereco: d.endereco || prev.endereco,
+          insta: d.instagram || prev.insta
+        }));
+      } else {
+        // Fallback caso a loja ainda não tenha configuracoes_empresa específica
+        try {
+          const userDoc = await getDoc(doc(db, "usuarios", tenantIdAlvo));
+          if (userDoc.exists()) {
+            const ud = userDoc.data();
+            setEmpresa(prev => ({
+              ...prev,
+              nome: ud.nomeFantasia || ud.nomeEmpresa || ud.nome || prev.nome,
+              logo: ud.fotoUrl || ud.logo || prev.logo,
+              whats: ud.telefone || ud.whatsapp || prev.whats
+            }));
+          }
+        } catch (e) {
+          console.warn("Aviso ao buscar dados de fallback da loja:", e);
+        }
+      }
+    }, (err) => {
+      console.warn("Aviso ao sincronizar vitrine com auto-cadastro:", err);
+    });
+
+    return () => unsub();
+  }, [tenantIdAlvo]);
+
+  const [logoComErro, setLogoComErro] = useState(false);
+  useEffect(() => {
+    setLogoComErro(false);
+  }, [empresa.logo]);
+
+  const paleta = useMemo(() => {
+    return processarPaletaVitrine(empresa.corMarca);
+  }, [empresa.corMarca]);
 
   const [loading, setLoading] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
@@ -332,16 +447,39 @@ const AutoCadastro = () => {
   };
 
   if (concluido) {
-    const idDaLoja = idEmpresa || empresa.userId || empresa.id;
+    const idDaLoja = tenantIdAlvo || idEmpresa || empresa.userId || empresa.id;
     const foneLoja = (empresa.whats || empresa.telefone || '').replace(/\D/g, '');
     const linkWhats = foneLoja ? `https://wa.me/55${foneLoja}?text=${encodeURIComponent(`Olá! Concluí meu cadastro no site em nome de ${form.nome}.`)}` : null;
 
     return (
-      <div className="autocadastro-luxury-wrapper fade-in">
+      <div className="autocadastro-luxury-wrapper fade-in" style={{ '--cor-marca': paleta.primaria }}>
+        <style>{`
+          .autocadastro-luxury-wrapper {
+            --cor-marca: ${paleta.primaria} !important;
+            --cor-marca-glow: ${paleta.glow} !important;
+          }
+          .autocadastro-luxury-wrapper .btn-ir-catalogo-success {
+            background: linear-gradient(135deg, ${paleta.primaria} 0%, ${paleta.escura} 100%) !important;
+            color: #ffffff !important;
+            box-shadow: 0 8px 20px ${paleta.glow} !important;
+          }
+        `}</style>
+
         <div className="autocadastro-card-luxury text-center-success" style={{ textAlign: 'center', padding: '50px 30px' }}>
-          <div className="company-badge-icon" style={{ width: '64px', height: '64px', fontSize: '28px', marginBottom: '16px' }}>
-            🎉
-          </div>
+          {empresa.logo && !logoComErro ? (
+            <div className="autocadastro-brand-logo-container" style={{ marginBottom: '16px' }}>
+              <img 
+                src={empresa.logo} 
+                alt={empresa.nome || 'Logotipo'} 
+                className="autocadastro-brand-logo-img"
+                onError={() => setLogoComErro(true)}
+              />
+            </div>
+          ) : (
+            <div className="company-badge-icon" style={{ width: '64px', height: '64px', fontSize: '28px', marginBottom: '16px' }}>
+              🎉
+            </div>
+          )}
           
           <h2 style={{ fontSize: '1.6rem', fontWeight: '850', color: '#0f172a', margin: '0 0 10px 0' }}>
             Cadastro Recebido com Sucesso!
@@ -365,8 +503,7 @@ const AutoCadastro = () => {
               <button 
                 type="button" 
                 onClick={() => navigate(`/catalogo/${idDaLoja}`)} 
-                className="btn-finalizar-luxury"
-                style={{ background: '#0f172a', color: '#fff', boxShadow: '0 8px 20px rgba(15, 23, 42, 0.2)' }}
+                className="btn-finalizar-luxury btn-ir-catalogo-success"
               >
                 🛍️ Ir para o Catálogo de Peças
               </button>
@@ -386,18 +523,120 @@ const AutoCadastro = () => {
   }
 
   return (
-    <div className="autocadastro-luxury-wrapper fade-in">
+    <div className="autocadastro-luxury-wrapper fade-in" style={{ '--cor-marca': paleta.primaria }}>
+      {/* 🎨 MOTOR DINÂMICO DE IDENTIDADE VISUAL EXCLUSIVA (SINCRONIZADO COM MINHA VITRINE / CATÁLOGO) */}
+      <style>{`
+        .autocadastro-luxury-wrapper {
+          --cor-marca: ${paleta.primaria} !important;
+          --cor-marca-clara: ${paleta.clara} !important;
+          --cor-marca-escura: ${paleta.escura} !important;
+          --cor-marca-glow: ${paleta.glow} !important;
+          --cor-marca-soft: ${paleta.soft} !important;
+          --cor-marca-border: ${paleta.borderSoft} !important;
+        }
+
+        .autocadastro-luxury-wrapper .autocadastro-hero-banner {
+          border-bottom-color: ${paleta.primaria} !important;
+        }
+
+        .autocadastro-luxury-wrapper .company-badge-icon {
+          background: linear-gradient(135deg, ${paleta.primaria} 0%, ${paleta.escura} 100%) !important;
+          box-shadow: 0 8px 20px ${paleta.glow} !important;
+        }
+
+        .autocadastro-luxury-wrapper .autocadastro-brand-logo-img {
+          border-color: ${paleta.primaria} !important;
+          box-shadow: 0 8px 24px ${paleta.glow} !important;
+        }
+
+        .autocadastro-luxury-wrapper .toggle-btn.active {
+          background: ${paleta.primaria} !important;
+          color: #ffffff !important;
+          box-shadow: 0 4px 14px ${paleta.glow} !important;
+        }
+
+        .autocadastro-luxury-wrapper .sessao-label-custom {
+          color: ${paleta.primaria} !important;
+        }
+
+        .autocadastro-luxury-wrapper .sessao-label-custom i {
+          color: ${paleta.primaria} !important;
+        }
+
+        .autocadastro-luxury-wrapper .btn-sugestao-nome-caps {
+          background: ${paleta.soft} !important;
+          color: ${paleta.primaria} !important;
+          border-color: ${paleta.borderSoft} !important;
+        }
+
+        .autocadastro-luxury-wrapper .btn-sugestao-nome-caps:hover {
+          background: ${paleta.primaria} !important;
+          color: #ffffff !important;
+          border-color: ${paleta.escura} !important;
+          box-shadow: 0 4px 10px ${paleta.glow} !important;
+        }
+
+        .autocadastro-luxury-wrapper .btn-sugestao-nome-caps i {
+          color: ${paleta.primaria} !important;
+        }
+
+        .autocadastro-luxury-wrapper .btn-sugestao-nome-caps:hover i {
+          color: #ffffff !important;
+        }
+
+        .autocadastro-luxury-wrapper .input-with-icon input:focus {
+          border-color: ${paleta.primaria} !important;
+          box-shadow: 0 0 0 4px ${paleta.glow} !important;
+        }
+
+        .autocadastro-luxury-wrapper .btn-autocadastro-cnpj {
+          background: linear-gradient(135deg, ${paleta.primaria} 0%, ${paleta.escura} 100%) !important;
+          box-shadow: 0 2px 8px ${paleta.glow} !important;
+        }
+
+        .autocadastro-luxury-wrapper .btn-finalizar-luxury {
+          background: linear-gradient(135deg, ${paleta.primaria} 0%, ${paleta.escura} 100%) !important;
+          box-shadow: 0 10px 25px ${paleta.glow} !important;
+        }
+
+        .autocadastro-luxury-wrapper .btn-finalizar-luxury:hover {
+          box-shadow: 0 14px 30px ${paleta.glow} !important;
+        }
+
+        .autocadastro-luxury-wrapper .chip-qtd {
+          color: ${paleta.primaria} !important;
+        }
+      `}</style>
+
       <div className="autocadastro-card-luxury">
         
-        {/* TOP HERO BANNER */}
-        <header className="autocadastro-hero-banner">
+        {/* TOP HERO BANNER COM CAPA E LOGO DA VITRINE */}
+        <header 
+          className="autocadastro-hero-banner"
+          style={empresa.capa ? { 
+            backgroundImage: `linear-gradient(180deg, rgba(15, 23, 42, 0.78) 0%, rgba(15, 23, 42, 0.94) 100%), url(${empresa.capa})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : {}}
+        >
           <button className="btn-voltar-pill" onClick={() => navigate(-1)} title="Voltar">
             <i className="fas fa-arrow-left"></i> Voltar
           </button>
           
-          <div className="company-badge-icon">
-            <i className="fas fa-crown"></i>
-          </div>
+          {empresa.logo && !logoComErro ? (
+            <div className="autocadastro-brand-logo-container">
+              <img 
+                src={empresa.logo} 
+                alt={empresa.nome || 'Logotipo'} 
+                className="autocadastro-brand-logo-img"
+                onError={() => setLogoComErro(true)}
+              />
+            </div>
+          ) : (
+            <div className="company-badge-icon">
+              <i className="fas fa-crown"></i>
+            </div>
+          )}
 
           <h2>Olá! Vamos começar?</h2>
           <p>Preencha os dados abaixo para concluir seu cadastro na <strong>{empresa.nome || 'Celebre'}</strong>.</p>
@@ -455,52 +694,53 @@ const AutoCadastro = () => {
             <i className="fas fa-id-card"></i> IDENTIFICAÇÃO
           </div>
           
-          <div className="form-group-custom full">
-            <div className="label-with-option-row">
-              <label htmlFor="autocadastro-nome">
-                {tipoPessoa === 'juridica' ? 'Razão Social / Nome Fantasia *' : 'Nome Completo *'}
-              </label>
-              {podeCapitalizarNome && (
-                <button
-                  type="button"
-                  className="btn-sugestao-nome-caps"
-                  onClick={aplicarCapitalizacaoNome}
-                  title="Clique para formatar com primeira letra maiúscula"
-                >
-                  <i className="fas fa-magic"></i> {nomeSugerido}
-                </button>
-              )}
+          <div className="form-row-dupla">
+            <div className="form-group-custom">
+              <div className="label-with-option-row">
+                <label htmlFor="autocadastro-nome">
+                  {tipoPessoa === 'juridica' ? 'Razão Social / Nome Fantasia *' : 'Nome Completo *'}
+                </label>
+                {podeCapitalizarNome && (
+                  <button
+                    type="button"
+                    className="btn-sugestao-nome-caps"
+                    onClick={aplicarCapitalizacaoNome}
+                    title="Clique para formatar com primeira letra maiúscula"
+                  >
+                    <i className="fas fa-magic"></i> {nomeSugerido}
+                  </button>
+                )}
+              </div>
+              <div className="input-with-icon">
+                <i className="fas fa-user input-icon"></i>
+                <input 
+                  id="autocadastro-nome"
+                  type="text" 
+                  name="nome" 
+                  placeholder={tipoPessoa === 'juridica' ? 'Ex: Festas & Eventos Ltda' : 'Ex: Michel Silva'} 
+                  value={form.nome}
+                  autoCapitalize="words"
+                  autoComplete="name"
+                  required 
+                  onChange={handleChange} 
+                  onBlur={handleBlurCapitalize}
+                />
+              </div>
             </div>
-            <div className="input-with-icon">
-              <i className="fas fa-user input-icon"></i>
-              <input 
-                id="autocadastro-nome"
-                type="text" 
-                name="nome" 
-                placeholder={tipoPessoa === 'juridica' ? 'Ex: Festas & Eventos Ltda' : 'Ex: Michel Silva'} 
-                value={form.nome}
-                autoCapitalize="words"
-                autoComplete="name"
-                style={{ textTransform: 'capitalize' }}
-                required 
-                onChange={handleChange} 
-                onBlur={handleBlurCapitalize}
-              />
-            </div>
-          </div>
 
-          <div className="form-group-custom full">
-            <label>E-mail Principal *</label>
-            <div className="input-with-icon">
-              <i className="fas fa-envelope input-icon"></i>
-              <input 
-                type="email" 
-                name="email" 
-                placeholder="seu.email@exemplo.com" 
-                value={form.email} 
-                required 
-                onChange={handleChange} 
-              />
+            <div className="form-group-custom">
+              <label>E-mail Principal *</label>
+              <div className="input-with-icon">
+                <i className="fas fa-envelope input-icon"></i>
+                <input 
+                  type="email" 
+                  name="email" 
+                  placeholder="seu.email@exemplo.com" 
+                  value={form.email} 
+                  required 
+                  onChange={handleChange} 
+                />
+              </div>
             </div>
           </div>
           
@@ -510,7 +750,7 @@ const AutoCadastro = () => {
                 <span>
                   {tipoPessoa === 'juridica' ? 'CNPJ *' : 'CPF *'}
                   {buscandoCnpj && (
-                    <span style={{ color: '#c5a059', fontWeight: 'bold', fontSize: '0.68rem', marginLeft: '6px' }}>
+                    <span style={{ color: 'var(--cor-marca, #c5a059)', fontWeight: 'bold', fontSize: '0.68rem', marginLeft: '6px' }}>
                       ⏳ Consultando...
                     </span>
                   )}
@@ -600,7 +840,7 @@ const AutoCadastro = () => {
           </div>
           
           <div className="form-row-dupla">
-            <div className="form-group-custom input-cep">
+            <div className="form-group-custom">
               <label>CEP {buscandoCep && <span className="cep-loading-txt"><i className="fas fa-spinner fa-spin"></i> Buscando...</span>}</label>
               <div className="input-with-icon">
                 <i className="fas fa-search-location input-icon"></i>
@@ -624,7 +864,6 @@ const AutoCadastro = () => {
                   placeholder="Sua cidade" 
                   value={form.cidade} 
                   autoCapitalize="words"
-                  style={{ textTransform: 'capitalize' }}
                   required 
                   onChange={handleChange} 
                   onBlur={handleBlurCapitalize}
@@ -633,40 +872,41 @@ const AutoCadastro = () => {
             </div>
           </div>
           
-          <div className="form-group-custom full">
-            <label>Rua / Logradouro *</label>
-            <div className="input-with-icon">
-              <i className="fas fa-road input-icon"></i>
-              <input 
-                type="text" 
-                name="logradouro" 
-                placeholder="Endereço (Rua, Avenida, Alameda...)" 
-                value={form.logradouro} 
-                autoCapitalize="words"
-                style={{ textTransform: 'capitalize' }}
-                required 
-                onChange={handleChange} 
-                onBlur={handleBlurCapitalize}
-              />
-            </div>
-          </div>
-          
           <div className="form-row-dupla">
-            <div className="form-group-custom input-num">
+            <div className="form-group-custom">
+              <label>Rua / Logradouro *</label>
+              <div className="input-with-icon">
+                <i className="fas fa-road input-icon"></i>
+                <input 
+                  type="text" 
+                  name="logradouro" 
+                  placeholder="Endereço (Rua, Avenida, Alameda...)" 
+                  value={form.logradouro} 
+                  autoCapitalize="words"
+                  required 
+                  onChange={handleChange} 
+                  onBlur={handleBlurCapitalize}
+                />
+              </div>
+            </div>
+
+            <div className="form-group-custom">
               <label>Número *</label>
               <div className="input-with-icon">
                 <i className="fas fa-hashtag input-icon"></i>
                 <input 
                   type="text" 
                   name="numero" 
-                  placeholder="123" 
+                  placeholder="Ex: 123 ou S/N" 
                   value={form.numero} 
                   required 
                   onChange={handleChange} 
                 />
               </div>
             </div>
-
+          </div>
+          
+          <div className="form-row-dupla">
             <div className="form-group-custom">
               <label>Bairro *</label>
               <div className="input-with-icon">
@@ -677,26 +917,25 @@ const AutoCadastro = () => {
                   placeholder="Seu bairro" 
                   value={form.bairro} 
                   autoCapitalize="words"
-                  style={{ textTransform: 'capitalize' }}
                   required 
                   onChange={handleChange} 
                   onBlur={handleBlurCapitalize}
                 />
               </div>
             </div>
-          </div>
 
-          <div className="form-group-custom full">
-            <label>Complemento (Opcional)</label>
-            <div className="input-with-icon">
-              <i className="fas fa-info-circle input-icon"></i>
-              <input 
-                type="text" 
-                name="complemento" 
-                placeholder="Apto, Bloco, Casa..." 
-                value={form.complemento} 
-                onChange={handleChange} 
-              />
+            <div className="form-group-custom">
+              <label>Complemento (Opcional)</label>
+              <div className="input-with-icon">
+                <i className="fas fa-info-circle input-icon"></i>
+                <input 
+                  type="text" 
+                  name="complemento" 
+                  placeholder="Apto, Bloco, Casa..." 
+                  value={form.complemento} 
+                  onChange={handleChange} 
+                />
+              </div>
             </div>
           </div>
 
@@ -737,6 +976,20 @@ const AutoCadastro = () => {
 
         <footer className="autocadastro-footer-notice">
           <p><i className="fas fa-shield-alt"></i> Seus dados estão seguros e protegidos pela LGPD.</p>
+          {empresa.whats && (
+            <div className="autocadastro-help-whatsapp">
+              <span>Dúvidas no preenchimento?</span>
+              <a 
+                href={`https://wa.me/55${empresa.whats.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá! Estou na página de cadastro da ${empresa.nome || 'loja'} e preciso de ajuda.`)}`}
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="autocadastro-help-whatsapp-link"
+                title="Falar com nossa equipe via WhatsApp"
+              >
+                <i className="fab fa-whatsapp"></i> Tirar dúvidas no WhatsApp
+              </a>
+            </div>
+          )}
         </footer>
       </div>
     </div>

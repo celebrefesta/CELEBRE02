@@ -744,6 +744,7 @@ const AppContent = () => {
             <Route path="/checkout" element={<Checkout />} /> 
             
             <Route path="/autocadastro/:idEmpresa" element={<AutoCadastro />} /> 
+            <Route path="/autocadastro" element={<AutoCadastro />} /> 
             <Route path="/catalogo/:idEmpresa" element={<Catalogo />} />
             <Route path="/catalogo" element={<Catalogo />} />
             <Route path="/assinatura/:id" element={<AssinaturaContrato />} />
