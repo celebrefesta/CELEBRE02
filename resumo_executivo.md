@@ -3,7 +3,7 @@
 > **Plataforma SaaS Multi-Tenant Especializada em Gestão de Locação de Acervo, Decoração e Pegue & Monte**  
 > *Documento Executivo e Técnico Definitivo cobrindo Arquitetura, Módulos, Segurança, Workflows Operacionais, Blindagem de UI/UX e Histórico de Evolução.*  
 > **Tecnologias**: React 19 / 18 + Vite 7 · Firebase Firestore & Auth · Mercado Pago SDK · Vanilla CSS Luxury Design System (`#c5a059`, Glassmorphism, Dark/Light Mode)  
-> **Data de Referência**: 28 de Setembro / 2026  
+> **Data de Referência**: 30 de Setembro / 2026  
 
 ---
 
@@ -315,25 +315,66 @@ O módulo de Catálogo do Celebre opera em duas frentes complementares: o **Pain
 
 ---
 
-### 🔔 6.14. Central de Notificações (`/src/pages/Notificacoes/`)
-- Alertas em tempo real referentes a saídas do dia, devoluções vencendo e tarefas logísticas.
+### 🔔 6.14. Central de Notificações em Tempo Real & Topbar Sininho (`/src/pages/Notificacoes/`, `/src/components/SininhoNotificacoes.jsx`)
+- **Topbar Sininho Inteligente (`SininhoNotificacoes.jsx`, `Topbar.jsx`)**:
+  - Badge dinâmica reativa com contador numérico de alertas não lidos, alimentada em tempo real pela coleção `notificacoes` do Firestore.
+  - Dropdown suspenso luxury com animação de entrada, permitindo ao usuário checar avisos recentes sem sair do módulo atual.
+  - Ações rápidas de 1 clique: *"Marcar todas como lidas"* e link para a Central Completa.
+- **Central Executiva de Alertas (`Notificacoes.jsx`, `Notificacoes.css`)**:
+  - Abas segmentadas por nicho operacional: `Todas`, `Não Lidas`, `🚚 Logística`, `💰 Financeiro`, `👤 Clientes` e `⚙️ Sistema`.
+  - Cards de notificação com status visual de severidade (Alta, Média, Baixa) e atalho de ação direta (ex.: abrir devolução atrasada ou parcela pendente).
+  - Gestão de lote: marcação coletiva e expurgo de avisos obsoletos com confirmação.
 
 ---
 
-### 👥 6.15. Equipe, Controle ASO & Monitoramento (`/src/Usuarios/`)
+### 👥 6.15. Gestão 360º de Clientes, Dossiê & Auto-Cadastro Boutique (`/src/pages/Clientes/`)
+- **Fichário Dossiê 360º do Cliente (`Clientes.jsx`, `Clientes.css`)**:
+  - Histórico integral de relacionamento comercial: total de locações celebradas, cálculo automático de LTV (Lifetime Value) e ticket médio.
+  - **Trava de Inadimplência**: Detecção imediata de pendências financeiras e bloqueio preventivo de novas locações ou integração assistida com soma do débito anterior.
+  - Ações rápidas de comunicação: botão de WhatsApp direto com mensagem pré-configurada, chamada telefônica e localização GPS no Google Maps.
+  - Exportação gerencial para planilhas CSV e dossiê em PDF.
+- **Cadastro Interno Estruturado (`CadastroCliente.jsx`, `CadastroCliente.css`)**:
+  - Ergonomia semântica de formulário (Regra 4 do AGENTS.md) com blocos simétricos em 2 colunas no desktop e 1 coluna tátil no mobile.
+  - Autopreenchimento de endereço via CEP (ViaCEP) e validação instantânea de CPF/CNPJ.
+- **Auto-Cadastro de Clientes Boutique (`AutoCadastro.jsx`, `AutoCadastro.css`)**:
+  - Interface pública de auto-atendimento (`/autocadastro`) integrada ao catálogo digital e vitrine virtual.
+  - Visual nobre alinhado ao Celebre Luxury Design System, proporcionando experiência premium para o cliente final preencher seus dados sem intervenção da decoradora.
+
+---
+
+### 🏢 6.16. Motor Universal de Consulta de CNPJ & Autopreenchimento (`/src/utils/consultaCnpj.js`)
+- **Integração Gratuita com a Receita Federal via BrasilAPI & ReceitaWS**:
+  - Consulta automática em 1 clique ao digitar o CNPJ, higienizando caracteres especiais.
+  - Preenchimento simultâneo de: Razão Social, Nome Fantasia, CEP, Logradouro, Número, Bairro, Cidade, UF, Telefone e E-mail.
+  - Integrado de forma transparente em `NovoFornecedor.jsx`, `AbaEmpresa.jsx` e `CadastroCliente.jsx`.
+
+---
+
+### ⚙️ 6.17. Governança de Perfil, Foto Google & Credenciais (`/src/pages/Configuracoes/`)
+- **Aba Meu Perfil (`AbaMeuPerfil.jsx`)**:
+  - Gestão de dados cadastrais do operador (Nome, Celular, Cargo).
+  - Sincronização e aplicação da foto de perfil da Conta Google autenticada diretamente no perfil local do Firestore e Firebase Auth.
+  - Redefinição e alteração segura de senhas de acesso.
+- **Aba Empresa (`AbaEmpresa.jsx`)**:
+  - Cadastro de sede corporativa para ancoragem do motor de rotas e cálculo de frete por KM (OSRM / OpenStreetMap).
+  - Upload de logomarca e chave Pix oficial da empresa para contratos e propostas.
+
+---
+
+### 👥 6.18. Equipe, Controle ASO & Monitoramento (`/src/Usuarios/`)
 - **Controle de Usuários (`Usuarios.jsx`)**: Cadastro de colaboradores e atribuição de cargos.
 - **Gestão ASO (`GestaoASO.jsx`)**: Controle de Atestados de Saúde Ocupacional da equipe.
 - **Monitoramento (`Monitoramento.jsx`)**: Logs de auditoria operacional em tempo real.
 
 ---
 
-### 💎 6.16. Planos, Assinaturas SaaS & Painel Admin (`/src/pages/Planos/`, `/Admin/`)
+### 💎 6.19. Planos, Assinaturas SaaS & Painel Admin (`/src/pages/Planos/`, `/Admin/`)
 - **Matriz de Planos (`Planos.jsx`, `PaginaUpgrade.jsx`)**: Apresentação de planos (Teste, Starter, Pro, Enterprise) e upgrade.
 - **Painel Admin Master (`ControleGeral.jsx`, `AdminPlanos.jsx`)**: Controle global de empresas, pagamentos e liberação de acessos.
 
 ---
 
-### 🎨 6.17. Moodboard & Estúdio 3D de Cenografia Visual (`/src/pages/Moodboard/`)
+### 🎨 6.20. Moodboard & Estúdio 3D de Cenografia Visual (`/src/pages/Moodboard/`)
 - **Estúdio de Criação Visual Interativo**: Ferramenta completa de design de festas onde decoradores montam o cenário real com painéis, mesas cilindro 3D, arcos de balões orgânicos, acervo fotográfico da loja e iluminação.
 - **Letreiros & Tipografia de Alta Performance (60–120 FPS)**:
   - Efeitos realistas de Neon LED, Acrílico Espelhado Dourado/Rose Gold/Prata, MDF 3D Madeirado a Laser e Glitter.
@@ -373,6 +414,27 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 ---
 
 ## 📅 9. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
+
+### 🗓️ Sessão: 30/09/2026 — 14h00 às 18h30 (BRT)
+- ✅ **🔔 Central de Notificações em Tempo Real & Topbar Sininho (`Notificacoes.jsx`, `Notificacoes.css`, `SininhoNotificacoes.jsx`, `SininhoNotificacoes.css`, `Topbar.jsx`)**:
+  - **Sininho no Topbar com Badge Reativo**: Ícone de notificação na barra superior com contador pulsante de não lidas e dropdown de acesso rápido.
+  - **Central Executiva de Alertas (`/notificacoes`)**: Filtros segmentados por `Todas`, `Não Lidas`, `Logística`, `Financeiro`, `Clientes` e `Sistema`, com marcação em lote, expurgo e redirecionamento direto aos pedidos.
+  - **Estilização Blindada**: Padrão luxury com cards responsivos, sem vazamento de CSS e suporte pleno a Dark Mode.
+- ✅ **👥 Gestão 360º de Clientes, Fichário Dossiê & Auto-Cadastro Boutique (`Clientes.jsx`, `Clientes.css`, `CadastroCliente.jsx`, `CadastroCliente.css`, `AutoCadastro.jsx`, `AutoCadastro.css`)**:
+  - **Fichário 360º & Trava de Inadimplência**: Painel com histórico completo de locações, LTV, ticket médio e detecção automática de débitos pendentes com trava de segurança em novas locações.
+  - **Auto-Cadastro Boutique**: Portal público responsivo (`/autocadastro`) integrado ao catálogo digital de luxo, permitindo auto-atendimento limpo com validação de CPF/CNPJ e busca por CEP.
+  - **Ergonomia Semântica**: Formulários internos em 2 colunas com campos emparelhados e máscaras automáticas.
+- ✅ **🏢 Motor Universal de Consulta de CNPJ Gratuita (`consultaCnpj.js`)**:
+  - Integração assíncrona com BrasilAPI e fallback para ReceitaWS.
+  - Preenchimento instantâneo em 1 clique de Razão Social, Nome Fantasia, Endereço completo, Telefone e E-mail comercial.
+  - Incorporado a Fornecedores (`NovoFornecedor.jsx`), Dados da Empresa (`AbaEmpresa.jsx`) e Clientes PJ (`CadastroCliente.jsx`).
+- ✅ **⚙️ Aba Meu Perfil com Foto da Conta Google & Governança (`AbaMeuPerfil.jsx`, `Configuracoes.css`)**:
+  - Sincronização direta da foto de perfil da Conta Google autenticada para o Firestore e Firebase Auth.
+  - Alteração de senha, controle de permissões e dados cadastrais.
+- ✅ **📊 BI Analítico & Dashboard Executivo Refinado (`Dashboard.jsx`, `Dashboard.css`)**:
+  - Cards de KPI em 1 linha horizontal no desktop e 2 colunas no celular. Gráficos analíticos de faturamento e locações via Recharts, Termômetro de Meta Financeira e BI por categorias.
+- ✅ **Auditoria & Build de Produção Verificado**:
+  - `npm run build` aprovado com **0 erros** (`✓ built in 18.18s`).
 
 ### 🗓️ Sessão: 28/09/2026 — 14h20 às 15h10 (BRT)
 - ✅ **📅 Agenda Operacional — Sincronização Google Agenda, Automação 1-Clique, WhatsApp & Atribuição de Equipe (`Agenda.jsx`, `Agenda.css`, `calendarSyncUtils.js`)**:
@@ -815,5 +877,5 @@ Para testar e homologar a última versão do Catálogo e do Painel Minha Vitrine
 
 ---
 
-> **⏱️ Última atualização:** 28/09/2026 — 15h10 (BRT)  
+> **⏱️ Última atualização:** 30/09/2026 — 18h30 (BRT)  
 > **✍️ Consolidação e Fusão Executiva por:** Antigravity AI — Workspace CELEBRE02  

@@ -569,7 +569,7 @@ const AbaMeuPerfil = ({
         await setDoc(doc(db, 'usuarios', impData.originalUid), { fotoUrl: fotoParaAplicar, photoURL: fotoParaAplicar }, { merge: true });
       }
 
-      await updateProfile(currentUser, { photoURL: fotoParaAplicar }).catch(() => {});
+      await updateProfile(currentUser, { photoURL: fotoParaAplicar }).catch(() => { });
 
       setDadosPerfil(prev => ({ ...prev, fotoUrl: fotoParaAplicar }));
       setMsgGoogleFeedback({
@@ -695,10 +695,10 @@ const AbaMeuPerfil = ({
           <div className="profile-google-security-card">
             <div className="profile-google-header">
               <div className="profile-google-title-wrap">
-                <img 
-                  src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
-                  alt="Google" 
-                  style={{ width: '18px', height: '18px' }} 
+                <img
+                  src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+                  alt="Google"
+                  style={{ width: '18px', height: '18px' }}
                 />
                 <h4>Conta Google</h4>
               </div>
