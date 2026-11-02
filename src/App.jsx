@@ -257,6 +257,7 @@ const TravaSeguranca = ({ children, modulo, recursoExigido }) => {
                 parseDataGenerica(dadosUsr.dataProximaCobranca),
                 parseDataGenerica(dadosUsr.dataFimTeste),
                 parseDataGenerica(dadosUsr.ultimoAcesso),
+                parseDataGenerica(user?.metadata?.lastSignInTime),
                 parseDataGenerica(dadosUsr.dataCadastro || dadosUsr.criadoEm)
             ].filter(Boolean);
 

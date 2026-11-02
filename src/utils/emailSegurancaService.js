@@ -3,7 +3,7 @@ import { db } from '../firebaseConfig';
 
 const RESEND_API_KEY = ['re', '9XQXdePo', 'BhzvGTxk3phud7qXuMiu5Fv7'].join('_');
 const SENDER_EMAIL = 'Celebre Segurança <seguranca@celebrefesta.com.br>';
-const REPLY_TO_EMAIL = 'celebrefesta25@gmail.com';
+const REPLY_TO_EMAIL = 'celebrefesta25+suporte@gmail.com';
 
 /**
  * Identifica o dispositivo e navegador amigável a partir do userAgent

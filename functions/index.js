@@ -238,7 +238,7 @@ async function dispararEmailComprovanteExclusao(email, nome, motivo, protoCustom
       body: JSON.stringify({
         from: 'Celebre Segurança <seguranca@celebrefesta.com.br>',
         to: [emailLimpo],
-        reply_to: 'celebrefesta25@gmail.com',
+        reply_to: 'celebrefesta25+suporte@gmail.com',
         subject: `Comprovante de Exclusão de Conta • Protocolo ${protocolo}`,
         html: htmlBody
       })
@@ -335,7 +335,7 @@ async function dispararEmailReativacaoInterno(email, nome, nomePlano) {
       body: JSON.stringify({
         from: 'Celebre <seguranca@celebrefesta.com.br>',
         to: [emailLimpo],
-        reply_to: 'celebrefesta25@gmail.com',
+        reply_to: 'celebrefesta25+suporte@gmail.com',
         subject: '🎉 Sua conta no Celebre foi reativada com sucesso! Seja bem-vindo(a) de volta!',
         html: htmlBody
       })
@@ -449,7 +449,7 @@ async function dispararEmailConfirmacaoPagamento(email, nome, nomePlano, valor, 
       body: JSON.stringify({
         from: 'Celebre <seguranca@celebrefesta.com.br>',
         to: [emailLimpo],
-        reply_to: 'celebrefesta25@gmail.com',
+        reply_to: 'celebrefesta25+suporte@gmail.com',
         subject,
         html: htmlBody
       })
@@ -503,7 +503,7 @@ async function dispararEmailTrialInterno(tipo, email, nome, cupom = 'PRIMEIROACE
       body: JSON.stringify({
         from: 'Celebre <seguranca@celebrefesta.com.br>',
         to: [emailLimpo],
-        reply_to: 'celebrefesta25@gmail.com',
+        reply_to: 'celebrefesta25+suporte@gmail.com',
         subject,
         html: htmlBody
       })
@@ -1072,7 +1072,7 @@ exports.enviarComprovanteExclusao = functions.https.onRequest((req, res) => {
 
                     <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin: 0;">
                       Se você <strong>não realizou</strong> esta solicitação ou suspeita de uso indevido, entre em contato imediatamente com o nosso Encarregado de Proteção de Dados (DPO) respondendo a este e-mail ou pelo e-mail 
-                      <a href="mailto:celebrefesta25@gmail.com" style="color: #c5a059; text-decoration: none; font-weight: 700;">celebrefesta25@gmail.com</a>.
+                      <a href="mailto:celebrefesta25+suporte@gmail.com?subject=Suporte%20e%20Privacidade%20-%20Celebre" style="color: #c5a059; text-decoration: none; font-weight: 700;">celebrefesta25@gmail.com</a>.
                     </p>
                   </td>
                 </tr>
@@ -1105,7 +1105,7 @@ exports.enviarComprovanteExclusao = functions.https.onRequest((req, res) => {
         body: JSON.stringify({
           from: 'Celebre Segurança <seguranca@celebrefesta.com.br>',
           to: [email],
-          reply_to: 'celebrefesta25@gmail.com',
+          reply_to: 'celebrefesta25+suporte@gmail.com',
           subject: `Comprovante de Exclusão de Conta • Protocolo ${protocolo}`,
           html: htmlBody
         })
@@ -1399,7 +1399,7 @@ exports.enviarLinkRedefinicaoSenha = functions.https.onRequest((req, res) => {
         body: JSON.stringify({
           from: 'Celebre Segurança <seguranca@celebrefesta.com.br>',
           to: [emailLimpo],
-          reply_to: 'celebrefesta25@gmail.com',
+          reply_to: 'celebrefesta25+suporte@gmail.com',
           subject: 'Redefinição de Senha • Celebre',
           html: htmlBody
         })
@@ -1559,7 +1559,7 @@ exports.enviarAvisoInatividade = functions.https.onRequest((req, res) => {
         body: JSON.stringify({
           from: 'Celebre Segurança <seguranca@celebrefesta.com.br>',
           to: [emailLimpo],
-          reply_to: 'celebrefesta25@gmail.com',
+          reply_to: 'celebrefesta25+suporte@gmail.com',
           subject: '⚠️ Aviso Importante: Sua conta no Celebre está suspensa por inatividade',
           html: htmlBody
         })
@@ -1675,7 +1675,7 @@ exports.enviarConfirmacaoReativacao = functions.https.onRequest((req, res) => {
         body: JSON.stringify({
           from: 'Celebre <seguranca@celebrefesta.com.br>',
           to: [emailLimpo],
-          reply_to: 'celebrefesta25@gmail.com',
+          reply_to: 'celebrefesta25+suporte@gmail.com',
           subject: '🎉 Sua conta no Celebre foi reativada com sucesso! Seja bem-vindo(a) de volta!',
           html: htmlBody
         })
@@ -2202,7 +2202,7 @@ exports.enviarAlertaSenhaAlterada = functions.https.onRequest((req, res) => {
         body: JSON.stringify({
           from: 'Celebre Segurança <seguranca@celebrefesta.com.br>',
           to: [emailLimpo],
-          reply_to: 'celebrefesta25@gmail.com',
+          reply_to: 'celebrefesta25+suporte@gmail.com',
           subject: '🔒 Alerta de Segurança: Sua senha no Celebre foi alterada com sucesso',
           html: htmlBody
         })

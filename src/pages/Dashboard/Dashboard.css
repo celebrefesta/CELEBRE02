@@ -136,253 +136,264 @@
 ========================================= */
 
 .dash-status-screen {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
+  min-height: 76vh;
+  padding: 24px 16px;
 }
 
-.dash-status-card {
-  background: var(--fundo-card, #ffffff);
-  padding: 36px 32px;
-  border-radius: 20px;
-  max-width: 520px;
+.dash-status-screen .dash-status-card,
+[data-theme^='dark'] .dash-status-screen .dash-status-card {
   width: 100%;
-  box-shadow: 0 20px 50px -20px rgba(15, 23, 42, 0.15);
+  max-width: 560px;
+  background: #0f172a !important;
+  background-color: #0f172a !important;
+  border: 1.5px solid rgba(197, 160, 89, 0.35) !important;
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.55), 0 0 30px rgba(197, 160, 89, 0.1) !important;
+  padding: 36px 32px;
   box-sizing: border-box;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-.dash-status-card--danger { border: 1px solid #fee2e2; }
-.dash-status-card--warning { border: 1px solid #e2e8f0; }
+.dash-status-brand-header {
+  text-align: center;
+  margin-bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.dash-status-logo {
+  height: 46px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
+}
+
+.dash-status-brand-tag {
+  font-size: 11.5px;
+  color: #c5a059;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 700;
+}
 
 .dash-status-badge {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-  border-radius: 30px;
-  font-size: 11px;
+  gap: 6px;
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 11.5px;
   font-weight: 800;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
   text-transform: uppercase;
   margin-bottom: 16px;
 }
 
-.dash-status-badge--danger {
-  background: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
-}
-
-.dash-status-card h2 {
+.dash-status-screen .dash-status-card h2 {
   margin: 0 0 10px 0;
   font-size: 22px;
   font-weight: 800;
-  letter-spacing: -0.5px;
-  color: #0f172a;
+  letter-spacing: -0.3px;
+  color: #f8fafc !important;
+  text-align: center;
 }
-.dash-status-card--danger h2 { color: #0f172a; }
-.dash-status-card--warning h2 { color: #0f172a; }
 
-.dash-status-card p {
-  color: #64748b;
+.dash-status-screen .dash-status-card p {
+  color: #94a3b8;
   line-height: 1.6;
   margin: 0 0 20px 0;
-  font-size: 14px;
+  font-size: 13.5px;
 }
 
 .dash-status-lead {
-  color: #64748b;
-  line-height: 1.55;
+  color: #94a3b8 !important;
+  line-height: 1.6;
   font-size: 13.5px;
-  margin-bottom: 18px !important;
+  text-align: center;
+  margin: 0 0 20px 0 !important;
 }
 
-.dash-status-preserved-box {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 14px 16px;
+.dash-status-lead span {
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+.dash-status-lead strong {
+  color: #f8fafc;
+}
+
+.dash-status-preserved-box,
+[data-theme^='dark'] .dash-status-preserved-box {
   display: flex;
-  gap: 12px;
   align-items: flex-start;
+  gap: 14px;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%) !important;
+  border: 1.5px solid rgba(197, 160, 89, 0.25) !important;
+  border-left: 4px solid #c5a059 !important;
+  border-radius: 12px;
+  padding: 16px 18px;
   text-align: left;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
 }
 
 .dash-status-preserved-icon {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
   border-radius: 10px;
-  background: rgba(197, 160, 89, 0.12);
-  color: var(--dourado, #c5a059);
+  background: rgba(197, 160, 89, 0.15);
+  color: #c5a059;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 17px;
-  margin-top: 2px;
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
-.dash-status-preserved-text strong {
+.dash-status-preserved-title,
+.dash-status-preserved-text > strong {
   display: block;
-  font-size: 13px;
-  color: #0f172a;
+  font-size: 13.5px;
+  color: #f8fafc !important;
   font-weight: 700;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
 
-.dash-status-preserved-text span {
-  font-size: 12px;
-  color: #64748b;
-  line-height: 1.45;
+.dash-status-preserved-text p,
+.dash-status-preserved-text span:not(.dash-status-preserved-title) {
+  margin: 0 !important;
+  font-size: 12.5px !important;
+  color: #94a3b8 !important;
+  line-height: 1.5 !important;
   display: block;
+}
+
+.dash-status-preserved-text p strong,
+.dash-status-preserved-text span strong {
+  display: inline !important;
+  color: #f8fafc !important;
+  font-weight: 700;
 }
 
 .dash-status-actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
 }
 
-.dash-status-btn {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  color: #fff;
-  padding: 13px 24px;
-  border-radius: 12px;
-  font-weight: 800;
-  font-size: 13px;
-  letter-spacing: 0.3px;
+.dash-status-btn,
+.dash-status-btn--gold {
   width: 100%;
-  cursor: pointer;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #c5a059 0%, #a8843c 100%) !important;
+  color: #ffffff !important;
   border: none;
-  transition: all 0.25s ease;
-  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.15);
+  border-radius: 12px;
+  font-size: 14.5px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-}
-.dash-status-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);
+  gap: 10px;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 18px rgba(197, 160, 89, 0.35);
+  font-family: inherit;
 }
 
-.dash-status-btn--gold {
-  background: linear-gradient(135deg, #c5a059 0%, #a8843c 100%);
-  color: #ffffff;
-  box-shadow: 0 4px 16px rgba(197, 160, 89, 0.35);
-  font-size: 13.5px;
-  font-weight: 800;
-}
+.dash-status-btn:hover,
 .dash-status-btn--gold:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(197, 160, 89, 0.45);
+  box-shadow: 0 6px 24px rgba(197, 160, 89, 0.5);
+  background: linear-gradient(135deg, #d4b06a 0%, #b59044 100%) !important;
 }
 
 .dash-status-btn-whatsapp {
-  background: #25d366;
-  color: #ffffff;
-  padding: 12px 20px;
-  border-radius: 12px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  font-size: 12.5px;
   font-weight: 700;
-  font-size: 13px;
-  text-decoration: none;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: all 0.25s ease;
-  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.25);
+  text-decoration: none;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  background: rgba(22, 163, 74, 0.12) !important;
+  border: 1px solid rgba(34, 197, 94, 0.35) !important;
+  color: #4ade80 !important;
 }
+
 .dash-status-btn-whatsapp:hover {
-  background: #20ba5a;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(37, 211, 102, 0.35);
-  color: #ffffff;
+  background: rgba(22, 163, 74, 0.22) !important;
+  border-color: #4ade80 !important;
+  color: #4ade80 !important;
+  transform: translateY(-1px);
 }
 
 .dash-status-footer-actions {
-  margin-top: 20px;
+  margin-top: 22px;
   padding-top: 16px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
+  font-size: 11.5px;
 }
 
 .dash-status-btn-logout {
-  background: transparent;
+  background: none;
   border: none;
-  color: #64748b;
-  font-size: 12.5px;
+  color: #94a3b8 !important;
+  font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   padding: 4px 8px;
-  transition: color 0.2s ease;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-family: inherit;
 }
+
 .dash-status-btn-logout:hover {
-  color: #dc2626;
+  color: #f8fafc !important;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .dash-status-footer-divider {
-  color: #cbd5e1;
-  font-size: 12px;
+  color: #475569 !important;
+  font-size: 11.5px;
 }
 
 .dash-status-link-delete {
-  color: #94a3b8;
-  font-size: 12px;
-  text-decoration: underline;
-  transition: color 0.2s ease;
-}
-.dash-status-link-delete:hover {
-  color: #ef4444;
+  color: #ef4444 !important;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
 }
 
-/* 🌙 SUPORTE AO MODO ESCURO NA TELA DE STATUS */
-[data-theme^='dark'] .dash-status-card {
-  background: #18181b;
-  border-color: #27272a;
-  box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.5);
-}
-[data-theme^='dark'] .dash-status-badge--danger {
-  background: rgba(220, 38, 38, 0.15);
-  color: #f87171;
-  border-color: rgba(220, 38, 38, 0.3);
-}
-[data-theme^='dark'] .dash-status-card h2 {
-  color: #f4f4f5;
-}
-[data-theme^='dark'] .dash-status-lead {
-  color: #a1a1aa;
-}
-[data-theme^='dark'] .dash-status-preserved-box {
-  background: #27272a;
-  border-color: #3f3f46;
-}
-[data-theme^='dark'] .dash-status-preserved-text strong {
-  color: #f4f4f5;
-}
-[data-theme^='dark'] .dash-status-preserved-text span {
-  color: #a1a1aa;
-}
-[data-theme^='dark'] .dash-status-footer-actions {
-  border-top-color: #27272a;
-}
-[data-theme^='dark'] .dash-status-footer-divider {
-  color: #3f3f46;
-}
-[data-theme^='dark'] .dash-status-btn-logout {
-  color: #a1a1aa;
-}
-[data-theme^='dark'] .dash-status-btn-logout:hover {
-  color: #f87171;
+.dash-status-link-delete:hover {
+  color: #f87171 !important;
+  text-decoration: underline;
 }
 
 /* =========================================

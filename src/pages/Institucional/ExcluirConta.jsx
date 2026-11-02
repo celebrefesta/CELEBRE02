@@ -265,7 +265,7 @@ const ExcluirConta = () => {
               Você também pode entrar em contato direto com o nosso Encarregado de Proteção de Dados para esclarecer dúvidas ou acompanhar o status da sua solicitação:
             </p>
             <ul>
-              <li><strong>E-mail de Privacidade & Suporte:</strong> <a href="mailto:celebrefesta25@gmail.com" style={{ color: '#0284c7' }}>celebrefesta25@gmail.com</a></li>
+              <li><strong>E-mail de Privacidade & Suporte:</strong> <a href="mailto:celebrefesta25+suporte@gmail.com?subject=Privacidade%20e%20Suporte%20-%20Celebre" style={{ color: '#0284c7' }}>celebrefesta25@gmail.com</a></li>
               <li><strong>WhatsApp Oficial:</strong> <a href="https://wa.me/5519998564109?text=Olá,%20gostaria%20de%20solicitar%20a%20exclusão%20da%20minha%20conta%20e%20dados%20no%20Celebre." target="_blank" rel="noopener noreferrer" style={{ color: '#16a34a' }}>+55 (19) 99856-4109</a></li>
               <li><strong>Horário de Atendimento:</strong> Segunda a Sexta-feira, das 09:00 às 18:00 (Horário de Brasília).</li>
             </ul>

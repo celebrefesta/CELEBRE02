@@ -144,7 +144,8 @@
   font-size: 18px;
 }
 
-.cs-preserved-text strong {
+.cs-preserved-title,
+.cs-preserved-text > strong {
   display: block;
   font-size: 13.5px;
   font-weight: 700;
@@ -159,8 +160,10 @@
   color: #94a3b8;
 }
 
-.cs-preserved-text strong {
+.cs-preserved-text p strong {
+  display: inline !important;
   color: #f8fafc;
+  font-weight: 700;
 }
 
 /* BOTÕES DE AÇÃO */
@@ -173,11 +176,11 @@
 .cs-btn-reactivate {
   width: 100%;
   padding: 14px 20px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #c5a059 0%, #a8843c 100%);
   color: #ffffff;
   border: none;
   border-radius: 12px;
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 800;
   cursor: pointer;
   display: flex;
@@ -185,15 +188,15 @@
   justify-content: center;
   gap: 10px;
   transition: all 0.25s ease;
-  box-shadow: 0 4px 18px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 4px 18px rgba(197, 160, 89, 0.35);
   font-family: inherit;
   letter-spacing: 0.3px;
 }
 
 .cs-btn-reactivate:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(16, 185, 129, 0.5);
-  background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+  box-shadow: 0 6px 24px rgba(197, 160, 89, 0.5);
+  background: linear-gradient(135deg, #d4b06a 0%, #b59044 100%);
 }
 
 .cs-btn-reactivate:disabled {

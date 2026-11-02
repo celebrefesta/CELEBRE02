@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import './Usuarios.css';
 import { db } from '../firebaseConfig'; 
 import { collection, getDocs, doc, query, where, getDoc, setDoc, updateDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { getAuth, signOut } from 'firebase/auth';
+import { Link } from 'react-router-dom';
+import logoImage from '../assets/LOGO_CELEBRE.png';
 import { calcularPeriodoTeste, verificarAssinaturaAtiva } from '../utils/periodoTesteUtils';
 import { obterLimitePlano } from '../utils/planoUtils';
 
@@ -247,31 +249,73 @@ const Usuarios = () => {
   if (loading) return <div style={{ padding: '50px', textAlign: 'center', color: 'var(--texto-secundario)' }}>Verificando permissões...</div>;
 
   if (isContaExpirada) {
+    const emailExibicao = usuarioLogado?.email || '';
+    const whatsappMsgTeste = encodeURIComponent(`Olá! Meu período de teste na conta (${emailExibicao}) expirou e gostaria de ajuda para escolher um plano no Celebre.`);
+    const handleLogoutExpirado = async () => {
+      try { await signOut(auth); } catch (e) {}
+      localStorage.removeItem('tenantId');
+      localStorage.removeItem('funcName');
+      localStorage.removeItem('userRole');
+      navigate('/login');
+    };
+
     return (
-      <div style={{ padding: '60px', textAlign: 'center', backgroundColor: 'var(--fundo-principal)', minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ background: 'var(--branco)', padding: '40px', borderRadius: '16px', border: '1px solid var(--borda)', maxWidth: '500px', boxSizing: 'border-box', boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}>
-          <div style={{ fontSize: '48px', marginBottom: '15px' }}>⏳</div>
-          <h2 style={{ color: 'var(--texto-principal)', marginBottom: '15px', fontWeight: '800' }}>Seu período de teste expirou!</h2>
-          <p style={{ color: 'var(--texto-secundario)', lineHeight: '1.6', marginBottom: '25px', fontSize: '14px' }}>
-            Para gerenciar sua equipe e permissões de colaboradores, escolha um plano ativo no Celebre.
+      <div className="dash-wide-container dash-status-screen fade-in">
+        <div className="dash-status-card">
+          <div className="dash-status-brand-header">
+            <img src={logoImage} alt="Celebre Logo" className="dash-status-logo" />
+            <span className="dash-status-brand-tag">Gestão Inteligente de Festas &amp; Acervo</span>
+          </div>
+
+          <div className="dash-status-badge">
+            <i className="fas fa-hourglass-end"></i> Período de Teste Expirado
+          </div>
+
+          <h2>Seu período de teste expirou!</h2>
+          <p className="dash-status-lead">
+            Para gerenciar sua equipe e permissões de colaboradores na conta {emailExibicao ? <span>({emailExibicao})</span> : ''}, escolha um plano ativo no Celebre.
           </p>
-          <button 
-            onClick={() => navigate('/planos')} 
-            style={{ 
-              width: '100%', 
-              padding: '14px 24px', 
-              background: 'var(--dourado)', 
-              color: '#ffffff', 
-              border: 'none', 
-              borderRadius: '8px', 
-              fontWeight: '800', 
-              fontSize: '14px', 
-              cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(0,0,0,0.15)' 
-            }}
-          >
-            Ver Planos e Assinar
-          </button>
+
+          <div className="dash-status-preserved-box">
+            <div className="dash-status-preserved-icon">
+              <i className="fas fa-shield-alt"></i>
+            </div>
+            <div className="dash-status-preserved-text">
+              <span className="dash-status-preserved-title">📦 Seus dados continuam salvos e protegidos</span>
+              <p>
+                Todo o seu acervo, clientes e colaboradores cadastrados durante o teste estão guardados com segurança.
+              </p>
+            </div>
+          </div>
+
+          <div className="dash-status-actions">
+            <button 
+              type="button"
+              onClick={() => navigate('/planos')} 
+              className="dash-status-btn dash-status-btn--gold"
+            >
+              <i className="fas fa-crown"></i> Ver Planos e Assinar Agora
+            </button>
+
+            <a 
+              href={`https://wa.me/5519998564109?text=${whatsappMsgTeste}`}
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="dash-status-btn-whatsapp"
+            >
+              <i className="fab fa-whatsapp"></i> Deseja conversar com a equipe Celebre? <strong>Chame no WhatsApp</strong>
+            </a>
+          </div>
+
+          <div className="dash-status-footer-actions">
+            <button type="button" className="dash-status-btn-logout" onClick={handleLogoutExpirado}>
+              <i className="fas fa-sign-out-alt"></i> Sair / Trocar de Conta
+            </button>
+            <span className="dash-status-footer-divider">•</span>
+            <Link to="/excluir-conta" className="dash-status-link-delete">
+              Não desejo mais utilizar o sistema (Excluir Definitivamente)
+            </Link>
+          </div>
         </div>
       </div>
     );

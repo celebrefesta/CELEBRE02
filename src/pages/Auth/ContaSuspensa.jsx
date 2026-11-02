@@ -178,9 +178,9 @@ const ContaSuspensa = () => {
                 <i className="fas fa-shield-alt"></i>
               </div>
               <div className="cs-preserved-text">
-                <strong>📦 Seus dados continuam salvos temporariamente</strong>
+                <span className="cs-preserved-title">📦 Seus dados continuam salvos e protegidos</span>
                 <p>
-                  Seu acervo de produtos, fotos e clientes cadastrados estão preservados por mais <strong>30 dias</strong>. Após esse período de carência, contas sem manifestação serão definitivamente encerradas para liberação de espaço no sistema.
+                  Seu acervo de produtos, fotos, clientes e contratos cadastrados estão preservados por mais <strong>30 dias</strong> para você regularizar sua conta sem perda de informações.
                 </p>
               </div>
             </div>

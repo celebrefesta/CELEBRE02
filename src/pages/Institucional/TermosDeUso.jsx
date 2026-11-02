@@ -210,7 +210,7 @@ const TermosDeUso = () => {
               >
                 <i className="fab fa-whatsapp"></i> WhatsApp
               </a>
-              <a href="mailto:celebrefesta25@gmail.com" className="btn-doc-email">
+              <a href="mailto:celebrefesta25+suporte@gmail.com?subject=D%C3%BAvida%20-%20Termos%20de%20Uso%20Celebre" className="btn-doc-email">
                 <i className="fa-solid fa-envelope"></i> E-mail
               </a>
             </div>

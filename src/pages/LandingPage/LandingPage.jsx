@@ -575,7 +575,7 @@ const LandingPage = () => {
               </a>
 
               <a 
-                href="mailto:celebrefesta25@gmail.com" 
+                href="mailto:celebrefesta25+suporte@gmail.com?subject=Atendimento%20Celebre" 
                 className="modal-channel-card email-channel"
               >
                 <div className="channel-icon-circle email-icon-bg">

@@ -86,12 +86,17 @@ const Login = () => {
           if (diasSemAtividade > 180) {
             isContaSuspensa = true;
           } else {
-            // Falso-positivo de inatividade! Auto-corrige o banco
+            // Falso-positivo de inatividade! Auto-corrige o banco e registra acesso
             try {
-              updateDoc(doc(db, 'usuarios', user.uid), { statusConta: 'bloqueado', status: 'bloqueado' }).catch(() => {});
+              updateDoc(doc(db, 'usuarios', user.uid), { statusConta: 'bloqueado', status: 'bloqueado', ultimoAcesso: new Date().toISOString() }).catch(() => {});
             } catch (eFix) {}
           }
-        } else if (tenantIdDaEmpresa !== user.uid) {
+        } else {
+          try {
+            updateDoc(doc(db, 'usuarios', user.uid), { ultimoAcesso: new Date().toISOString() }).catch(() => {});
+          } catch (eAcc) {}
+        }
+        if (!isContaSuspensa && tenantIdDaEmpresa !== user.uid) {
           try {
             const tenantSnap = await getDoc(doc(db, 'usuarios', tenantIdDaEmpresa));
             if (tenantSnap.exists()) {

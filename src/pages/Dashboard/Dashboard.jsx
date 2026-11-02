@@ -5,6 +5,7 @@ import { db } from '../../firebaseConfig';
 import { collection, getDocs, query, where, doc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth, signOut } from 'firebase/auth'; 
 import AuditoriaEstoque from './AuditoriaEstoque';
+import logoImage from '../../assets/LOGO_CELEBRE.png';
 import { calcularPeriodoTeste, verificarAssinaturaAtiva, parseDataGenerica, obterMelhorContaPorEmail } from '../../utils/periodoTesteUtils';
 import { verificarLembretesAgendadosHoje } from '../../utils/notificacoesDispatchService';
 import {
@@ -624,6 +625,7 @@ const Dashboard = () => {
                     parseDataGenerica(dadosEmpresa.dataProximaCobranca),
                     parseDataGenerica(dadosEmpresa.dataFimTeste),
                     parseDataGenerica(dadosEmpresa.ultimoAcesso),
+                    parseDataGenerica(usuarioLogado?.metadata?.lastSignInTime),
                     parseDataGenerica(dadosEmpresa.dataCadastro || dadosEmpresa.criadoEm)
                 ].filter(Boolean);
 
@@ -1410,14 +1412,19 @@ const Dashboard = () => {
 
       return (
           <div className="dash-wide-container dash-status-screen fade-in">
-              <div className="dash-status-card dash-status-card--danger">
-                  <div className="dash-status-badge dash-status-badge--danger">
+              <div className="dash-status-card">
+                  <div className="dash-status-brand-header">
+                      <img src={logoImage} alt="Celebre Logo" className="dash-status-logo" />
+                      <span className="dash-status-brand-tag">Gestão Inteligente de Festas &amp; Acervo</span>
+                  </div>
+
+                  <div className="dash-status-badge">
                       <i className="fas fa-pause-circle"></i> Conta Suspensa por Inatividade
                   </div>
 
                   <h2>Olá, {nomeUsuario}!</h2>
                   <p className="dash-status-lead">
-                      Seu período de inatividade ultrapassou <strong>6 meses</strong>. Por segurança e conformidade operacional, o acesso às funções do sistema foi temporariamente suspenso.
+                      Identificamos que sua conta {emailExibicao ? <span>({emailExibicao})</span> : ''} não registrou acessos ou assinatura ativa nos últimos <strong>6 meses</strong>. Por segurança, o acesso ao painel foi temporariamente suspenso.
                   </p>
 
                   <div className="dash-status-preserved-box">
@@ -1425,8 +1432,10 @@ const Dashboard = () => {
                           <i className="fas fa-shield-alt"></i>
                       </div>
                       <div className="dash-status-preserved-text">
-                          <strong>📦 Seus dados continuam salvos e protegidos</strong>
-                          <span>Seu acervo de produtos, fotos, clientes e contratos cadastrados estão preservados por mais <strong>30 dias</strong> para você regularizar sua conta sem perda de informações.</span>
+                          <span className="dash-status-preserved-title">📦 Seus dados continuam salvos e protegidos</span>
+                          <p>
+                              Seu acervo de produtos, fotos, clientes e contratos cadastrados estão preservados por mais <strong>30 dias</strong> para você regularizar sua conta sem perda de informações.
+                          </p>
                       </div>
                   </div>
 
@@ -1445,7 +1454,7 @@ const Dashboard = () => {
                           rel="noopener noreferrer" 
                           className="dash-status-btn-whatsapp"
                       >
-                          <i className="fab fa-whatsapp"></i> Conversar com a Equipe no WhatsApp
+                          <i className="fab fa-whatsapp"></i> Deseja conversar com a equipe Celebre? <strong>Chame no WhatsApp</strong>
                       </a>
                   </div>
 
@@ -1455,7 +1464,7 @@ const Dashboard = () => {
                       </button>
                       <span className="dash-status-footer-divider">•</span>
                       <Link to="/excluir-conta" className="dash-status-link-delete">
-                          Solicitar Exclusão Definitiva
+                          Não desejo mais utilizar o sistema (Excluir Definitivamente)
                       </Link>
                   </div>
               </div>
@@ -1464,20 +1473,55 @@ const Dashboard = () => {
   }
 
   if (statusConta === 'bloqueado') {
+      const emailExibicao = usuarioLogado?.email || '';
+      const nomeEmpresaTitular = dadosEmpresaState?.nomeExibicao || dadosEmpresaState?.nomeCompleto || 'sua empresa';
+      const whatsappMsgTeste = encodeURIComponent(`Olá! Meu período de teste na conta (${emailExibicao}) expirou e gostaria de ajuda para escolher um plano no Celebre.`);
+      const whatsappMsgEquipe = encodeURIComponent(`Olá! Faço parte da equipe da empresa (${nomeEmpresaTitular}) e nosso acesso está temporariamente suspenso no Celebre.`);
+
       if (isFuncionarioEquipe) {
         return (
           <div className="dash-wide-container dash-status-screen fade-in">
-            <div className="dash-status-card dash-status-card--warning">
-              <h2>🔒 Acesso da Equipe Temporariamente Suspenso</h2>
-              <p>
-                A conta da empresa <strong>{dadosEmpresaState?.nomeExibicao || dadosEmpresaState?.nomeCompleto || 'titular'}</strong> está com o período de teste expirado ou a assinatura pendente.
+            <div className="dash-status-card">
+              <div className="dash-status-brand-header">
+                <img src={logoImage} alt="Celebre Logo" className="dash-status-logo" />
+                <span className="dash-status-brand-tag">Gestão Inteligente de Festas &amp; Acervo</span>
+              </div>
+
+              <div className="dash-status-badge">
+                <i className="fas fa-lock"></i> Acesso da Equipe Temporariamente Suspenso
+              </div>
+
+              <h2>Olá, {nomeUsuario}!</h2>
+              <p className="dash-status-lead">
+                A conta da empresa <strong>{nomeEmpresaTitular}</strong> está com o período de teste expirado ou com a renovação de assinatura pendente.
               </p>
-              <p style={{ fontSize: '13px', color: 'var(--texto-secundario)', marginTop: '8px' }}>
-                Solicite ao gestor / administrador da sua empresa que regularize a assinatura no Celebre para restabelecer o acesso de toda a equipe.
-              </p>
-              <div style={{ marginTop: '20px', display: 'flex', gap: '12px', justifyContent: 'center' }}>
+
+              <div className="dash-status-preserved-box">
+                <div className="dash-status-preserved-icon">
+                  <i className="fas fa-shield-alt"></i>
+                </div>
+                <div className="dash-status-preserved-text">
+                  <span className="dash-status-preserved-title">📦 Dados da empresa salvos e protegidos</span>
+                  <p>
+                    Solicite ao gestor ou administrador da empresa que regularize a assinatura no Celebre para restabelecer imediatamente o acesso de toda a equipe.
+                  </p>
+                </div>
+              </div>
+
+              <div className="dash-status-actions">
+                <a 
+                  href={`https://wa.me/5519998564109?text=${whatsappMsgEquipe}`}
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="dash-status-btn-whatsapp"
+                >
+                  <i className="fab fa-whatsapp"></i> Deseja conversar com a equipe Celebre? <strong>Chame no WhatsApp</strong>
+                </a>
+              </div>
+
+              <div className="dash-status-footer-actions">
                 <button type="button" onClick={handleLogout} className="dash-status-btn-logout">
-                  <i className="fas fa-sign-out-alt"></i> Sair da Conta
+                  <i className="fas fa-sign-out-alt"></i> Sair / Trocar de Conta
                 </button>
               </div>
             </div>
@@ -1487,10 +1531,61 @@ const Dashboard = () => {
 
       return (
           <div className="dash-wide-container dash-status-screen fade-in">
-              <div className="dash-status-card dash-status-card--warning">
-                  <h2>⏳ Seu período de teste expirou!</h2>
-                  <p>Para continuar gerenciando seus eventos no Celebre, escolha o seu plano.</p>
-                  <button onClick={() => navigate('/planos')} className="dash-status-btn">Ver Planos e Assinar</button>
+              <div className="dash-status-card">
+                  <div className="dash-status-brand-header">
+                      <img src={logoImage} alt="Celebre Logo" className="dash-status-logo" />
+                      <span className="dash-status-brand-tag">Gestão Inteligente de Festas &amp; Acervo</span>
+                  </div>
+
+                  <div className="dash-status-badge">
+                      <i className="fas fa-hourglass-end"></i> Período de Teste Expirado
+                  </div>
+
+                  <h2>Olá, {nomeUsuario}!</h2>
+                  <p className="dash-status-lead">
+                      O período de avaliação gratuita da sua conta {emailExibicao ? <span>({emailExibicao})</span> : ''} chegou ao fim. Escolha o plano ideal para continuar gerenciando seus eventos e locações no Celebre.
+                  </p>
+
+                  <div className="dash-status-preserved-box">
+                      <div className="dash-status-preserved-icon">
+                          <i className="fas fa-shield-alt"></i>
+                      </div>
+                      <div className="dash-status-preserved-text">
+                          <span className="dash-status-preserved-title">📦 Seus dados continuam salvos e protegidos</span>
+                          <p>
+                              Todo o seu acervo de produtos, fotos, clientes e orçamentos cadastrados durante o teste estão guardados com segurança. Basta ativar seu plano para retomar de onde parou.
+                          </p>
+                      </div>
+                  </div>
+
+                  <div className="dash-status-actions">
+                      <button 
+                          type="button"
+                          onClick={() => navigate('/planos')} 
+                          className="dash-status-btn dash-status-btn--gold"
+                      >
+                          <i className="fas fa-crown"></i> Ver Planos e Assinar Agora
+                      </button>
+
+                      <a 
+                          href={`https://wa.me/5519998564109?text=${whatsappMsgTeste}`}
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="dash-status-btn-whatsapp"
+                      >
+                          <i className="fab fa-whatsapp"></i> Deseja conversar com a equipe Celebre? <strong>Chame no WhatsApp</strong>
+                      </a>
+                  </div>
+
+                  <div className="dash-status-footer-actions">
+                      <button type="button" className="dash-status-btn-logout" onClick={handleLogout}>
+                          <i className="fas fa-sign-out-alt"></i> Sair / Trocar de Conta
+                      </button>
+                      <span className="dash-status-footer-divider">•</span>
+                      <Link to="/excluir-conta" className="dash-status-link-delete">
+                          Não desejo mais utilizar o sistema (Excluir Definitivamente)
+                      </Link>
+                  </div>
               </div>
         </div>
       );

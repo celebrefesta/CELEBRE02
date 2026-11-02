@@ -133,7 +133,7 @@ export const enviarAvisoInatividadeEmail = async ({ email, nome = '', diasInativ
       body: JSON.stringify({
         from: 'Celebre Segurança <seguranca@celebrefesta.com.br>',
         to: [emailLimpo],
-        reply_to: 'celebrefesta25@gmail.com',
+        reply_to: 'celebrefesta25+suporte@gmail.com',
         subject: '⚠️ Aviso Importante: Sua conta no Celebre está suspensa por inatividade',
         html: htmlTemplate
       })
@@ -156,7 +156,7 @@ export const enviarAvisoInatividadeEmail = async ({ email, nome = '', diasInativ
   try {
     const docMail = await addDoc(collection(db, 'mail'), {
       to: emailLimpo,
-      replyTo: 'celebrefesta25@gmail.com',
+      replyTo: 'celebrefesta25+suporte@gmail.com',
       message: {
         subject: '⚠️ Aviso Importante: Sua conta no Celebre está suspensa por inatividade',
         html: htmlTemplate

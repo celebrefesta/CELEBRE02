@@ -120,6 +120,7 @@ const RotaProtegida = ({ recursoExigido, children }) => {
                         parseDataGenerica(dadosUsuario.dataProximaCobranca),
                         parseDataGenerica(dadosUsuario.dataFimTeste),
                         parseDataGenerica(dadosUsuario.ultimoAcesso),
+                        parseDataGenerica(user?.metadata?.lastSignInTime),
                         parseDataGenerica(dadosUsuario.dataCadastro || dadosUsuario.criadoEm)
                     ].filter(Boolean);
 

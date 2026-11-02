@@ -147,7 +147,7 @@ export const enviarConfirmacaoReativacaoEmail = async ({ email, nome = '', nomeP
       body: JSON.stringify({
         from: 'Celebre <seguranca@celebrefesta.com.br>',
         to: [emailLimpo],
-        reply_to: 'celebrefesta25@gmail.com',
+        reply_to: 'celebrefesta25+suporte@gmail.com',
         subject: '🎉 Sua conta no Celebre foi reativada com sucesso! Seja bem-vindo(a) de volta!',
         html: htmlTemplate
       })
@@ -169,7 +169,7 @@ export const enviarConfirmacaoReativacaoEmail = async ({ email, nome = '', nomeP
   try {
     const docMail = await addDoc(collection(db, 'mail'), {
       to: emailLimpo,
-      replyTo: 'celebrefesta25@gmail.com',
+      replyTo: 'celebrefesta25+suporte@gmail.com',
       message: {
         subject: '🎉 Sua conta no Celebre foi reativada com sucesso! Seja bem-vindo(a) de volta!',
         html: htmlTemplate

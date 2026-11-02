@@ -13,7 +13,7 @@ import { collection, addDoc } from 'firebase/firestore';
 
 const RESEND_API_KEY = ['re', '9XQXdePo', 'BhzvGTxk3phud7qXuMiu5Fv7'].join('_');
 const SENDER_EMAIL = 'Celebre <seguranca@celebrefesta.com.br>';
-const REPLY_TO_EMAIL = 'celebrefesta25@gmail.com';
+const REPLY_TO_EMAIL = 'celebrefesta25+suporte@gmail.com';
 export const CUPOM_OFICIAL_PRIMEIRO_ACESSO = 'PRIMEIROACESSO';
 
 // ============================================================================

@@ -17,7 +17,7 @@ import { getAuth } from 'firebase/auth';
 
 const RESEND_API_KEY = ['re', '9XQXdePo', 'BhzvGTxk3phud7qXuMiu5Fv7'].join('_');
 const SENDER_EMAIL = 'Celebre <seguranca@celebrefesta.com.br>';
-const REPLY_TO_EMAIL = 'celebrefesta25@gmail.com';
+const REPLY_TO_EMAIL = 'celebrefesta25+suporte@gmail.com';
 
 // 1. DETECTAR MUDANCAS ENTRE DUAS VERSOES DA MATRIZ
 
